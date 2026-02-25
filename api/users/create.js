@@ -19,6 +19,7 @@ module.exports = async (req, res) => {
       email,
       mobile,
       password,
+      type,
     } = body;
 
     // Basic validation
@@ -38,9 +39,10 @@ module.exports = async (req, res) => {
         username,
         email,
         mobile,
-        password
+        password,
+        type
       )
-      values ($1,$2,$3,$4,$5,$6,$7)
+      values ($1,$2,$3,$4,$5,$6,$7,$8)
       returning id, last_name, first_name, middle_name, username, email, mobile, created_at
       `,
       [
@@ -51,6 +53,7 @@ module.exports = async (req, res) => {
         email,
         mobile || null,
         hash_pass,
+        type
       ],
     );
 
