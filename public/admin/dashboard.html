@@ -3,34 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link href="../global.css" rel="stylesheet" />
-    <link href="admin.css" rel="stylesheet" />
-    <title>OENACAR | Dashboard</title>
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Dashboard</title>
   </head>
   <body>
     <div class="dashboard">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="logo">OENACAR</div>
-        <nav>
-          <a href="#" class="active">Dashboard</a>
-          <a href="#">Students</a>
-          <a href="#">Enrollment</a>
-          <a href="#">Records</a>
-          <a href="#">Settings</a>
-        </nav>
-      </aside>
+      <div data-component="../../components/sidebar.html"></div>
 
       <!-- Main Content -->
       <main class="main">
-        <!-- Topbar -->
-        <header class="topbar">
-          <h1>Dashboard</h1>
-          <div class="user">
-            <span>Admin</span>
-            <div class="avatar"></div>
-          </div>
-        </header>
+        <div data-component="../../components/topbar.html"></div>
 
         <!-- Stats -->
         <section class="stats">
