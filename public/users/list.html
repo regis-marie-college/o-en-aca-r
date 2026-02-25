@@ -5,36 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/index.css" rel="stylesheet" />
     <script src="../scripts/load-component.js" defer></script>
-    <title>Dashboard</title>
+    <title>Users</title>
   </head>
   <body>
-    <div class="dashboard">
+    <div class="users">
       <div data-component="../../components/sidebar.html"></div>
 
       <!-- Main Content -->
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
 
-        <!-- Stats -->
-        <section class="stats">
-          <div class="card">
-            <h3>Total Students</h3>
-            <p>1,248</p>
-          </div>
-          <div class="card">
-            <h3>Active Enrollment</h3>
-            <p>876</p>
-          </div>
-          <div class="card">
-            <h3>Pending Approval</h3>
-            <p>32</p>
-          </div>
-          <div class="card">
-            <h3>Archived Records</h3>
-            <p>540</p>
-          </div>
-        </section>
-
+        <a href="../users/create.html" class="btn btn-primary">+ Add Student</a>
         <!-- Table -->
         <section class="table-section">
           <h2>Recent Enrollments</h2>
