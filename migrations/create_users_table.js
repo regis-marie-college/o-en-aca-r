@@ -25,6 +25,8 @@ async function up() {
 }
 
 async function down() {
+  const table = "users";
+
   await db.query(`
     drop table if exists ${table};
   `);
