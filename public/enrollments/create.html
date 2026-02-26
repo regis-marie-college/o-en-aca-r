@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/index.css" rel="stylesheet" />
     <script src="../scripts/load-component.js" defer></script>
-    <title>Users</title>
+    <title>Enrollments</title>
   </head>
   <body>
     <div class="users">
@@ -16,7 +16,7 @@
         <div data-component="../../components/topbar.html"></div>
 
         <section class="form-section">
-          <form id="createUserForm" class="form-card">
+          <form id="createEnrollForm" class="form-card">
             <div class="form-group">
               <label>Last Name</label>
               <input type="text" name="last_name" required />
@@ -70,7 +70,7 @@
 
         try {
           const response = await fetch(
-            "http://localhost:8000/api/users/create",
+            "http://localhost:8000/api/enrollments/create",
             {
               method: "POST",
               headers: {
@@ -87,7 +87,7 @@
           }
 
           message.innerHTML =
-            "<span class='success'>User created successfully!</span>";
+            "<span class='success'>Enrollment created successfully!</span>";
           form.reset();
         } catch (error) {
           message.innerHTML = `<span class='error'>${error.message}</span>`;

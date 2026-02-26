@@ -17,6 +17,8 @@ async function up() {
 }
 
 async function down() {
+  const table = "enrollments";
+
   await db.query(`
     drop table if exists ${table};
   `);
