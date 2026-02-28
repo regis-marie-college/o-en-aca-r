@@ -19,38 +19,49 @@
         <!-- Table -->
         <section class="table-section">
           <h2>Recent Enrollments</h2>
-          <table>
+          <table id="table-users">
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Name</th>
-                <th>Program</th>
-                <th>Status</th>
-                <th>Date</th>
+                <th>Email</th>
+                <th>Type</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>Juan Dela Cruz</td>
-                <td>BSIT</td>
-                <td><span class="status active">Approved</span></td>
-                <td>Feb 25, 2026</td>
-              </tr>
-              <tr>
-                <td>Maria Santos</td>
-                <td>BSBA</td>
-                <td><span class="status pending">Pending</span></td>
-                <td>Feb 24, 2026</td>
-              </tr>
-              <tr>
-                <td>Carlos Reyes</td>
-                <td>BSED</td>
-                <td><span class="status archived">Archived</span></td>
-                <td>Feb 22, 2026</td>
-              </tr>
-            </tbody>
+            <tbody></tbody>
           </table>
         </section>
       </main>
     </div>
+    <script>
+      async function loadUsers() {
+        try {
+          const res = await fetch("http://localhost:8000/api/users/list");
+          const data = await res.json();
+
+          const tbody = document.querySelector("#table-users tbody");
+          tbody.innerHTML = "";
+
+          data.forEach((user) => {
+            const row = document.createElement("tr");
+
+            const { id, last_name, first_name, type, email } = user;
+
+            row.innerHTML = `
+              <td>${id.substring(0, 6)}</td>
+              <td>${last_name} ${first_name}</td>
+              <td>${email}</td>
+              <td>${type}</td>
+            `;
+
+            tbody.appendChild(row);
+          });
+        } catch (err) {
+          console.error("Failed to load users:", err);
+        }
+      }
+
+      loadUsers();
+    </script>
   </body>
 </html>
