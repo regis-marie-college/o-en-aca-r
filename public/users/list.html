@@ -48,7 +48,7 @@
             const { id, last_name, first_name, type, email } = user;
 
             row.innerHTML = `
-              <td>${id}</td>
+              <td>${id.substring(0, 6)}</td>
               <td>${last_name} ${first_name}</td>
               <td>${email}</td>
               <td>${type}</td>
