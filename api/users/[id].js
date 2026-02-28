@@ -5,7 +5,7 @@ module.exports = async (req, res) => {
     return notAllowed(res);
   }
 
-  const { index } = req.query;
+  const { index, id } = req.query;
 
   const users = [
     {
