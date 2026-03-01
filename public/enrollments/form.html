@@ -1,11 +1,111 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/enrollments.css" rel="stylesheet" />
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Enrollments</title>
+  </head>
+
 <body>
-    
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <img src="../images/logo.png" alt="Regis Marie College Logo">
+                <span>REGIS MARIE COLLEGE</span>
+            </div>
+
+            <ul class="nav-links">
+                <li><a href="#">HOME</a></li>
+                <li><a href="#">CONTACT US</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- FORM CONTAINER -->
+    <div class="container">
+        <h2>Student Enrollment Form</h2>
+
+        <!-- MESSAGE -->
+        <div id="formMessage"></div>
+
+        <form id="createUserForm" enctype="multipart/form-data">
+
+            <label for="lastname">Last Name</label>
+            <input type="text" id="lastname" name="last_name" required>
+
+            <label for="firstname">First Name</label>
+            <input type="text" id="firstname" name="first_name" required>
+
+            <label for="middlename">Middle Name</label>
+            <input type="text" id="middlename" name="middle_name">
+
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="birthday">Birthday</label>
+            <input type="date" id="birthday" name="birthday" required>
+
+            <label for="course">Select Course</label>
+            <select id="course" name="course" required>
+                <option value="">-- Select Course --</option>
+                <option value="BSCS">BSCS - Bachelor of Science in Computer Science</option>
+                <option value="BSOA">BSOA - Bachelor of Science in Office Administration</option>
+                <option value="BSED">BSED - Bachelor of Secondary Education</option>
+                <option value="BEED">BEED - Bachelor of Elementary Education</option>
+            </select>
+
+            <label for="photo">Upload Picture</label>
+            <input type="file" id="photo" name="photo" accept="image/*" required>
+
+            <button type="submit">Submit Enrollment</button>
+        </form>
+    </div>
+
+    <!-- SCRIPT -->
+    <script>
+      const form = document.querySelector("#createUserForm");
+      const message = document.getElementById("formMessage");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const button = form.querySelector("button");
+        button.disabled = true;
+        button.textContent = "Submitting...";
+
+        const formData = new FormData(form);
+
+        try {
+          const response = await fetch(
+            "http://localhost:8000/api/enrollments/create",
+            {
+              method: "POST",
+              body: formData, // multipart/form-data (for image upload)
+            }
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || "Something went wrong");
+          }
+
+          message.innerHTML =
+            "<span class='success'>Enrollment submitted successfully!</span>";
+          form.reset();
+        } catch (error) {
+          message.innerHTML =
+            `<span class='error'>${error.message}</span>`;
+        } finally {
+          button.disabled = false;
+          button.textContent = "Submit Enrollment";
+        }
+      });
+    </script>
+
 </body>
 </html>
