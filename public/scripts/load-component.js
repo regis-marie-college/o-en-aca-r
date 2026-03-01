@@ -84,6 +84,8 @@
 
     if (!btn_user) return;
 
+    btn_user.querySelector("span").textContent = user.first_name;
+
     btn_user.addEventListener("click", async () => {
       try {
         const response = await fetch(
