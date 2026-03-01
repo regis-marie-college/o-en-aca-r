@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Users</title>
   </head>
@@ -51,7 +52,7 @@
       const form = document.querySelector("#createUserForm");
       const form_submit = document.querySelector("#createUserForm button");
       const message = document.getElementById("formMessage");
-      
+
       form_submit.addEventListener("click", async (e) => {
         e.preventDefault();
 
@@ -70,7 +71,7 @@
 
         try {
           const response = await fetch(
-            "http://localhost:8000/api/users/create",
+            `${window.APP_CONFIG.API_BASE_URL}/users/create`,
             {
               method: "POST",
               headers: {
