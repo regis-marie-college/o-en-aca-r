@@ -43,15 +43,26 @@
             <label for="middlename">Middle Name</label>
             <input type="text" id="middlename" name="middle_name">
 
+            
             <label for="email">Email Address</label>
             <input type="email" id="email" name="email" required>
+            <label for="mobile">Mobile Number</label>
+            <input 
+              type="tel" 
+              id="mobile" 
+              name="mobile_number" 
+              placeholder="09XXXXXXXXX"
+              pattern="^09\d{9}$"
+              title="Please enter a valid 11-digit mobile number starting with 09"
+              required
+            >
 
             <label for="birthday">Birthday</label>
             <input type="date" id="birthday" name="birthday" required>
 
-            <label for="course">Select Course</label>
-            <select id="course" name="course" required>
-                <option value="">-- Select Course --</option>
+           <!-- <label for="program">Select Program</label>
+            <select id="program" name="program" required>
+                <option value="">-- Select Program --</option>
                 <option value="BSCS">BSCS - Bachelor of Science in Computer Science</option>
                 <option value="BSOA">BSOA - Bachelor of Science in Office Administration</option>
                 <option value="BSED">BSED - Bachelor of Secondary Education</option>
@@ -60,7 +71,7 @@
 
             <label for="photo">Upload Picture</label>
             <input type="file" id="photo" name="photo" accept="image/*" required>
-
+            -->
             <button type="submit">Submit Enrollment</button>
         </form>
     </div>
