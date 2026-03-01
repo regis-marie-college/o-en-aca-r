@@ -1,11 +1,39 @@
 <!doctype html>
 <html>
-  <head>
-    <link rel="stylesheet" href="../styles/index.css" />
-    <title>Register Page</title>
+ <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Register</title>
   </head>
-  <body>
-    <h1>Register</h1>
-    <a href="login.html">Login to your account</a>
-  </body>
+<body>
+
+  <div class="background"></div>
+
+ 
+  <!-- TIGER -->
+  <img src="../tiger.png.png" class="tiger">
+
+  <!-- REGISTER CARD -->
+  <div class="register-card">
+    <h2>Create Account</h2>
+    <p>Please fill in your details</p>
+
+    <form action="register.php" method="POST">
+      <input type="text" name="fullname" placeholder="Full Name" required>
+      <input type="email" name="email" placeholder="Email Address" required>
+      <input type="text" name="student_number" placeholder="Student Number" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+
+      <button type="submit" class="register-btn">Register</button>
+    </form>
+
+    <div class="extra-links">
+      <p>Already have an account? <a href="login.html">Sign In</a></p>
+    </div>
+  </div>
+
+</body>
 </html>
