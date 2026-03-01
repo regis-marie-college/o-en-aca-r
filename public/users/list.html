@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Users</title>
   </head>
@@ -36,8 +37,11 @@
     <script>
       async function loadUsers() {
         try {
-          const res = await fetch("http://localhost:8000/api/users/list");
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/users/list`,
+          );
           const data = await res.json();
+          console.log(data);
 
           const tbody = document.querySelector("#table-users tbody");
           tbody.innerHTML = "";
@@ -61,7 +65,9 @@
         }
       }
 
-      loadUsers();
+      document.addEventListener("DOMContentLoaded", function () {
+        loadUsers();
+      });
     </script>
   </body>
 </html>
