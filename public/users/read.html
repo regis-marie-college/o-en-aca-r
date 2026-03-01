@@ -14,34 +14,17 @@
       <!-- Main Content -->
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
-
-        <a href="../users/create.html" class="btn btn-primary">+ Add Student</a>
-        <!-- Table -->
-        <section class="table-section">
-          <h2>Recent Enrollments</h2>
-          <table id="table-users">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Type</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </section>
       </main>
     </div>
     <script>
       async function loadUsers() {
         try {
-          const res = await fetch("http://localhost:8000/api/users/list");
+          const res = await fetch("http://localhost:8000/api/users/read");
           const data = await res.json();
 
           const tbody = document.querySelector("#table-users tbody");
           tbody.innerHTML = "";
-
+     
           data.forEach((user) => {
             const row = document.createElement("tr");
 
