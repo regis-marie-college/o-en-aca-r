@@ -38,7 +38,10 @@ module.exports = async (req, res) => {
       ],
     );
 
-    return okay(res, result.rows[0]);
+    let user = result.rows[0];
+    delete user.password;
+
+    return okay(res, user);
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);
