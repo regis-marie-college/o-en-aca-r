@@ -10,7 +10,7 @@ module.exports = async (req, res) => {
   let result = { rows: [] };
 
   try {
-    if (type === "admin") {
+    if (type) {
       result = await db.query(`select * from users where type=$1`, [type]);
     } else {
       result = await db.query(`select * from users`);

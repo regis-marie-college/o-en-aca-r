@@ -53,6 +53,9 @@
       const form_submit = document.querySelector("#createUserForm button");
       const message = document.getElementById("formMessage");
 
+      const params = new URLSearchParams(window.location.search);
+      const type = params.get("type") || "student";
+
       form_submit.addEventListener("click", async (e) => {
         e.preventDefault();
 
@@ -67,6 +70,7 @@
           first_name: formData.get("first_name"),
           email: formData.get("email"),
           password: formData.get("password"),
+          type,
         };
 
         try {

@@ -35,7 +35,16 @@ module.exports = async (req, res) => {
       values ($1,$2,$3,$4,$5,$6,$7,$8)
       returning id, last_name, first_name, middle_name, username, email, mobile, created_at
       `,
-      [last_name, first_name, middle_name || null, username || null, email, mobile || null, hash_pass, type],
+      [
+        last_name,
+        first_name,
+        middle_name || null,
+        username || null,
+        email,
+        mobile || null,
+        hash_pass,
+        type,
+      ],
     );
 
     return okay(res, result.rows[0]);
