@@ -6,8 +6,15 @@ module.exports = async (req, res) => {
     return notAllowed(res);
   }
 
+  const { type } = req.query;
+  let result = { rows: [] };
+
   try {
-    const result = await db.query(`select * from users`);
+    if (type === "admin") {
+      result = await db.query(`select * from users where type=$1`, [type]);
+    } else {
+      result = await db.query(`select * from users`);
+    }
 
     return okay(res, result.rows);
   } catch (err) {
