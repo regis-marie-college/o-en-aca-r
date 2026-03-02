@@ -163,3 +163,165 @@ a.btn {
   cursor: not-allowed;
   pointer-events: none;
 }
+
+/* Table */
+.table-section {
+  background: rgba(15, 23, 42, 0.9);
+  padding: 25px;
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.table-section h2 {
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  text-align: left;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+th,
+td {
+  padding: 14px 10px;
+}
+
+tbody tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Form */
+.form-section {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.form-card {
+  width: 100%;
+  max-width: 500px;
+  padding: 35px;
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.form-card h2 {
+  margin-bottom: 25px;
+  font-weight: 600;
+}
+
+/* Form Groups */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  font-size: 13px;
+  margin-bottom: 8px;
+  color: #94a3b8;
+}
+
+/* Inputs */
+.form-group input {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  color: #f1f5f9;
+  font-size: 14px;
+  transition: all 0.25s ease;
+  outline: none;
+}
+
+/* Focus effect */
+.form-group input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.9);
+}
+
+/* Placeholder color */
+.form-group input::placeholder {
+  color: #64748b;
+}
+
+/* Inputs & Select */
+.form-group input,
+.form-group select {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+  color: #000;
+  font-size: 14px;
+  transition: all 0.25s ease;
+  outline: none;
+  appearance: none; /* optional: removes default select styling */
+}
+
+/* Focus effect */
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #3b82f6;
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* File Upload */
+.form-group input[type="file"] {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  font-size: 14px;
+
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+/* Hover effect */
+.form-group input[type="file"]:hover {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+/* Focus effect */
+.form-group input[type="file"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* Style the upload button (Chrome, Edge, Safari) */
+.form-group input[type="file"]::file-selector-button {
+  background: #3b82f6;
+  border: none;
+  padding: 8px 14px;
+  margin-right: 12px;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.form-group input[type="file"]::file-selector-button:hover {
+  background: #2563eb;
+}

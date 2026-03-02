@@ -10,14 +10,8 @@ module.exports = async (req, res) => {
   try {
     const body = await bodyParser(req);
 
-    const {
-      last_name,
-      first_name,
-      middle_name,
-      email,
-      mobile_number,
-      birthday,
-    } = body;
+    const { last_name, first_name, middle_name, email, mobile, birthday } =
+      body;
 
     // Basic validation
     if (!last_name || !first_name || !email) {
@@ -29,7 +23,7 @@ module.exports = async (req, res) => {
       values ($1,$2,$3,$4,$5,$6)
       returning id, last_name, first_name, middle_name, email, mobile_number, created_at
       `,
-      [last_name, first_name, middle_name, email, mobile_number, birthday],
+      [last_name, first_name, middle_name, email, mobile, birthday],
     );
 
     return okay(res, result.rows[0]);

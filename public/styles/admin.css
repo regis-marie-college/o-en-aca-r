@@ -36,44 +36,6 @@
   font-weight: 600;
 }
 
-/* Table */
-.table-section {
-  background: rgba(15, 23, 42, 0.9);
-  padding: 25px;
-  border-radius: 14px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-}
-
-.table-section h2 {
-  margin-bottom: 20px;
-  font-weight: 500;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  text-align: left;
-  font-size: 14px;
-  color: #94a3b8;
-}
-
-th,
-td {
-  padding: 14px 10px;
-}
-
-tbody tr {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
-}
-
 /* Status Badges */
 .status {
   padding: 6px 12px;
