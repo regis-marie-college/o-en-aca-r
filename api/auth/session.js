@@ -6,17 +6,14 @@ module.exports = async (req, res) => {
     return notAllowed(res);
   }
 
-  const { type } = req.query;
-  let result = { rows: [] };
+  const { id } = req.query;
 
   try {
-    if (type === "admin") {
-      result = await db.query(`select * from users where type=$1`, [type]);
-    } else {
-      result = await db.query(`select * from users`);
-    }
+    const result = await db.query(`select * from users where id = $1`, [id]);
 
-    return okay(res, result.rows);
+    let auth = result.rows.length > 0;
+
+    return okay(res, { auth });
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);

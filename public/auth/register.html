@@ -1,11 +1,111 @@
 <!doctype html>
 <html>
   <head>
-    <link rel="stylesheet" href="../styles/index.css" />
-    <title>Register Page</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Register</title>
   </head>
   <body>
-    <h1>Register</h1>
-    <a href="login.html">Login to your account</a>
+    <div class="background"></div>
+    <header class="header">
+      <h1>REGIS MARIE COLLEGE</h1>
+    </header>
+    <header class="rmc"></header>
+
+    <!-- TIGER -->
+    <img src="../tiger.png.png" class="tiger" />
+
+    <!-- REGISTER CARD -->
+    <div class="register-card">
+      <h2>Create Account</h2>
+      <p>Please fill in your details</p>
+
+      <form>
+        <input
+          type="text"
+          name="first_name"
+          placeholder="First name"
+          required
+        />
+        <input type="text" name="last_name" placeholder="Last name" required />
+        <input type="email" name="email" placeholder="Email Address" required />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+        />
+        <input
+          type="password"
+          name="confirm_password"
+          placeholder="Confirm Password"
+          required
+        />
+
+        <button type="button" class="register-btn">Register</button>
+      </form>
+
+      <div class="extra-links">
+        <p>Already have an account? <a href="login.html">Sign In</a></p>
+      </div>
+    </div>
+    <script>
+      const form = document.querySelector(".register-card form");
+      const submit = form.querySelector("button");
+
+      submit.addEventListener("click", async (event) => {
+        event.preventDefault();
+
+        const formData = new FormData(form);
+
+        if (formData.get("password") !== formData.get("confirm_password")) {
+          return alert("Password mismatch");
+        }
+
+        const payload = {
+          first_name: formData.get("first_name"),
+          last_name: formData.get("last_name"),
+          email: formData.get("email"),
+          password: formData.get("password"),
+        };
+
+        try {
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/auth/register`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(payload),
+            },
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || "Something went wrong");
+          }
+
+          if (data.type === "admin") {
+            window.location.assign("/admin/dashboard.html");
+          } else {
+            window.location.assign("/enrollments/form.html");
+          }
+
+          localStorage.setItem("user", JSON.stringify(data));
+
+          form.reset();
+        } catch (error) {
+          console.error(error);
+        } finally {
+          submit.disabled = false;
+          submit.textContent = "Sign In";
+        }
+      });
+    </script>
   </body>
 </html>

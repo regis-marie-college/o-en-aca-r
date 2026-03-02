@@ -77,10 +77,46 @@
     });
   }
 
+  async function initLogout() {
+    const btn_user = document.querySelector(".user");
+
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!btn_user) return;
+
+    btn_user.querySelector("span").textContent = user.first_name;
+
+    btn_user.addEventListener("click", async () => {
+      try {
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/auth/logout`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ id: user.id }),
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Something went wrong");
+        }
+        localStorage.removeItem("user");
+        window.location.assign("/auth/login.html");
+      } catch (error) {
+        console.error(error);
+      }
+    });
+  }
+
   // Auto-run when DOM is ready
   document.addEventListener("DOMContentLoaded", async function () {
     await autoLoadComponents();
     getDocumentTitle();
+    initLogout();
   });
 
   // Optional: expose globally for manual usage

@@ -1,0 +1,310 @@
+/* BACKGROUND GLOW */
+.background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 25% 50%,
+    rgba(59, 130, 246, 0.25),
+    transparent 60%
+  );
+  z-index: 0;
+}
+
+/* HEADER */
+.header {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 3;
+}
+
+.header h1 {
+  font-family: "Orbitron", sans-serif;
+  font-size: 32px;
+  letter-spacing: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  background: linear-gradient(90deg, #ffffff, #ffffff, #ffffff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  text-shadow:
+    0 0 10px rgba(41, 46, 58, 0.6),
+    0 0 25px rgba(42, 55, 74, 0.4);
+}
+
+/* TIGER */
+.tiger {
+  position: absolute;
+  left: 6%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 550px;
+  max-width: 45%;
+  z-index: 1;
+  filter: drop-shadow(0 30px 60px rgba(37, 99, 235, 0.4));
+  animation: float 6s ease-in-out infinite;
+  margin-left: 20px;
+  margin-top: 10px;
+}
+
+/* FLOAT ANIMATION */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(-50%) translateX(0);
+  }
+  50% {
+    transform: translateY(-53%) translateX(10px);
+  }
+}
+
+/* ===============================
+   ULTRA FUTURISTIC NEON LOGIN CARD
+================================= */
+
+/* LOGIN CARD - CLEAN VERSION */
+.login-card {
+  position: absolute;
+  right: 10%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 400px;
+  padding: 45px;
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+
+  z-index: 2;
+}
+
+/* TITLE */
+.login-card h2 {
+  font-size: 26px;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+/* SUBTEXT */
+.login-card p {
+  color: #f1f1f1;
+  margin-bottom: 25px;
+  font-size: 14px;
+}
+
+/* INPUTS */
+.login-card input {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+
+  transition: 0.3s;
+}
+
+.login-card input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #2563eb;
+}
+
+/* BUTTON */
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+
+  background: #2563eb;
+  color: white;
+  font-weight: bold;
+  letter-spacing: 1px;
+
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.login-btn:hover {
+  background: #1e40af;
+  transform: translateY(-2px);
+}
+
+/* LINKS */
+.extra-links {
+  margin-top: 18px;
+  font-size: 13px;
+  color: #f1f1f1;
+}
+
+.extra-links a {
+  color: #ffffff;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.extra-links a:hover {
+  text-decoration: underline;
+}
+
+/*REGISTER*/
+
+/* BACKGROUND SOFT LIGHT */
+.background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 25% 50%,
+    rgba(59, 130, 246, 0.15),
+    transparent 60%
+  );
+  z-index: 0;
+}
+
+/* HEADER */
+.header {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 3;
+}
+
+.header h1 {
+  font-family: "Orbitron", sans-serif;
+  font-size: 32px;
+  letter-spacing: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: white;
+}
+
+/* TIGER */
+.tiger {
+  position: absolute;
+  left: 6%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 550px;
+  max-width: 45%;
+  z-index: 1;
+  filter: drop-shadow(0 30px 60px rgba(37, 99, 235, 0.4));
+  animation: float 6s ease-in-out infinite;
+  margin-left: 20px;
+  margin-top: 10px;
+}
+
+/* FLOAT ANIMATION */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(-50%) translateX(0);
+  }
+  50% {
+    transform: translateY(-53%) translateX(10px);
+  }
+}
+
+/* REGISTER CARD */
+.register-card {
+  position: absolute;
+  right: 10%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 400px;
+  padding: 45px;
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+
+  z-index: 2;
+}
+
+/* TITLE */
+.register-card h2 {
+  font-size: 26px;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.register-card p {
+  color: #f1f1f1;
+  margin-bottom: 25px;
+  font-size: 14px;
+}
+
+/* INPUTS */
+.register-card input {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+
+  transition: 0.3s;
+}
+
+.register-card input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #2563eb;
+}
+
+/* BUTTON */
+.register-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+
+  background: #2563eb;
+  color: white;
+  font-weight: bold;
+  letter-spacing: 1px;
+
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.register-btn:hover {
+  background: #1e40af;
+  transform: translateY(-2px);
+}
+
+/* LINKS */
+.extra-links {
+  margin-top: 18px;
+  font-size: 13px;
+  color: #f1f1f1;
+}
+
+.extra-links a {
+  color: #ffffff;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.extra-links a:hover {
+  text-decoration: underline;
+}

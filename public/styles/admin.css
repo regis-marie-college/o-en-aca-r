@@ -13,7 +13,7 @@
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.9);
   padding: 25px;
   border-radius: 14px;
   backdrop-filter: blur(8px);
@@ -38,7 +38,7 @@
 
 /* Table */
 .table-section {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.9);
   padding: 25px;
   border-radius: 14px;
   backdrop-filter: blur(8px);
