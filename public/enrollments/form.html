@@ -8,23 +8,6 @@
     <title>Enrollments</title>
   </head>
 
-<<<<<<< HEAD
-<body>
-
-    <!-- NAVBAR -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="logo">
-                <img src="../images/logo.png" alt="Regis Marie College Logo">
-                <span>REGIS MARIE COLLEGE</span>
-            </div>
-
-            <ul class="nav-links">
-                <li><a href="#">HOME</a></li>
-                <li><a href="#">CONTACT US</a></li>
-            </ul>
-        </div>
-=======
   <body>
     <!-- NAVBAR -->
     <nav class="navbar">
@@ -39,47 +22,10 @@
           <li><a href="#">CONTACT US</a></li>
         </ul>
       </div>
->>>>>>> 8856700c6a4b567523758edd083b947b2ce678d7
     </nav>
 
     <!-- FORM CONTAINER -->
     <div class="container">
-<<<<<<< HEAD
-        <h2>Student Enrollment Form</h2>
-
-        <!-- MESSAGE -->
-        <div id="formMessage"></div>
-
-        <form id="createUserForm" enctype="multipart/form-data">
-
-            <label for="lastname">Last Name</label>
-            <input type="text" id="lastname" name="last_name" required>
-
-            <label for="firstname">First Name</label>
-            <input type="text" id="firstname" name="first_name" required>
-
-            <label for="middlename">Middle Name</label>
-            <input type="text" id="middlename" name="middle_name">
-
-            
-            <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" required>
-            <label for="mobile">Mobile Number</label>
-            <input 
-              type="tel" 
-              id="mobile" 
-              name="mobile_number" 
-              placeholder="09XXXXXXXXX"
-              pattern="^09\d{9}$"
-              title="Please enter a valid 11-digit mobile number starting with 09"
-              required
-            >
-
-            <label for="birthday">Birthday</label>
-            <input type="date" id="birthday" name="birthday" required>
-
-           <!-- <label for="program">Select Program</label>
-=======
       <h2>Student Enrollment Form</h2>
 
       <!-- MESSAGE -->
@@ -112,7 +58,6 @@
         <input type="date" id="birthday" name="birthday" required />
 
         <!-- <label for="program">Select Program</label>
->>>>>>> 8856700c6a4b567523758edd083b947b2ce678d7
             <select id="program" name="program" required>
                 <option value="">-- Select Program --</option>
                 <option value="BSCS">BSCS - Bachelor of Science in Computer Science</option>
@@ -124,29 +69,14 @@
             <label for="photo">Upload Picture</label>
             <input type="file" id="photo" name="photo" accept="image/*" required>
             -->
-<<<<<<< HEAD
-            <button type="submit">Submit Enrollment</button>
-        </form>
-=======
         <button type="submit">Submit Enrollment</button>
       </form>
->>>>>>> 8856700c6a4b567523758edd083b947b2ce678d7
     </div>
 
     <!-- SCRIPT -->
     <script>
       const form = document.querySelector("#createUserForm");
       const message = document.getElementById("formMessage");
-<<<<<<< HEAD
-    
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-    
-        const button = form.querySelector("button");
-        button.disabled = true;
-        button.textContent = "Submitting...";
-    
-=======
 
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -155,7 +85,6 @@
         button.disabled = true;
         button.textContent = "Submitting...";
 
->>>>>>> 8856700c6a4b567523758edd083b947b2ce678d7
         const formData = {
           last_name: form.last_name.value,
           first_name: form.first_name.value,
@@ -164,26 +93,6 @@
           mobile_number: form.mobile_number.value,
           birthday: form.birthday.value,
         };
-<<<<<<< HEAD
-    
-        try {
-          const response = await fetch(
-  "http://localhost:8000/api/enrollments/create",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(formData),
-  }
-);
-          const data = await response.json();
-    
-          if (!response.ok) {
-            throw new Error(data.message || "Something went wrong");
-          }
-    
-=======
 
         try {
           const response = await fetch(
@@ -202,28 +111,16 @@
             throw new Error(data.message || "Something went wrong");
           }
 
->>>>>>> 8856700c6a4b567523758edd083b947b2ce678d7
           message.innerHTML =
             "<span class='success'>Enrollment submitted successfully!</span>";
           form.reset();
         } catch (error) {
-<<<<<<< HEAD
-          message.innerHTML =
-            `<span class='error'>${error.message}</span>`;
-=======
           message.innerHTML = `<span class='error'>${error.message}</span>`;
->>>>>>> 8856700c6a4b567523758edd083b947b2ce678d7
         } finally {
           button.disabled = false;
           button.textContent = "Submit Enrollment";
         }
       });
     </script>
-<<<<<<< HEAD
-
-</body>
-</html>
-=======
   </body>
 </html>
->>>>>>> 8856700c6a4b567523758edd083b947b2ce678d7
