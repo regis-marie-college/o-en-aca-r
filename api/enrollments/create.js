@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
     }
 
     const result = await db.query(
-      `insert into enrollments (last_name, first_name, middle_name, email, mobile_number)
+      `insert into enrollments (last_name, first_name, middle_name, email, mobile_number, birthday)
       values ($1,$2,$3,$4,$5,$6)
       returning id, last_name, first_name, middle_name, email, mobile_number, created_at
       `,
