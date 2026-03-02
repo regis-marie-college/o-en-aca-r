@@ -80,31 +80,40 @@
     <script>
       const form = document.querySelector("#createUserForm");
       const message = document.getElementById("formMessage");
-
+    
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
-
+    
         const button = form.querySelector("button");
         button.disabled = true;
         button.textContent = "Submitting...";
-
-        const formData = new FormData(form);
-
+    
+        const formData = {
+          last_name: form.last_name.value,
+          first_name: form.first_name.value,
+          middle_name: form.middle_name.value,
+          email: form.email.value,
+          mobile_number: form.mobile_number.value,
+          birthday: form.birthday.value,
+        };
+    
         try {
           const response = await fetch(
-            "http://localhost:8000/api/enrollments/create",
-            {
-              method: "POST",
-              body: formData, // multipart/form-data (for image upload)
-            }
-          );
-
+  "http://localhost:8000/api/enrollments/create",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(formData),
+  }
+);
           const data = await response.json();
-
+    
           if (!response.ok) {
             throw new Error(data.message || "Something went wrong");
           }
-
+    
           message.innerHTML =
             "<span class='success'>Enrollment submitted successfully!</span>";
           form.reset();
