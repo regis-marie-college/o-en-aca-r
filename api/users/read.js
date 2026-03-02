@@ -1,19 +1,32 @@
-const { okay, notAllowed, badRequest } = require("../../lib/response");
-const db = require("../../services/supabase");
+const { okay, notAllowed } = require("../../lib/response");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     return notAllowed(res);
   }
 
-  const { id } = req.query;
+  const { index, id } = req.query;
 
-  try {
-    const result = await db.query(`select * from users where id = $1`, [id]);
+  const users = [
+    {
+      id: "123",
+      name: "Tony Tripulca",
+      type: "admin",
+      email: "tony.tripulca@gmail.com",
+    },
+    {
+      id: "124",
+      name: "Tony Tripulca",
+      type: "student",
+      email: "test@gmail.com",
+    },
+    {
+      id: "125",
+      name: "Tony Tripulca",
+      type: "teacher",
+      email: "testing@gmail.com",
+    },
+  ];
 
-    return okay(res, result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    return badRequest(res, err.message);
-  }
+  return okay(res, users[index || 0]);
 };

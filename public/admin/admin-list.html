@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Admins</title>
+  </head>
+  <body>
+    <div class="users">
+      <div data-component="../../components/sidebar.html"></div>
+
+      <!-- Main Content -->
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+
+        <a href="../users/create.html" class="btn btn-primary">+ Add Admin</a>
+        <!-- Table -->
+        <section class="table-section">
+          <table id="table-users">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+    <script>
+      async function loadUsers() {
+        try {
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/users/list?type=admin`,
+          );
+          const data = await res.json();
+
+          const tbody = document.querySelector("#table-users tbody");
+          tbody.innerHTML = "";
+
+          data.forEach((user) => {
+            const row = document.createElement("tr");
+
+            const { id, last_name, first_name, type, email } = user;
+
+            row.innerHTML = `
+              <td><a href="read.html?id=${id}">${id.substring(0, 6)}</a></td>
+              <td>${last_name} ${first_name}</td>
+              <td>${email}</td>
+              <td>${type}</td>
+            `;
+
+            tbody.appendChild(row);
+          });
+        } catch (err) {
+          console.error("Failed to load users:", err);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        loadUsers();
+      });
+    </script>
+  </body>
+</html>
