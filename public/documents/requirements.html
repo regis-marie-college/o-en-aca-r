@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/requirements.css" rel="stylesheet" />
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Enrollments</title>
+  </head>
+<body>
+
+    <div class="left-panel">
+        <h1>Enrollment Requirements Portal</h1>
+        <p>
+            Please upload the required documents to complete your enrollment.
+            <br><br>
+            ✔ Form 137 <br>
+            ✔ 1x1 ID Picture <br>
+            ✔ PSA Birth Certificate <br>
+            ✔ Good Moral Certificate <br>
+            ✔ Certificate of Completion / Diploma <br>
+            ✔ Other Required Documents
+        </p>
+    </div>
+
+    <div class="right-panel">
+        <h2>Submit Requirements</h2>
+
+        <form>
+
+            <div class="form-row">
+    <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" required>
+    </div>
+
+    <div class="form-group">
+        <label>Student ID</label>
+        <input type="text">
+    </div>
+</div>
+
+            <div class="requirements-box">
+
+                <div class="requirement-item">
+                    <label>Form 137</label>
+                    <input type="file" required>
+                </div>
+
+                <div class="requirement-item">
+                    <label>1x1 ID Picture</label>
+                    <input type="file" required>
+                </div>
+
+                <div class="requirement-item">
+                    <label>PSA Birth Certificate</label>
+                    <input type="file" required>
+                </div>
+
+                <div class="requirement-item">
+                    <label>Good Moral Certificate</label>
+                    <input type="file">
+                </div>
+
+                <div class="requirement-item">
+                    <label>Certificate of Completion / Diploma</label>
+                    <input type="file">
+                </div>
+
+                <div class="requirement-item">
+                    <label>Other Documents (Optional)</label>
+                    <input type="file">
+                </div>
+
+            </div>
+
+            <button type="submit">Submit Requirements</button>
+
+            <div class="note">
+                All files must be clear and readable. Accepted format: PDF, JPG, PNG.
+            </div>
+
+        </form>
+    </div>
+
+</body>
+</html>
