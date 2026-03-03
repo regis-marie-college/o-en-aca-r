@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Programs</title>
+  </head>
+  <body>
+    <div class="programs">
+      <div data-component="../../components/sidebar.html"></div>
+
+      <!-- Main Content -->
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+
+        <section class="form-section">
+          <form id="form-create-program" class="form-card">
+            <div class="form-group">
+              <label>Name</label>
+              <input type="text" name="name" required />
+            </div>
+
+            <div class="form-group">
+              <label>Description</label>
+              <input type="text" name="description" required />
+            </div>
+
+            <button type="button" class="btn btn-primary btn-lg">
+              Create Program
+            </button>
+          </form>
+
+          <div id="formMessage" class="form-message"></div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const form = document.querySelector("#form-create-program");
+      const form_submit = document.querySelector("#form-create-program button");
+      const message = document.getElementById("formMessage");
+
+      form_submit.addEventListener("click", async (e) => {
+        e.preventDefault();
+
+        const button = form.querySelector("button");
+        button.disabled = true;
+        button.textContent = "Creating...";
+
+        const formData = new FormData(form);
+
+        const payload = {
+          name: formData.get("name"),
+          description: formData.get("description"),
+        };
+
+        try {
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/programs/create`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(payload),
+            },
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || "Something went wrong");
+          }
+
+          message.innerHTML =
+            "<span class='success'>Program created successfully!</span>";
+          form.reset();
+        } catch (error) {
+          message.innerHTML = `<span class='error'>${error.message}</span>`;
+        } finally {
+          button.disabled = false;
+          button.textContent = "Create Program";
+        }
+      });
+    </script>
+  </body>
+</html>
