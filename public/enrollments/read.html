@@ -51,6 +51,8 @@
       </div>
     </div>
     <script>
+      let user_data = {};
+
       async function initApproval() {
         try {
           const approval = document.querySelector("#approval");
@@ -62,6 +64,7 @@
             const payload = {
               id,
               status: approval.value,
+              ...user_data,
             };
 
             const response = await fetch(
@@ -101,7 +104,7 @@
             const { id, user_full_name, name, type, created_at } = doc;
 
             row.innerHTML = `
-              <td><a href="#" onclick="openPreview(event)">${id.substring(0, 6)}</a></td>
+              <td><a href="#" onclick="openPreview(event)" style="color:white;">${id.substring(0, 6)}</a></td>
               <td>${user_full_name}</td>
               <td>${name}</td>
               <td>${type}</td>
@@ -125,6 +128,8 @@
           );
 
           const data = await res.json();
+
+          user_data = data;
 
           const info = document.querySelector(".info-holder");
 

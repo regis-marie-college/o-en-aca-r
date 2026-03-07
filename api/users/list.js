@@ -11,9 +11,12 @@ module.exports = async (req, res) => {
 
   try {
     if (type) {
-      result = await db.query(`select * from users where type=$1`, [type]);
+      result = await db.query(
+        `SELECT * FROM users where type = $1 ORDER BY created_at DESC`,
+        [type],
+      );
     } else {
-      result = await db.query(`select * from users`);
+      result = await db.query(`SELET * FROM users`);
     }
 
     return okay(res, result.rows);
