@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Enrollments</title>
+  </head>
+  <body>
+    <div class="enrollments">
+      <div data-component="../../components/sidebar.html"></div>
+
+      <!-- Main Content -->
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+
+        <div class="info-holder"></div>
+        <div class="form-group">
+          <label for="approval">Admin approval</label>
+          <select id="approval" name="approval" required>
+            <option value="Pending">-- Select Decision --</option>
+            <option value="Approved">Approved</option>
+            <option value="Pending">Pending</option>
+            <option value="Declined">Declined</option>
+          </select>
+        </div>
+        <section class="table-section">
+          <h2>Submitted Documents</h2>
+          <table id="table-enrollments">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Mobile number</th>
+                <th>Birthday</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+    <script>
+      async function initApproval() {
+        try {
+          const approval = document.querySelector("#approval");
+
+          const params = new URLSearchParams(window.location.search);
+          const id = params.get("id");
+
+          approval.addEventListener("change", async () => {
+            const payload = {
+              id,
+              status: approval.value,
+            };
+
+            const response = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/enrollments/update-status`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+              },
+            );
+
+            readEnrollment();
+          });
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
+      async function loadEnrollments() {
+        try {
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/list`,
+          );
+          const data = await res.json();
+
+          const tbody = document.querySelector("#table-enrollments tbody");
+          tbody.innerHTML = "";
+
+          data.forEach((enrollment) => {
+            const row = document.createElement("tr");
+
+            const {
+              id,
+              last_name,
+              first_name,
+              middle_name,
+              email,
+              mobile_number,
+              birthday,
+            } = enrollment;
+
+            row.innerHTML = `
+              <td><a href="read.html?id=${id}">${id.substring(0, 6)}</a></td>
+              <td>${last_name} ${first_name} ${middle_name}</td>
+              <td>${email}</td>
+              <td>${mobile_number}</td>
+              <td>${birthday}</td>
+            `;
+
+            tbody.appendChild(row);
+          });
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
+      async function readEnrollment() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const id = params.get("id");
+
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/read?id=${id}`,
+          );
+
+          const data = await res.json();
+
+          const info = document.querySelector(".info-holder");
+
+          info.innerHTML = `
+            <p><strong>ID:</strong> ${data.id}</p>
+            <p><strong>Name:</strong> ${data.first_name} ${data.middle_name} ${data.last_name}</p>
+            <p><strong>Email:</strong> ${data.email}</p>
+            <p><strong>Mobile:</strong> ${data.mobile_number}</p>
+            <p><strong>Birthday:</strong> ${defaultDate(data.birthday)}</p>
+            <p><strong>Created:</strong> ${defaultDate(data.created_at)}</p>
+            <p><strong>Updated:</strong> ${defaultDate(data.updated_at)}</p>
+            <p><strong>Status:</strong> ${data.status || "Pending"}</p>
+          `;
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        initApproval();
+        loadEnrollments();
+        readEnrollment();
+      });
+    </script>
+  </body>
+</html>

@@ -1,3 +1,22 @@
+.enrollments {
+  display: flex;
+  height: 100vh;
+
+  .info-holder {
+    margin-bottom: 16px;
+  }
+
+  .link-enrollment-form {
+    display: block;
+    width: 100%;
+    text-align: right;
+  }
+
+  .form-group {
+    width: 30%;
+  }
+}
+
 /* LOGO */
 .logo {
   display: flex;

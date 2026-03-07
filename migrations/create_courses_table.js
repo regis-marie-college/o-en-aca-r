@@ -27,3 +27,5 @@ async function down() {
 
   console.log(`${table} table dropped`);
 }
+
+module.exports = { up, down };

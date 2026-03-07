@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Dashboard</title>
@@ -38,39 +39,73 @@
 
         <!-- Table -->
         <section class="table-section">
-          <h2>Recent Enrollments</h2>
-          <table>
+          <table id="table-enrollments">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Program</th>
-                <th>Status</th>
-                <th>Date</th>
+                <th>ID</th>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Mobile number</th>
+                <th>Birthday</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>Juan Dela Cruz</td>
-                <td>BSIT</td>
-                <td><span class="status active">Approved</span></td>
-                <td>Feb 25, 2026</td>
-              </tr>
-              <tr>
-                <td>Maria Santos</td>
-                <td>BSBA</td>
-                <td><span class="status pending">Pending</span></td>
-                <td>Feb 24, 2026</td>
-              </tr>
-              <tr>
-                <td>Carlos Reyes</td>
-                <td>BSED</td>
-                <td><span class="status archived">Archived</span></td>
-                <td>Feb 22, 2026</td>
-              </tr>
-            </tbody>
+            <tbody></tbody>
           </table>
         </section>
       </main>
     </div>
+    <script>
+      async function loadEnrollments() {
+        try {
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/list`,
+          );
+          const data = await res.json();
+
+          const tbody = document.querySelector("#table-enrollments tbody");
+          tbody.innerHTML = "";
+
+          const date = new Date();
+
+          const formatted = date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+
+          console.log(formatted);
+
+          data.forEach((enrollment) => {
+            const row = document.createElement("tr");
+
+            const {
+              id,
+              last_name,
+              first_name,
+              middle_name,
+              email,
+              mobile_number,
+              birthday,
+            } = enrollment;
+
+            row.innerHTML = `
+              <td><a href="read.html?id=${id}">${id.substring(0, 6)}</a></td>
+              <td>${last_name} ${first_name} ${middle_name}</td>
+              <td>${email}</td>
+              <td>${mobile_number}</td>
+              <td>${defaultDate(birthday)}</td>
+            `;
+
+            tbody.appendChild(row);
+          });
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        loadEnrollments();
+      });
+    </script>
   </body>
 </html>
