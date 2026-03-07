@@ -27,8 +27,8 @@ module.exports = async (req, res) => {
     // Insert enrollment
     const result = await db.query(
       `insert into enrollments 
-      (last_name, first_name, middle_name, email, mobile_number, birthday)
-      values ($1,$2,$3,$4,$5,$6)
+      (last_name, first_name, middle_name, email, mobile_number, birthday, status)
+      values ($1,$2,$3,$4,$5,$6, 'Pending')
       returning id, last_name, first_name, middle_name, email, mobile_number, created_at`,
       [last_name, first_name, middle_name, email, mobile, birthday],
     );
@@ -41,7 +41,12 @@ module.exports = async (req, res) => {
         await db.query(
           `insert into documents (enrollment_id, user_full_name, name, type)
            values ($1,$2,$3,$4)`,
-          [enrollment.id, `${last_name} ${first_name}`, fileName, "Requirements"],
+          [
+            enrollment.id,
+            `${last_name} ${first_name}`,
+            fileName,
+            "Requirements",
+          ],
         );
       }
     }

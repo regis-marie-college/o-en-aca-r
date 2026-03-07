@@ -61,6 +61,8 @@
           const id = params.get("id");
 
           approval.addEventListener("change", async () => {
+            delete user_data.status;
+
             const payload = {
               id,
               status: approval.value,
