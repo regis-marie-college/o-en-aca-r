@@ -65,8 +65,8 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="profile">Upload Photo</label>
-          <input type="file" id="profile" />
+          <label for="profile">Upload Documents</label>
+          <input type="file" id="profile" multiple />
         </div>
         <button type="button" class="btn btn-primary">Submit Enrollment</button>
       </form>
@@ -77,6 +77,16 @@
 
       form.querySelector("button").addEventListener("click", async (e) => {
         e.preventDefault();
+
+        const input = document.querySelector("#profile");
+
+        const files = input.files;
+
+        const fileNames = [];
+
+        for (let i = 0; i < files.length; i++) {
+          fileNames.push(files[i].name);
+        }
 
         const button = form.querySelector("button");
         button.disabled = true;
@@ -89,9 +99,8 @@
           email: form.email.value,
           mobile: form.mobile.value,
           birthday: form.birthday.value,
+          documents: fileNames,
         };
-
-        console.log(formData);
 
         try {
           const response = await fetch(

@@ -15,6 +15,45 @@
   .form-group {
     width: 30%;
   }
+
+  #preview {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    background: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .preview-box {
+    background: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    width: 700px;
+    height: 500px;
+    position: relative;
+  }
+
+  .preview-box button {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    border: none;
+    background: none;
+    font-size: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    color: black;
+  }
+
+  #frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
 }
 
 /* LOGO */

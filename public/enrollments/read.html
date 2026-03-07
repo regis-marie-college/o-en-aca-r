@@ -29,20 +29,26 @@
         </div>
         <section class="table-section">
           <h2>Submitted Documents</h2>
-          <table id="table-enrollments">
+          <table id="table-documents">
             <thead>
               <tr>
                 <th>ID</th>
                 <th>Full Name</th>
-                <th>Email</th>
-                <th>Mobile number</th>
-                <th>Birthday</th>
+                <th>File</th>
+                <th>Type</th>
+                <th>Submitted At</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </section>
       </main>
+      <div id="preview">
+        <div class="preview-box">
+          <button onclick="closePreview()">✕</button>
+          <iframe id="frame"></iframe>
+        </div>
+      </div>
     </div>
     <script>
       async function initApproval() {
@@ -76,35 +82,30 @@
         }
       }
 
-      async function loadEnrollments() {
+      async function loadDocuments() {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("id");
+
         try {
           const res = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/enrollments/list`,
+            `${window.APP_CONFIG.API_BASE_URL}/documents/list?enrollment_id=${id}`,
           );
           const data = await res.json();
 
-          const tbody = document.querySelector("#table-enrollments tbody");
+          const tbody = document.querySelector("#table-documents tbody");
           tbody.innerHTML = "";
 
-          data.forEach((enrollment) => {
+          data.forEach((doc) => {
             const row = document.createElement("tr");
 
-            const {
-              id,
-              last_name,
-              first_name,
-              middle_name,
-              email,
-              mobile_number,
-              birthday,
-            } = enrollment;
+            const { id, user_full_name, name, type, created_at } = doc;
 
             row.innerHTML = `
-              <td><a href="read.html?id=${id}">${id.substring(0, 6)}</a></td>
-              <td>${last_name} ${first_name} ${middle_name}</td>
-              <td>${email}</td>
-              <td>${mobile_number}</td>
-              <td>${birthday}</td>
+              <td><a href="#" onclick="openPreview(event)">${id.substring(0, 6)}</a></td>
+              <td>${user_full_name}</td>
+              <td>${name}</td>
+              <td>${type}</td>
+              <td>${defaultDate(created_at)}</td>
             `;
 
             tbody.appendChild(row);
@@ -142,9 +143,31 @@
         }
       }
 
+      function openPreview(e) {
+        e.preventDefault();
+
+        const preview = document.getElementById("preview");
+        const frame = document.getElementById("frame");
+
+        frame.srcdoc = `
+          <html>
+            <body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;flex-direction:column;">
+              <img src="https://images.immediate.co.uk/production/volatile/sites/3/2018/04/avengers-infinity-war-character-posters-55c281a.jpg" width="480" height="480"/>
+              <p>Preview not available yet</p>
+            </body>
+          </html>
+        `;
+
+        preview.style.display = "flex";
+      }
+
+      function closePreview() {
+        document.getElementById("preview").style.display = "none";
+      }
+
       document.addEventListener("DOMContentLoaded", function () {
         initApproval();
-        loadEnrollments();
+        loadDocuments();
         readEnrollment();
       });
     </script>
