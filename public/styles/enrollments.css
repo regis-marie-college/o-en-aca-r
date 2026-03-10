@@ -6,6 +6,10 @@
     margin-bottom: 16px;
   }
 
+  .search-box {
+    width: 20%;
+  }
+
   .link-enrollment-form {
     display: block;
     width: 100%;

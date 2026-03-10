@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Enrollments</title>
@@ -15,7 +16,10 @@
       <!-- Main Content -->
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
-        <a href="form.html" class="link-enrollment-form" target="_blank">Link to enrollment form</a>
+        <input class="search-box" value="" placeholder="Search" />
+        <a href="form.html" class="link-enrollment-form" target="_blank"
+          >Link to enrollment form</a
+        >
         <!-- Table -->
         <section class="table-section">
           <table id="table-enrollments">
@@ -26,6 +30,7 @@
                 <th>Email</th>
                 <th>Mobile number</th>
                 <th>Birthday</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -34,10 +39,21 @@
       </main>
     </div>
     <script>
-      async function loadEnrollments() {
+      async function initSearch() {
+        const search_box = document.querySelector(".search-box");
+
+        search_box.addEventListener("keyup", (e) => {
+          console.log(e.code);
+          if(e.code === "Enter") {
+            loadEnrollments(search_box.value);
+          }
+        });
+      }
+
+      async function loadEnrollments(search = null) {
         try {
           const res = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/enrollments/list`,
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/list${search ? "?search="+search : ""}`,
           );
           const data = await res.json();
 
@@ -55,6 +71,7 @@
               email,
               mobile_number,
               birthday,
+              status
             } = enrollment;
 
             row.innerHTML = `
@@ -62,7 +79,8 @@
               <td>${last_name} ${first_name} ${middle_name}</td>
               <td>${email}</td>
               <td>${mobile_number}</td>
-              <td>${birthday}</td>
+              <td>${defaultDate(birthday)}</td>
+              <td>${status}</td>
             `;
 
             tbody.appendChild(row);
@@ -74,6 +92,7 @@
 
       document.addEventListener("DOMContentLoaded", function () {
         loadEnrollments();
+        initSearch();
       });
     </script>
   </body>

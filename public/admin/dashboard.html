@@ -19,21 +19,21 @@
 
         <!-- Stats -->
         <section class="stats">
-          <div class="card">
+          <div class="card card-students">
             <h3>Total Students</h3>
-            <p>1,248</p>
+            <p>0</p>
           </div>
-          <div class="card">
+          <div class="card card-enrollments">
             <h3>Active Enrollment</h3>
-            <p>876</p>
+            <p>0</p>
           </div>
-          <div class="card">
+          <div class="card card-pending">
             <h3>Pending Approval</h3>
-            <p>32</p>
+            <p>0</p>
           </div>
-          <div class="card">
+          <div class="card card-archived">
             <h3>Archived Records</h3>
-            <p>540</p>
+            <p>0</p>
           </div>
         </section>
 
@@ -46,6 +46,7 @@
                 <th>Email</th>
                 <th>Mobile number</th>
                 <th>Birthday</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -54,6 +55,60 @@
       </main>
     </div>
     <script>
+      async function countStudents() {
+        try {
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/users/list?type=student`,
+          );
+          const data = await res.json();
+
+          const card_student = document.querySelector(".card-students");
+          card_student.innerHTML = `
+            <h3>Total Students</h3>
+            <p>${data.length}</p>
+          `;
+
+        } catch (err) {
+          console.error("Failed to load students:", err);
+        }
+      }
+
+      async function countEnrollments() {
+        try {
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/list`,
+          );
+          const data = await res.json();
+
+          const card_student = document.querySelector(".card-enrollments");
+          card_student.innerHTML = `
+            <h3>Active Enrollment</h3>
+            <p>${data.length}</p>
+          `;
+
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
+      async function countPendingEnrollments() {
+        try {
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/list?search=Pending`,
+          );
+          const data = await res.json();
+
+          const card_student = document.querySelector(".card-pending");
+          card_student.innerHTML = `
+            <h3>Pending Approval</h3>
+            <p>${data.length}</p>
+          `;
+
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
       async function loadEnrollments() {
         try {
           const res = await fetch(
@@ -75,6 +130,7 @@
               email,
               mobile_number,
               birthday,
+              status
             } = enrollment;
 
             row.innerHTML = `
@@ -82,6 +138,7 @@
               <td>${email}</td>
               <td>${mobile_number}</td>
               <td>${defaultDate(birthday)}</td>
+              <td>${status}</td>
             `;
 
             tbody.appendChild(row);
@@ -93,6 +150,9 @@
 
       document.addEventListener("DOMContentLoaded", function () {
         loadEnrollments();
+        countStudents();
+        countEnrollments();
+        countPendingEnrollments();
       });
     </script>
   </body>
