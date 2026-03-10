@@ -50,6 +50,38 @@
   display: flex;
   align-items: center;
   gap: 15px;
+  position: relative; /* required for dropdown */
+  cursor: pointer;
+}
+
+.user .dropdown {
+  position: absolute;
+  z-index: 1201;
+  top: 55px;
+  right: 0;
+  background: #fff;
+  border-radius: 8px;
+  min-width: 150px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  display: none;
+  overflow: hidden;
+}
+
+.user .dropdown a {
+  display: block;
+  padding: 10px 15px;
+  font-size: 14px;
+  text-decoration: none;
+  color: #333;
+}
+
+.user .dropdown a:hover {
+  background: #f3f4f6;
+}
+
+/* show dropdown */
+.user.active .dropdown {
+  display: block;
 }
 
 .avatar {
