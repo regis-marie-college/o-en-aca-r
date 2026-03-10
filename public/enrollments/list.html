@@ -30,6 +30,7 @@
                 <th>Email</th>
                 <th>Mobile number</th>
                 <th>Birthday</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -70,6 +71,7 @@
               email,
               mobile_number,
               birthday,
+              status
             } = enrollment;
 
             row.innerHTML = `
@@ -78,6 +80,7 @@
               <td>${email}</td>
               <td>${mobile_number}</td>
               <td>${defaultDate(birthday)}</td>
+              <td>${status}</td>
             `;
 
             tbody.appendChild(row);
