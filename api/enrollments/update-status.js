@@ -37,6 +37,9 @@ module.exports = async (req, res) => {
         password: "password",
         type: "student",
       });
+
+      // Send email for confirmation
+      // Codes here...
     }
 
     return okay(res, result.rows[0]);
