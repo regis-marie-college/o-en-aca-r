@@ -17,6 +17,8 @@ async function up() {
       mobile_number varchar(15) not null,
       birthday date not null,
 
+      status TEXT,
+
       created_at timestamp default now(),
       updated_at timestamp default now(),
       deleted_at timestamp

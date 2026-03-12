@@ -1,17 +1,21 @@
 const db = require("../services/supabase");
 
 async function up() {
-  const table = "courses";
+  const table = "documents";
 
   await db.query(`
     create table if not exists ${table} (
       id uuid primary key default gen_random_uuid(),
-      name text not null,
-      description text,
-      status text,
-      created_at timestamp default now(),
-      updated_at timestamp default now(),
-      deleted_at timestamp
+      enrollment_id TEXT,
+      user_id TEXT,
+      user_full_name TEXT,
+      name TEXT NOT NULL,
+      description TEXT,
+      type TEXT,
+      status TEXT,
+      created_at TIMESTAMP default now(),
+      updated_at TIMESTAMP default now(),
+      deleted_at TIMESTAMP
     );
   `);
 
@@ -19,7 +23,7 @@ async function up() {
 }
 
 async function down() {
-  const table = "courses";
+  const table = "documents";
 
   await db.query(`
     drop table if exists ${table};

@@ -1,25 +1,17 @@
 const { okay, notAllowed, badRequest } = require("../../lib/response");
 const db = require("../../services/supabase");
-
+//edit ko muna to
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     return notAllowed(res);
   }
 
-  const { type } = req.query;
-  let result = { rows: [] };
+  const { id } = req.query;
 
   try {
-    if (type) {
-      result = await db.query(
-        `SELECT * FROM users where type = $1 ORDER BY created_at DESC`,
-        [type],
-      );
-    } else {
-      result = await db.query(`SELET * FROM users`);
-    }
+    const result = await db.query(`SELECT * FROM enrollments WHERE id = $1`, [id]);
 
-    return okay(res, result.rows);
+    return okay(res, result.rows[0]);
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);

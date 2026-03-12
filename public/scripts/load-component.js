@@ -79,6 +79,17 @@
 
   async function initLogout() {
     const btn_user = document.querySelector(".user");
+    const btn_logout = document.querySelector(".btn-logout");
+
+    btn_user.addEventListener("click", (e) => {
+      e.stopPropagation();
+      btn_user.classList.toggle("active");
+      console.log(btn_user);
+    });
+
+    document.addEventListener("click", () => {
+      btn_user.classList.remove("active");
+    });
 
     const user = JSON.parse(localStorage.getItem("user"));
 
@@ -86,7 +97,7 @@
 
     btn_user.querySelector("span").textContent = user.first_name;
 
-    btn_user.addEventListener("click", async () => {
+    btn_logout.addEventListener("click", async () => {
       try {
         const response = await fetch(
           `${window.APP_CONFIG.API_BASE_URL}/auth/logout`,

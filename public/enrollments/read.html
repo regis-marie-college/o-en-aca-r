@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Enrollments</title>
+  </head>
+  <body>
+    <div class="enrollments">
+      <div data-component="../../components/sidebar.html"></div>
+
+      <!-- Main Content -->
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+
+        <div class="info-holder"></div>
+        <div class="form-group">
+          <label for="approval">Admin approval</label>
+          <select id="approval" name="approval" required>
+            <option value="Pending">-- Select Decision --</option>
+            <option value="Approved">Approved</option>
+            <option value="Pending">Pending</option>
+            <option value="Declined">Declined</option>
+          </select>
+        </div>
+        <section class="table-section">
+          <h2>Submitted Documents</h2>
+          <table id="table-documents">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Full Name</th>
+                <th>File</th>
+                <th>Type</th>
+                <th>Submitted At</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+      </main>
+      <div id="preview">
+        <div class="preview-box">
+          <button onclick="closePreview()">✕</button>
+          <iframe id="frame"></iframe>
+        </div>
+      </div>
+    </div>
+    <script>
+      let user_data = {};
+
+      async function initApproval() {
+        try {
+          const approval = document.querySelector("#approval");
+
+          const params = new URLSearchParams(window.location.search);
+          const id = params.get("id");
+
+          approval.addEventListener("change", async () => {
+            delete user_data.status;
+
+            const payload = {
+              id,
+              status: approval.value,
+              ...user_data,
+            };
+
+            const response = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/enrollments/update-status`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+              },
+            );
+
+            readEnrollment();
+          });
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
+      async function loadDocuments() {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("id");
+
+        try {
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/documents/list?enrollment_id=${id}`,
+          );
+          const data = await res.json();
+
+          const tbody = document.querySelector("#table-documents tbody");
+          tbody.innerHTML = "";
+
+          data.forEach((doc) => {
+            const row = document.createElement("tr");
+
+            const { id, user_full_name, name, type, created_at } = doc;
+
+            row.innerHTML = `
+              <td><a href="#" onclick="openPreview(event)" style="color:white;">${id.substring(0, 6)}</a></td>
+              <td>${user_full_name}</td>
+              <td>${name}</td>
+              <td>${type}</td>
+              <td>${defaultDate(created_at)}</td>
+            `;
+
+            tbody.appendChild(row);
+          });
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
+      async function readEnrollment() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const id = params.get("id");
+
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/read?id=${id}`,
+          );
+
+          const data = await res.json();
+
+          user_data = data;
+
+          const info = document.querySelector(".info-holder");
+
+          info.innerHTML = `
+            <p><strong>ID:</strong> ${data.id}</p>
+            <p><strong>Name:</strong> ${data.first_name} ${data.middle_name} ${data.last_name}</p>
+            <p><strong>Email:</strong> ${data.email}</p>
+            <p><strong>Mobile:</strong> ${data.mobile_number}</p>
+            <p><strong>Birthday:</strong> ${defaultDate(data.birthday)}</p>
+            <p><strong>Created:</strong> ${defaultDate(data.created_at)}</p>
+            <p><strong>Updated:</strong> ${defaultDate(data.updated_at)}</p>
+            <p><strong>Status:</strong> ${data.status || "Pending"}</p>
+          `;
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
+      function openPreview(e) {
+        e.preventDefault();
+
+        const preview = document.getElementById("preview");
+        const frame = document.getElementById("frame");
+
+        frame.srcdoc = `
+          <html>
+            <body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;flex-direction:column;">
+              <img src="https://images.immediate.co.uk/production/volatile/sites/3/2018/04/avengers-infinity-war-character-posters-55c281a.jpg" width="480" height="480"/>
+              <p>Preview not available yet</p>
+            </body>
+          </html>
+        `;
+
+        preview.style.display = "flex";
+      }
+
+      function closePreview() {
+        document.getElementById("preview").style.display = "none";
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        initApproval();
+        loadDocuments();
+        readEnrollment();
+      });
+    </script>
+  </body>
+</html>
