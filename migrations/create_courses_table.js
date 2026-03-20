@@ -6,6 +6,9 @@ async function up() {
   await db.query(`
     create table if not exists ${table} (
       id uuid primary key default gen_random_uuid(),
+      program_id TEXT,
+      program_name TEXT,
+      program_code TEXT,
       name text not null,
       description text,
       status text,

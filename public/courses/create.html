@@ -28,6 +28,16 @@
               <input type="text" name="description" required />
             </div>
 
+            <div class="form-group">
+              <label for="program">Programs</label>
+              <select id="program" name="program" required>
+                <option value="Pending">-- Select Program --</option>
+                <option value="Approved">Approved</option>
+                <option value="Pending">Pending</option>
+                <option value="Declined">Declined</option>
+              </select>
+            </div>
+
             <button type="button" class="btn btn-primary btn-lg">
               Create courses
             </button>
@@ -39,51 +49,92 @@
     </div>
 
     <script>
-      const form = document.querySelector("#form-create-courses");
-      const form_submit = document.querySelector("#form-create-courses button");
-      const message = document.getElementById("formMessage");
+      function initForm() {
+        const form = document.querySelector("#form-create-courses");
+        const form_submit = document.querySelector(
+          "#form-create-courses button",
+        );
+        const message = document.getElementById("formMessage");
 
-      form_submit.addEventListener("click", async (e) => {
-        e.preventDefault();
+        form_submit.addEventListener("click", async (e) => {
+          e.preventDefault();
 
-        const button = form.querySelector("button");
-        button.disabled = true;
-        button.textContent = "Creating...";
+          const button = form.querySelector("button");
+          button.disabled = true;
+          button.textContent = "Creating...";
 
-        const formData = new FormData(form);
+          const formData = new FormData(form);
 
-        const payload = {
-          name: formData.get("name"),
-          description: formData.get("description"),
-        };
+          const [program_id, program_name, program_code] = formData
+            .get("program")
+            .split(":");
 
-        try {
-          const response = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/courses/create`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
+          const payload = {
+            name: formData.get("name"),
+            description: formData.get("description"),
+            program_id,
+            program_name,
+            program_code,
+          };
+
+          try {
+            const response = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/courses/create`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
               },
-              body: JSON.stringify(payload),
-            },
-          );
+            );
 
-          const data = await response.json();
+            const data = await response.json();
 
-          if (!response.ok) {
-            throw new Error(data.message || "Something went wrong");
+            if (!response.ok) {
+              throw new Error(data.message || "Something went wrong");
+            }
+
+            message.innerHTML =
+              "<span class='success'>course created successfully!</span>";
+            form.reset();
+          } catch (error) {
+            message.innerHTML = `<span class='error'>${error.message}</span>`;
+          } finally {
+            button.disabled = false;
+            button.textContent = "Create course";
           }
+        });
+      }
 
-          message.innerHTML =
-            "<span class='success'>course created successfully!</span>";
-          form.reset();
-        } catch (error) {
-          message.innerHTML = `<span class='error'>${error.message}</span>`;
-        } finally {
-          button.disabled = false;
-          button.textContent = "Create course";
+      async function loadPrograms() {
+        try {
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/programs/list`,
+          );
+          const data = await res.json();
+
+          const select_programs = document.querySelector("select#program");
+          select_programs.innerHTML = "";
+
+          data.forEach((program) => {
+            const option = document.createElement("option");
+
+            const { id, name, code } = program;
+
+            option.value = `${id}:${name}:${code}`;
+            option.textContent = name;
+
+            select_programs.appendChild(option);
+          });
+        } catch (err) {
+          console.error("Failed to load programs:", err);
         }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        loadPrograms();
+        initForm();
       });
     </script>
   </body>

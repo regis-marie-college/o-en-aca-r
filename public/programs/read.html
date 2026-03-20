@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Programs</title>
+  </head>
+  <body>
+    <div class="programs">
+      <div data-component="../../components/sidebar.html"></div>
+
+      <!-- Main Content -->
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+
+        <div class="info-holder"></div>
+      </main>
+    </div>
+    <script>
+      async function loadCourses() {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("id");
+
+        try {
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/courses/list?program_id=${id}`,
+          );
+          const data = await res.json();
+
+          const tbody = document.querySelector("#table-courses tbody");
+          tbody.innerHTML = "";
+
+          data.forEach((doc) => {
+            const row = document.createElement("tr");
+
+            const { id, user_full_name, name, type, created_at } = doc;
+
+            row.innerHTML = `
+              <td><a href="#" onclick="openPreview(event)" style="color:white;">${id.substring(0, 6)}</a></td>
+              <td>${user_full_name}</td>
+              <td>${name}</td>
+              <td>${type}</td>
+              <td>${defaultDate(created_at)}</td>
+            `;
+
+            tbody.appendChild(row);
+          });
+        } catch (err) {
+          console.error("Failed to load enrollments:", err);
+        }
+      }
+
+      async function readProgram() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const id = params.get("id");
+
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/programs/read?id=${id}`,
+          );
+
+          const data = await res.json();
+
+          user_data = data;
+
+          const info = document.querySelector(".info-holder");
+
+          info.innerHTML = `
+            <p><strong>ID:</strong> ${data.id}</p>
+            <p><strong>Program:</strong> ${data.name}</p>
+            <p><strong>Description:</strong> ${data.description}</p>
+          `;
+        } catch (err) {
+          console.error("Failed to load programs:", err);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        readProgram();
+      });
+    </script>
+  </body>
+</html>

@@ -7,6 +7,7 @@ async function up() {
     create table if not exists ${table} (
       id uuid primary key default gen_random_uuid(),
       name text not null,
+      code TEXT,
       description text,
       status text,
       created_at timestamp default now(),

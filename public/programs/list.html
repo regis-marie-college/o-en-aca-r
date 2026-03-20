@@ -9,7 +9,7 @@
     <title>Programs</title>
   </head>
   <body>
-    <div class="users">
+    <div class="programs">
       <div data-component="../../components/sidebar.html"></div>
 
       <!-- Main Content -->
@@ -26,6 +26,7 @@
               <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Code</th>
                 <th>Description</th>
                 <th>Status</th>
               </tr>
@@ -36,7 +37,7 @@
       </main>
     </div>
     <script>
-      async function loadUsers() {
+      async function loadPrograms() {
         try {
           const res = await fetch(
             `${window.APP_CONFIG.API_BASE_URL}/programs/list`,
@@ -49,11 +50,12 @@
           data.forEach((program) => {
             const row = document.createElement("tr");
 
-            const { id, name, description, status } = program;
+            const { id, name, code, description, status } = program;
 
             row.innerHTML = `
               <td><a href="read.html?id=${id}">${id.substring(0, 6)}</a></td>
               <td>${name}</td>
+              <td>${code}</td>
               <td>${description}</td>
               <td>${status}</td>
             `;
@@ -66,7 +68,7 @@
       }
 
       document.addEventListener("DOMContentLoaded", function () {
-        loadUsers();
+        loadPrograms();
       });
     </script>
   </body>
