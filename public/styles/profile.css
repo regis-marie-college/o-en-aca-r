@@ -1,0 +1,274 @@
+/* ===============================
+RESET
+================================= */
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Segoe UI',sans-serif;
+}
+
+/* ===============================
+BODY
+================================= */
+
+.profile{
+
+background: linear-gradient(135deg,#071426,#ffffff);
+
+min-height:100vh;
+
+display:flex;
+justify-content:center;
+align-items:center;
+
+padding:40px;
+
+}
+
+.profile::before{
+
+content:"";
+
+position:fixed;
+
+width:100%;
+height:100%;
+
+background: radial-gradient(circle at 25% 50%, rgba(59,130,246,0.25), transparent 60%);
+
+z-index:0;
+
+}
+
+/* ===============================
+CONTAINER
+================================= */
+
+.account-container{
+
+width:700px;
+max-width:100%;
+
+position:relative;
+z-index:1;
+
+}
+
+/* ===============================
+PROFILE CARD
+================================= */
+
+.profile-card{
+
+background:rgba(255,255,255,0.15);
+
+backdrop-filter:blur(14px);
+
+border:1px solid rgba(255,255,255,0.3);
+
+border-radius:20px;
+
+padding:40px;
+
+box-shadow:0 15px 40px rgba(0,0,0,0.25);
+
+color:white;
+
+}
+
+/* ===============================
+PROFILE HEADER
+================================= */
+
+.profile-header{
+
+text-align:center;
+
+margin-bottom:30px;
+
+}
+
+.profile-picture{
+
+width:90px;
+height:90px;
+
+background:#3b82f6;
+
+border-radius:50%;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+font-size:36px;
+font-weight:bold;
+
+margin:auto;
+
+margin-bottom:15px;
+
+}
+
+.role{
+
+font-size:13px;
+color:#e5e7eb;
+
+}
+
+/* ===============================
+FORM
+================================= */
+
+.profile-form h3{
+
+margin-bottom:20px;
+
+}
+
+.form-grid{
+
+display:grid;
+
+grid-template-columns:1fr 1fr;
+
+gap:20px;
+
+}
+
+.form-group{
+
+display:flex;
+flex-direction:column;
+
+}
+
+.form-group label{
+
+font-size:13px;
+margin-bottom:5px;
+
+color:#e5e7eb;
+
+}
+
+.form-group input,
+.form-group select{
+
+padding:10px;
+
+border-radius:8px;
+
+border:1px solid rgba(255,255,255,0.3);
+
+background:rgba(255,255,255,0.1);
+
+color:white;
+
+}
+
+/* ===============================
+BUTTONS
+================================= */
+
+.buttons{
+
+margin-top:25px;
+
+display:flex;
+
+gap:15px;
+
+}
+
+.save-btn{
+
+padding:12px 28px;
+
+border:none;
+
+background:linear-gradient(135deg,#2563eb,#3b82f6);
+
+border-radius:25px;
+
+color:white;
+
+font-weight:600;
+
+cursor:pointer;
+
+box-shadow:0 10px 25px rgba(37,99,235,0.5);
+
+}
+
+.cancel-btn{
+
+padding:12px 28px;
+
+border-radius:25px;
+
+border:1px solid rgba(255,255,255,0.4);
+
+background:transparent;
+
+color:white;
+
+cursor:pointer;
+
+}
+/* ===============================
+TOP BAR
+================================= */
+
+.top-bar{
+
+margin-bottom:20px;
+
+}
+
+/* BACK BUTTON */
+
+.back-btn{
+
+padding:8px 16px;
+
+border:none;
+
+background:rgba(255,255,255,0.15);
+
+border:1px solid rgba(255,255,255,0.3);
+
+color:white;
+
+border-radius:10px;
+
+cursor:pointer;
+
+font-size:14px;
+
+transition:0.3s;
+
+}
+
+.back-btn:hover{
+
+background:rgba(255,255,255,0.25);
+
+}
+
+/* ===============================
+RESPONSIVE
+================================= */
+
+@media(max-width:700px){
+
+.form-grid{
+
+grid-template-columns:1fr;
+
+}
+
+}

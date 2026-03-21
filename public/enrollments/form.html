@@ -3,132 +3,116 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link href="../styles/index.css" rel="stylesheet" />
-    <script src="../scripts/config.js" defer></script>
-    <script src="../scripts/load-component.js" defer></script>
-    <title>Enrollments</title>
+
+    <title>Enrollment Portal</title>
+
+    <link rel="stylesheet" href="../styles/enrollments.css" />
   </head>
 
-  <body>
-    <section class="form-section">
-      <form id="create-enrollment-form" class="form-card">
+  <body class="enrollment">
+    <form id="enrollmentForm" class="container">
+      <!-- LEFT SIDE -->
+      <div class="card">
         <div class="logo">
-          <img src="../images/logo.png" alt="Regis Marie College Logo" />
+          <img src="../images/logo.png" />
           <span>REGIS MARIE COLLEGE</span>
         </div>
-        <h2>Student Enrollment Form</h2>
+
+        <h2>Student Enrollment</h2>
+
         <div class="form-group">
-          <label for="last_name">Last Name</label>
+          <label>Last Name</label>
           <input type="text" name="last_name" required />
         </div>
+
         <div class="form-group">
-          <label for="first_name">First Name</label>
+          <label>First Name</label>
           <input type="text" name="first_name" required />
         </div>
+
         <div class="form-group">
-          <label for="middle_name">Middle Name</label>
+          <label>Middle Name</label>
           <input type="text" name="middle_name" required />
         </div>
+
         <div class="form-group">
-          <label for="email">Email</label>
+          <label>Email</label>
           <input type="email" name="email" required />
         </div>
+
         <div class="form-group">
-          <label for="mobile">Mobile</label>
+          <label>Mobile</label>
           <input
             type="text"
             name="mobile"
-            placeholder="09XXXXXXXXX"
             pattern="^09\d{9}$"
-            title="Please enter a valid 11-digit mobile number starting with 09"
+            placeholder="09XXXXXXXXX"
             required
           />
         </div>
+
         <div class="form-group">
-          <label for="birthday">Birthday</label>
+          <label>Birthday</label>
           <input type="date" name="birthday" required />
         </div>
+
         <div class="form-group">
-          <label for="program">Role</label>
-          <select id="program" name="program" required>
-            <option value="">-- Select Program --</option>
-            <option value="BSCS">
-              BSCS - Bachelor of Science in Computer Science
-            </option>
-            <option value="BSOA">
-              BSOA - Bachelor of Science in Office Administration
-            </option>
-            <option value="BSED">BSED - Bachelor of Secondary Education</option>
-            <option value="BEED">
-              BEED - Bachelor of Elementary Education
-            </option>
+          <label>Program</label>
+
+          <select name="program" required>
+            <option value="">Select Program</option>
+
+            <option value="BSCS">BSCS</option>
+            <option value="BSOA">BSOA</option>
+            <option value="BSED">BSED</option>
+            <option value="BEED">BEED</option>
           </select>
         </div>
-        <div class="form-group">
-          <label for="profile">Upload Documents</label>
-          <input type="file" id="profile" multiple />
+      </div>
+
+      <!-- RIGHT SIDE -->
+
+      <div class="card">
+        <h2>Submit Requirements</h2>
+
+        <div class="requirements-box">
+          <div class="requirement-item">
+            <label>Form 137</label>
+            <input type="file" id="form137" required />
+          </div>
+
+          <div class="requirement-item">
+            <label>1x1 ID Picture</label>
+            <input type="file" id="idpic" required />
+          </div>
+
+          <div class="requirement-item">
+            <label>PSA Birth Certificate</label>
+            <input type="file" id="psa" required />
+          </div>
+
+          <div class="requirement-item">
+            <label>Good Moral</label>
+            <input type="file" id="moral" />
+          </div>
+
+          <div class="requirement-item">
+            <label>Diploma</label>
+            <input type="file" id="diploma" />
+          </div>
+
+          <div class="requirement-item">
+            <label>Other Documents</label>
+            <input type="file" id="others" />
+          </div>
         </div>
-        <button type="button" class="btn btn-primary">Submit Enrollment</button>
-      </form>
-    </section>
-    <script>
-      const form = document.querySelector("#create-enrollment-form");
-      const message = document.getElementById("formMessage");
+      </div>
 
-      form.querySelector("button").addEventListener("click", async (e) => {
-        e.preventDefault();
+      <div class="submit-container">
+        <button type="submit">Submit Enrollment</button>
 
-        const input = document.querySelector("#profile");
-
-        const files = input.files;
-
-        const fileNames = [];
-
-        for (let i = 0; i < files.length; i++) {
-          fileNames.push(files[i].name);
-        }
-
-        const button = form.querySelector("button");
-        button.disabled = true;
-        button.textContent = "Submitting...";
-
-        const formData = {
-          last_name: form.last_name.value,
-          first_name: form.first_name.value,
-          middle_name: form.middle_name.value,
-          email: form.email.value,
-          mobile: form.mobile.value,
-          birthday: form.birthday.value,
-          documents: fileNames,
-        };
-
-        try {
-          const response = await fetch(
-            "http://localhost:8000/api/enrollments/create",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(formData),
-            },
-          );
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.message || "Something went wrong");
-          }
-
-          message.innerHTML =
-            "<span class='success'>Enrollment submitted successfully!</span>";
-          form.reset();
-        } catch (error) {
-          message.innerHTML = `<span class='error'>${error.message}</span>`;
-        } finally {
-          button.disabled = false;
-          button.textContent = "Submit Enrollment";
-        }
-      });
-    </script>
+        <div id="formMessage"></div>
+      </div>
+    </form>
   </body>
 </html>

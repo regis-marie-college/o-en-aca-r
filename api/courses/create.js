@@ -10,7 +10,7 @@ module.exports = async (req, res) => {
   try {
     const body = await bodyParser(req);
 
-    const { name, description } = body;
+    const { name, description, program_id, program_name, program_code } = body;
 
     // Basic validation
     if (!name) {
@@ -18,11 +18,11 @@ module.exports = async (req, res) => {
     }
 
     const result = await db.query(
-      `insert into courses (name, description, status)
-      values ($1,$2,'active')
+      `insert into courses (name, description, program_id, program_name, program_code, status)
+      values ($1,$2,$3,$4,$5,'active')
       returning id, name, description, status, created_at
       `,
-      [name, description],
+      [name, description, program_id, program_name, program_code],
     );
 
     return okay(res, result.rows[0]);

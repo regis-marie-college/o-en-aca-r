@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
   const { id } = req.query;
 
   try {
-    const result = await db.query(`SELECT * FROM enrollments WHERE id = $1`, [id]);
+    const result = await db.query(`SELECT * FROM programs WHERE id = $1`, [id]);
 
     return okay(res, result.rows[0]);
   } catch (err) {
