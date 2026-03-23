@@ -41,55 +41,65 @@
     <script>
       async function initSearch() {
         const search_box = document.querySelector(".search-box");
-
+    
         search_box.addEventListener("keyup", (e) => {
-          console.log(e.code);
-          if(e.code === "Enter") {
+          if (e.code === "Enter") {
             loadEnrollments(search_box.value);
           }
         });
       }
-
+    
       async function loadEnrollments(search = null) {
         try {
           const res = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/enrollments/list${search ? "?search="+search : ""}`,
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/list${
+              search ? "?search=" + search : ""
+            }`
           );
+    
           const data = await res.json();
-
+    
           const tbody = document.querySelector("#table-enrollments tbody");
           tbody.innerHTML = "";
-
+    
           data.forEach((enrollment) => {
             const row = document.createElement("tr");
-
+    
             const {
               id,
               last_name,
               first_name,
               middle_name,
               email,
-              mobile_number,
+              mobile_number, 
               birthday,
               status
             } = enrollment;
-
+    
             row.innerHTML = `
-              <td><a href="read.html?id=${id}" style="color:white;">${id.substring(0, 6)}</a></td>
-              <td>${last_name} ${first_name} ${middle_name}</td>
+              <td>
+                <a href="read.html?id=${id}" style="color:white;">
+                  ${id.substring(0, 6)}
+                </a>
+              </td>
+              <td>${last_name} ${first_name} ${middle_name || ""}</td>
               <td>${email}</td>
               <td>${mobile_number}</td>
               <td>${defaultDate(birthday)}</td>
-              <td>${status}</td>
+              <td>
+                <span class="status ${status}">
+                  ${status}
+                </span>
+              </td>
             `;
-
+    
             tbody.appendChild(row);
           });
         } catch (err) {
           console.error("Failed to load enrollments:", err);
         }
       }
-
+    
       document.addEventListener("DOMContentLoaded", function () {
         loadEnrollments();
         initSearch();

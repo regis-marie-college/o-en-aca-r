@@ -14,10 +14,18 @@ async function up() {
       middle_name varchar(100),
 
       email varchar(150) not null,
-      mobile_number varchar(15) not null,
+      mobile varchar(15) not null,
       birthday date not null,
 
-      status TEXT,
+      -- 👉 DOCUMENT FILE URLS
+      form137_url text,
+      idpic_url text,
+      psa_url text,
+      moral_url text,
+      diploma_url text,
+      others_url text,
+
+      status text default 'pending',
 
       created_at timestamp default now(),
       updated_at timestamp default now(),
@@ -25,7 +33,7 @@ async function up() {
     );
   `);
 
-  console.log("${table} table created");
+  console.log(`${table} table created`);
 }
 
 async function down() {
@@ -35,7 +43,7 @@ async function down() {
     drop table if exists ${table};
   `);
 
-  console.log("${table} table dropped");
+  console.log(`${table} table dropped`);
 }
 
 module.exports = { up, down };

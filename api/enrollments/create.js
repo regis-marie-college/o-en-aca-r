@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
       birthday,
       documents,
     } = body;
-
+    console.log(documents)
     if (!last_name || !first_name || !email) {
       return badRequest(res, "Missing required fields");
     }
