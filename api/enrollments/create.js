@@ -19,10 +19,13 @@ module.exports = async (req, res) => {
       birthday,
       documents,
     } = body;
-    console.log(documents)
-    if (!last_name || !first_name || !email) {
-      return badRequest(res, "Missing required fields");
-    }
+    console.log("Documents {");
+
+    Object.values(documents || {}).forEach(file => {
+      console.log(" ", file);
+    });
+    
+    console.log("}");
 
     // Insert enrollment
     const result = await db.query(
@@ -36,8 +39,10 @@ module.exports = async (req, res) => {
     const enrollment = result.rows[0];
 
     // Insert documents
-    if (documents && documents.length > 0) {
-      for (const fileName of documents) {
+    if (documents && Object.keys(documents).length > 0) {
+      const files = Object.values(documents);
+    
+      for (const fileName of files) {
         await db.query(
           `insert into documents (enrollment_id, user_full_name, name, type)
            values ($1,$2,$3,$4)`,
