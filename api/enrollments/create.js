@@ -19,39 +19,45 @@ module.exports = async (req, res) => {
       birthday,
       documents,
     } = body;
-    console.log("Documents {");
 
-    Object.values(documents || {}).forEach(file => {
-      console.log(" ", file);
-    });
-    
-    console.log("}");
+    // ✅ Debug log (formatted)
+    if (documents) {
+      console.log("Documents {");
+      Object.entries(documents).forEach(([category, file]) => {
+        console.log(`  ${category}: ${file}`);
+      });
+      console.log("}");
+    }
 
-    // Insert enrollment
+    // ✅ Validation
+    if (!last_name || !first_name || !email) {
+      return badRequest(res, "Missing required fields");
+    }
+
+    // ✅ Insert enrollment
     const result = await db.query(
       `insert into enrollments 
       (last_name, first_name, middle_name, email, mobile_number, birthday, status)
-      values ($1,$2,$3,$4,$5,$6, 'Pending')
+      values ($1,$2,$3,$4,$5,$6,'Pending')
       returning id, last_name, first_name, middle_name, email, mobile_number, created_at`,
-      [last_name, first_name, middle_name, email, mobile, birthday],
+      [last_name, first_name, middle_name, email, mobile, birthday]
     );
 
     const enrollment = result.rows[0];
 
-    // Insert documents
+    // ✅ Insert documents (category + type)
     if (documents && Object.keys(documents).length > 0) {
-      const files = Object.values(documents);
-    
-      for (const fileName of files) {
+      for (const [category, fileName] of Object.entries(documents)) {
         await db.query(
-          `insert into documents (enrollment_id, user_full_name, name, type)
-           values ($1,$2,$3,$4)`,
+          `insert into documents (enrollment_id, user_full_name, name, category, type)
+           values ($1,$2,$3,$4,$5)`,
           [
             enrollment.id,
             `${last_name} ${first_name}`,
             fileName,
-            "Requirements",
-          ],
+            category,        // form137, idpic, psa, etc.
+            "Requirements",  // default type
+          ]
         );
       }
     }

@@ -13,6 +13,7 @@ async function up() {
       description TEXT,
       type TEXT,
       status TEXT,
+      category TEXT,
       created_at TIMESTAMP default now(),
       updated_at TIMESTAMP default now(),
       deleted_at TIMESTAMP
