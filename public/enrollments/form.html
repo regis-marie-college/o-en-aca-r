@@ -115,73 +115,73 @@
       </div>
     </form>
     <script>
-        const form = document.querySelector("#enrollmentForm");
-const message = document.getElementById("formMessage");
+      const form = document.querySelector("#enrollmentForm");
+      const message = document.getElementById("formMessage");
 
-form.querySelector("button").addEventListener("click", async (e) => {
-  e.preventDefault();
+      form.querySelector("button").addEventListener("click", async (e) => {
+        e.preventDefault();
 
-  const fileInputs = {
-    form137: document.getElementById("form137").files[0],
-    idpic: document.getElementById("idpic").files[0],
-    psa: document.getElementById("psa").files[0],
-    moral: document.getElementById("moral").files[0],
-    diploma: document.getElementById("diploma").files[0],
-    others: document.getElementById("others").files[0],
-  };
+        const fileInputs = {
+          form137: document.getElementById("form137").files[0],
+          idpic: document.getElementById("idpic").files[0],
+          psa: document.getElementById("psa").files[0],
+          moral: document.getElementById("moral").files[0],
+          diploma: document.getElementById("diploma").files[0],
+          others: document.getElementById("others").files[0],
+        };
 
-  // 👉 GET FILE NAMES ONLY (for now)
-  const documents = {};
+        // 👉 GET FILE NAMES ONLY (for now)
+        const documents = {};
 
-  for (let key in fileInputs) {
-    if (fileInputs[key]) {
-      documents[key] = fileInputs[key].name;
-    }
-  }
+        for (let key in fileInputs) {
+          if (fileInputs[key]) {
+            documents[key] = fileInputs[key].name;
+          }
+        }
 
-  const button = form.querySelector("button");
-  button.disabled = true;
-  button.textContent = "Submitting...";
+        const button = form.querySelector("button");
+        button.disabled = true;
+        button.textContent = "Submitting...";
 
-  const formData = {
-    last_name: form.last_name.value,
-    first_name: form.first_name.value,
-    middle_name: form.middle_name.value,
-    email: form.email.value,
-    mobile: form.mobile.value,
-    birthday: form.birthday.value,
-    documents: documents, // 👈 now structured
-  };
+        const formData = {
+          last_name: form.last_name.value,
+          first_name: form.first_name.value,
+          middle_name: form.middle_name.value,
+          email: form.email.value,
+          mobile: form.mobile.value,
+          birthday: form.birthday.value,
+          documents: documents, // 👈 now structured
+        };
 
-  try {
-    const response = await fetch(
-      "http://localhost:8000/api/enrollments/create",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      }
-    );
+        try {
+          const response = await fetch(
+            "http://localhost:8000/api/enrollments/create",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(formData),
+            },
+          );
 
-    const data = await response.json();
+          const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.message || "Something went wrong");
-    }
+          if (!response.ok) {
+            throw new Error(data.message || "Something went wrong");
+          }
 
-    message.innerHTML =
-      "<span class='success'>Enrollment submitted successfully!</span>";
+          message.innerHTML =
+            "<span class='success'>Enrollment submitted successfully!</span>";
 
-    form.reset();
-  } catch (error) {
-    message.innerHTML = `<span class='error'>${error.message}</span>`;
-  } finally {
-    button.disabled = false;
-    button.textContent = "Submit Enrollment";
-  }
-});
+          form.reset();
+        } catch (error) {
+          message.innerHTML = `<span class='error'>${error.message}</span>`;
+        } finally {
+          button.disabled = false;
+          button.textContent = "Submit Enrollment";
+        }
+      });
     </script>
   </body>
 </html>

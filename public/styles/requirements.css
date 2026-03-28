@@ -1,139 +1,130 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:'Poppins', sans-serif;
-}
-
 /* BODY */
-.requirements-body{
-    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-    height:100vh;
-    display:grid;
-    grid-template-columns:1fr 1fr;
+.requirements-body {
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
 
 /* LEFT SIDE */
-.left-panel{
-    padding:70px;
-    color:white;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
+.left-panel {
+  padding: 70px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.left-panel h1{
-    font-size:38px;
-    margin-bottom:25px;
+.left-panel h1 {
+  font-size: 38px;
+  margin-bottom: 25px;
 }
 
-.left-panel p{
-    font-size:16px;
-    line-height:1.8;
+.left-panel p {
+  font-size: 16px;
+  line-height: 1.8;
 }
 
 /* RIGHT SIDE */
-.right-panel{
-    background:white;
-    padding:50px 70px;
-    display:flex;
-    flex-direction:column;
-    justify-content:flex-start;
-    overflow-y:auto;
+.right-panel {
+  background: white;
+  padding: 50px 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow-y: auto;
 }
 
-.right-panel h2{
-    margin-bottom:25px;
-    color:#2c5364;
-    font-size:24px;
+.right-panel h2 {
+  margin-bottom: 25px;
+  color: #2c5364;
+  font-size: 24px;
 }
 
 /* FORM ROW */
-.form-row{
-    display:grid;
-    grid-template-columns:2fr 1fr;
-    gap:15px;
+.form-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 15px;
 }
 
 /* FORM GROUP */
-.form-group{
-    margin-bottom:18px;
+.form-group {
+  margin-bottom: 18px;
 }
 
-label{
-    font-size:15px;
-    margin-bottom:6px;
-    display:block;
-    font-weight:500;
+label {
+  font-size: 15px;
+  margin-bottom: 6px;
+  display: block;
+  font-weight: 500;
 }
 
 /* INPUTS */
 input[type="text"],
-input[type="file"]{
-    width:100%;
-    padding:14px;
-    border-radius:8px;
-    border:1px solid #ddd;
-    font-size:15px;
-    transition:0.3s;
+input[type="file"] {
+  width: 100%;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 15px;
+  transition: 0.3s;
 }
 
-input:focus{
-    border-color:#2c5364;
-    outline:none;
-    box-shadow:0 0 0 3px rgba(44,83,100,0.15);
+input:focus {
+  border-color: #2c5364;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(44, 83, 100, 0.15);
 }
 
 /* REQUIREMENTS BOX */
-.requirements-box{
-    background:#f8f9fb;
-    padding:25px;
-    border-radius:12px;
-    margin-bottom:20px;
+.requirements-box {
+  background: #f8f9fb;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 20px;
 }
 
-.requirement-item{
-    margin-bottom:18px;
+.requirement-item {
+  margin-bottom: 18px;
 }
 
 /* BUTTON */
-button{
-    width:100%;
-    padding:15px;
-    border:none;
-    border-radius:10px;
-    background:linear-gradient(135deg,#0f2027,#2c5364);
-    color:white;
-    font-size:16px;
-    font-weight:600;
-    cursor:pointer;
-    transition:0.3s;
-    margin-top:10px;
+button {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0f2027, #2c5364);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+  margin-top: 10px;
 }
 
-button:hover{
-    transform:translateY(-2px);
-    box-shadow:0 8px 16px rgba(0,0,0,0.2);
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 /* NOTE TEXT */
-.note{
-    text-align:center;
-    margin-top:15px;
-    font-size:13px;
-    color:#777;
+.note {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 13px;
+  color: #777;
 }
 
 /* RESPONSIVE */
-@media(max-width:900px){
+@media (max-width: 900px) {
+  .requirements-body {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
 
-    .requirements-body{
-        grid-template-columns:1fr;
-        overflow:auto;
-    }
-
-    .left-panel{
-        display:none;
-    }
-
+  .left-panel {
+    display: none;
+  }
 }

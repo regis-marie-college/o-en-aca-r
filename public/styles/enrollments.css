@@ -1,3 +1,9 @@
+.enrollments {
+  display: flex;
+  height: 100vh;
+}
+
+
 .enrollment {
   background: linear-gradient(135deg, #071426, #ffffff);
 
