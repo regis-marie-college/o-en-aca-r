@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
 
     // ✅ Insert documents (category + type)
     if (documents && Object.keys(documents).length > 0) {
-      for (const [category, fileName] of Object.entries(documents)) {
+      for (const [type, fileName] of Object.entries(documents)) {
         await db.query(
           `insert into documents (enrollment_id, user_full_name, name, category, type)
            values ($1,$2,$3,$4,$5)`,
@@ -55,8 +55,8 @@ module.exports = async (req, res) => {
             enrollment.id,
             `${last_name} ${first_name}`,
             fileName,
-            category,        // form137, idpic, psa, etc.
             "Requirements",  // default type
+            type,        // form137, idpic, psa, etc.
           ]
         );
       }

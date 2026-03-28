@@ -22,8 +22,7 @@
 
     <!-- LOGIN CARD -->
     <div class="login-card">
-      <h2>Hello !</h2>
-      <p>Welcome Back</p>
+      <h2>Welcome Back!</h2>
 
       <form>
         <input type="email" name="email" placeholder="Enter Email" required />
@@ -75,11 +74,7 @@
             throw new Error(data.message || "Something went wrong");
           }
 
-          if (data.type === "admin") {
-            window.location.assign("/admin/dashboard.html");
-          } else {
-            window.location.assign("/enrollments/form.html");
-          }
+          window.location.assign("/admin/dashboard.html");
 
           localStorage.setItem("user", JSON.stringify(data));
 

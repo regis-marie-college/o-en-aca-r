@@ -5,10 +5,13 @@
   padding: 0;
 }
 
+/* #f9f9f9, #7fc8f8, #5aa9e6 */
+
 html,
 body {
   height: 100vh;
-  background: linear-gradient(135deg, #071426, #ffffff);
+  background: linear-gradient(135deg, #5aa9e6, #7fc8f8);
+
   font-family:
     system-ui,
     -apple-system,

@@ -76,3 +76,7 @@
   height: 45px;
   object-fit: contain;
 }
+
+.form-enrollment {
+  padding: 32px 64px;
+}

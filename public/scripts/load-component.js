@@ -21,9 +21,6 @@
 (function () {
   const componentCache = new Map();
 
-  /**
-   * Load a single component into an element
-   */
   async function loadComponent(element) {
     const url = element.getAttribute("data-component");
     if (!url) return;
@@ -57,9 +54,6 @@
     }
   }
 
-  /**
-   * Scan and load all components inside a container
-   */
   async function autoLoadComponents(root) {
     root = root || document;
 
@@ -77,9 +71,12 @@
     });
   }
 
-  async function initLogout() {
+  async function initProfile() {
     const btn_user = document.querySelector(".user");
     const btn_logout = document.querySelector(".btn-logout");
+
+    if (!btn_user) return;
+    if (!btn_logout) return;
 
     btn_user.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -95,7 +92,8 @@
 
     if (!btn_user) return;
 
-    btn_user.querySelector("span").textContent = user.first_name;
+    btn_user.querySelector("span.auth-name").textContent = user.first_name;
+    btn_user.querySelector("span.auth-type").textContent = user.type;
 
     btn_logout.addEventListener("click", async () => {
       try {
@@ -123,14 +121,64 @@
     });
   }
 
-  // Auto-run when DOM is ready
+  function initSidebar() {
+    const menu = document.querySelector(".sidebar nav");
+    if (!menu) return;
+
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!user) return;
+
+    let links = [];
+
+    switch (user.type) {
+      case "admin":
+        links = [
+          { href: "../admin/dashboard.html", label: "Dashboard" },
+          { href: "../enrollments/list.html", label: "Enrollments" },
+          { href: "../students/list.html", label: "Students" },
+          { href: "../admin/admin-list.html", label: "Admins" },
+          { href: "../programs/list.html", label: "Programs" },
+          { href: "../courses/list.html", label: "Courses" },
+        ];
+        break;
+
+      case "treasury":
+        links = [
+          { href: "../admin/dashboard.html", label: "Dashboard" },
+          { href: "../enrollments/list.html", label: "Enrollments" },
+          { href: "../programs/list.html", label: "Programs" },
+          { href: "../courses/list.html", label: "Courses" },
+        ];
+        break;
+
+      case "student":
+        links = [
+          { href: "../student/dashboard.html", label: "Dashboard" },
+          { href: "../courses/list.html", label: "My Courses" },
+        ];
+        break;
+
+      default:
+        links = [{ href: "../auth/login.html", label: "Login" }];
+    }
+
+    menu.innerHTML = links
+      .map(
+        (link) => `
+    <a href="${link.href}">${link.label}</a>
+  `,
+      )
+      .join("");
+  }
+
   document.addEventListener("DOMContentLoaded", async function () {
     await autoLoadComponents();
     getDocumentTitle();
-    initLogout();
+    initSidebar();
+    initProfile();
   });
 
-  // Optional: expose globally for manual usage
   window.loadComponent = loadComponent;
   window.autoLoadComponents = autoLoadComponents;
 })();

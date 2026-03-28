@@ -3,22 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>Enrollment Portal</title>
-
-    <link rel="stylesheet" href="../styles/enrollments.css" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Enrollments</title>
   </head>
 
-  <body class="enrollment">
-    <form id="enrollmentForm" class="container">
-      <!-- LEFT SIDE -->
-      <div class="card">
+  <body>
+    <div class="form-enrollment">
+      <form id="enrollmentForm">
         <div class="logo">
           <img src="../images/logo.png" />
           <span>REGIS MARIE COLLEGE</span>
         </div>
-
-        <h2>Student Enrollment</h2>
+        <h2>Student Details</h2>
 
         <div class="form-group">
           <label>Last Name</label>
@@ -56,6 +55,39 @@
           <input type="date" name="birthday" required />
         </div>
 
+        <h2>Requirements</h2>
+        <div class="requirement-item">
+          <label>Form 137</label>
+          <input type="file" id="form137" required />
+        </div>
+
+        <div class="requirement-item">
+          <label>1x1 ID Picture</label>
+          <input type="file" id="idpic" required />
+        </div>
+
+        <div class="requirement-item">
+          <label>PSA Birth Certificate</label>
+          <input type="file" id="psa" required />
+        </div>
+
+        <div class="requirement-item">
+          <label>Good Moral</label>
+          <input type="file" id="moral" />
+        </div>
+
+        <div class="requirement-item">
+          <label>Diploma</label>
+          <input type="file" id="diploma" />
+        </div>
+
+        <div class="requirement-item">
+          <label>Other Documents</label>
+          <input type="file" id="others" />
+        </div>
+
+        <h2>Select Program & Courses</h2>
+
         <div class="form-group">
           <label>Program</label>
 
@@ -68,120 +100,160 @@
             <option value="BEED">BEED</option>
           </select>
         </div>
-      </div>
 
-      <!-- RIGHT SIDE -->
+        <div class="form-group">
+          <label>Courses</label>
 
-      <div class="card">
-        <h2>Submit Requirements</h2>
+          <!-- clickable list -->
+          <div id="course-options" class="select-list"></div>
 
-        <div class="requirements-box">
-          <div class="requirement-item">
-            <label>Form 137</label>
-            <input type="file" id="form137" required />
-          </div>
-
-          <div class="requirement-item">
-            <label>1x1 ID Picture</label>
-            <input type="file" id="idpic" required />
-          </div>
-
-          <div class="requirement-item">
-            <label>PSA Birth Certificate</label>
-            <input type="file" id="psa" required />
-          </div>
-
-          <div class="requirement-item">
-            <label>Good Moral</label>
-            <input type="file" id="moral" />
-          </div>
-
-          <div class="requirement-item">
-            <label>Diploma</label>
-            <input type="file" id="diploma" />
-          </div>
-
-          <div class="requirement-item">
-            <label>Other Documents</label>
-            <input type="file" id="others" />
-          </div>
+          <!-- selected items -->
+          <div id="course-selected" class="selected-list"></div>
         </div>
-      </div>
 
-      <div class="submit-container">
-        <button type="submit">Submit Enrollment</button>
+        <button type="button" class="btn btn-primary btn-lg btn-enroll">
+          Submit Enrollment
+        </button>
 
-        <div id="formMessage"></div>
-      </div>
-    </form>
+        <div id="formMessage" class="form-message"></div>
+      </form>
+    </div>
     <script>
+      const courses = [
+        { id: "class1", name: "Class 1" },
+        { id: "class2", name: "Class 2" },
+        { id: "class3", name: "Class 3" },
+        { id: "class4", name: "Class 4" },
+      ];
+
+      const selectedCourses = new Set();
+
+      const optionsEl = document.querySelector("#course-options");
+      const selectedEl = document.querySelector("#course-selected");
+
+      function renderOptions() {
+        optionsEl.innerHTML = courses
+          .map(
+            (c) => `
+    <div class="select-item" data-id="${c.id}">
+      ${c.name}
+    </div>
+  `,
+          )
+          .join("");
+      }
+
+      function renderSelected() {
+        selectedEl.innerHTML = [...selectedCourses]
+          .map((id) => {
+            const course = courses.find((c) => c.id === id);
+
+            return `
+      <div class="selected-item" data-id="${id}">
+        ${course.name} ✕
+      </div>
+
+      <input type="hidden" name="course[]" value="${id}">
+    `;
+          })
+          .join("");
+      }
+
+      optionsEl.addEventListener("click", (e) => {
+        const item = e.target.closest(".select-item");
+
+        if (!item) return;
+
+        const id = item.dataset.id;
+
+        selectedCourses.add(id);
+
+        renderSelected();
+      });
+
+      selectedEl.addEventListener("click", (e) => {
+        const item = e.target.closest(".selected-item");
+
+        if (!item) return;
+
+        const id = item.dataset.id;
+
+        selectedCourses.delete(id);
+
+        renderSelected();
+      });
+
+      renderOptions();
+
       const form = document.querySelector("#enrollmentForm");
       const message = document.getElementById("formMessage");
 
-      form.querySelector("button").addEventListener("click", async (e) => {
-        e.preventDefault();
+      form
+        .querySelector("button.btn-enroll")
+        .addEventListener("click", async (e) => {
+          e.preventDefault();
 
-        const fileInputs = {
-          form137: document.getElementById("form137").files[0],
-          idpic: document.getElementById("idpic").files[0],
-          psa: document.getElementById("psa").files[0],
-          moral: document.getElementById("moral").files[0],
-          diploma: document.getElementById("diploma").files[0],
-          others: document.getElementById("others").files[0],
-        };
+          const fileInputs = {
+            form137: document.getElementById("form137").files[0],
+            idpic: document.getElementById("idpic").files[0],
+            psa: document.getElementById("psa").files[0],
+            moral: document.getElementById("moral").files[0],
+            diploma: document.getElementById("diploma").files[0],
+            others: document.getElementById("others").files[0],
+          };
 
-        // 👉 GET FILE NAMES ONLY (for now)
-        const documents = {};
+          // 👉 GET FILE NAMES ONLY (for now)
+          const documents = {};
 
-        for (let key in fileInputs) {
-          if (fileInputs[key]) {
-            documents[key] = fileInputs[key].name;
+          for (let key in fileInputs) {
+            if (fileInputs[key]) {
+              documents[key] = fileInputs[key].name;
+            }
           }
-        }
 
-        const button = form.querySelector("button");
-        button.disabled = true;
-        button.textContent = "Submitting...";
+          const button = form.querySelector("button");
+          button.disabled = true;
+          button.textContent = "Submitting...";
 
-        const formData = {
-          last_name: form.last_name.value,
-          first_name: form.first_name.value,
-          middle_name: form.middle_name.value,
-          email: form.email.value,
-          mobile: form.mobile.value,
-          birthday: form.birthday.value,
-          documents: documents, // 👈 now structured
-        };
+          const formData = {
+            last_name: form.last_name.value,
+            first_name: form.first_name.value,
+            middle_name: form.middle_name.value,
+            email: form.email.value,
+            mobile: form.mobile.value,
+            birthday: form.birthday.value,
+            documents: documents, // 👈 now structured
+          };
 
-        try {
-          const response = await fetch(
-            "http://localhost:8000/api/enrollments/create",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
+          try {
+            const response = await fetch(
+              "http://localhost:8000/api/enrollments/create",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(formData),
               },
-              body: JSON.stringify(formData),
-            },
-          );
+            );
 
-          const data = await response.json();
+            const data = await response.json();
 
-          if (!response.ok) {
-            throw new Error(data.message || "Something went wrong");
+            if (!response.ok) {
+              throw new Error(data.message || "Something went wrong");
+            }
+
+            message.innerHTML =
+              "<span class='success'>Enrollment submitted successfully!</span>";
+
+            form.reset();
+          } catch (error) {
+            message.innerHTML = `<span class='error'>${error.message}</span>`;
+          } finally {
+            button.disabled = false;
+            button.textContent = "Submit Enrollment";
           }
-
-          message.innerHTML =
-            "<span class='success'>Enrollment submitted successfully!</span>";
-
-          form.reset();
-        } catch (error) {
-          message.innerHTML = `<span class='error'>${error.message}</span>`;
-        } finally {
-          button.disabled = false;
-          button.textContent = "Submit Enrollment";
-        }
-      });
+        });
     </script>
   </body>
 </html>

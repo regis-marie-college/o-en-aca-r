@@ -1,7 +1,7 @@
 .sidebar {
   width: 240px;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.9);
+  background: #7fc8f8;
   backdrop-filter: blur(10px);
   padding: 30px 20px;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -22,7 +22,7 @@
 
 .sidebar nav a {
   text-decoration: none;
-  color: #94a3b8;
+  color: white;
   padding: 10px 14px;
   border-radius: 8px;
   transition: 0.3s ease;
@@ -44,6 +44,15 @@
 .topbar h1 {
   font-size: 26px;
   font-weight: 600;
+}
+
+.topbar span.auth-type {
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: capitalize;
+  font-weight: bold;
+  font-size: 0.8rem;
+  background-color: #3b82f6;
 }
 
 .user {
@@ -310,7 +319,7 @@ tbody tr:hover {
 .form-group input:focus,
 .form-group select:focus {
   border-color: #3b82f6;
-  background-color: black;
+  background-color: rgba(0, 0, 0, 0.1);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
@@ -356,4 +365,35 @@ tbody tr:hover {
 
 .form-group input[type="file"]::file-selector-button:hover {
   background: #2563eb;
+}
+
+.select-list,
+.selected-list {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.select-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: blue;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.select-item:hover {
+  border-color: #3b82f6;
+}
+
+.selected-item {
+  padding: 6px 10px;
+  border-radius: 20px;
+  background: #3b82f6;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
 }

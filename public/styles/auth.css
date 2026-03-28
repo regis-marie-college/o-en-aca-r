@@ -28,10 +28,6 @@
   font-weight: 700;
   text-transform: uppercase;
   margin-bottom: 20px;
-  background: linear-gradient(90deg, #ffffff, #ffffff, #ffffff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
 
   text-shadow:
     0 0 10px rgba(41, 46, 58, 0.6),
@@ -78,7 +74,7 @@
   padding: 45px;
   border-radius: 20px;
 
-  background: rgba(255, 255, 255, 0.15);
+  background: white;
   backdrop-filter: blur(12px);
 
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -90,30 +86,19 @@
 /* TITLE */
 .login-card h2 {
   font-size: 26px;
-  color: #ffffff;
+  color: black;
   margin-bottom: 8px;
 }
 
 /* SUBTEXT */
 .login-card p {
-  color: #f1f1f1;
+  color: black;
   margin-bottom: 25px;
   font-size: 14px;
 }
 
-/* INPUTS */
 .login-card input {
-  width: 100%;
-  padding: 14px;
   margin-bottom: 18px;
-  border-radius: 12px;
-  border: none;
-  font-size: 14px;
-
-  background: rgba(255, 255, 255, 0.9);
-  color: #333;
-
-  transition: 0.3s;
 }
 
 .login-card input:focus {
@@ -146,11 +131,10 @@
 .extra-links {
   margin-top: 18px;
   font-size: 13px;
-  color: #f1f1f1;
+  color: black;
 }
 
 .extra-links a {
-  color: #ffffff;
   font-weight: 500;
   text-decoration: none;
 }
@@ -229,8 +213,7 @@
   padding: 45px;
   border-radius: 20px;
 
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(12px);
+  background: white;
 
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
@@ -241,29 +224,19 @@
 /* TITLE */
 .register-card h2 {
   font-size: 26px;
-  color: #ffffff;
+  color: black;
   margin-bottom: 8px;
 }
 
 .register-card p {
-  color: #f1f1f1;
+  color: black;
   margin-bottom: 25px;
   font-size: 14px;
 }
 
 /* INPUTS */
 .register-card input {
-  width: 100%;
-  padding: 14px;
   margin-bottom: 18px;
-  border-radius: 12px;
-  border: none;
-  font-size: 14px;
-
-  background: rgba(255, 255, 255, 0.9);
-  color: #333;
-
-  transition: 0.3s;
 }
 
 .register-card input:focus {
@@ -290,21 +263,4 @@
 .register-btn:hover {
   background: #1e40af;
   transform: translateY(-2px);
-}
-
-/* LINKS */
-.extra-links {
-  margin-top: 18px;
-  font-size: 13px;
-  color: #f1f1f1;
-}
-
-.extra-links a {
-  color: #ffffff;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.extra-links a:hover {
-  text-decoration: underline;
 }
