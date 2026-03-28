@@ -1,95 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Profile</title>
+  </head>
 
-<title>User Account</title>
+  <body>
+    <div class="profile">
+      <div data-component="../../components/sidebar.html"></div>
 
-<link rel="stylesheet" href="../styles/profile.css">
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
 
-</head>
+        <div class="profile-card">
+          <div class="profile-header">
+            <div class="profile-picture">A</div>
 
-<body class="profile">
-    <div data-component="../../components/sidebar.html"></div>
-<div class="account-container">
+            <h2>Angeline</h2>
+            <p class="role">Student Account</p>
+          </div>
 
-<div class="profile-card">
+          <form class="profile-form">
+            <h3>Account Information</h3>
 
-<!-- BACK BUTTON -->
-<div class="top-bar">
-<button onclick="window.location.href='dashboard.html'" class="back-btn">
-← Back to Dashboard
-</button>
-</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>First Name</label>
+                <input type="text" value="Angeline" />
+              </div>
 
-<div class="profile-header">
+              <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" value="Santos" />
+              </div>
 
-<div class="profile-picture">
-A
-</div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" value="angeline@email.com" />
+              </div>
 
-<h2>Angeline</h2>
-<p class="role">Student Account</p>
+              <div class="form-group">
+                <label>Mobile Number</label>
+                <input type="text" value="09123456789" />
+              </div>
 
-</div>
+              <div class="form-group">
+                <label>Birthday</label>
+                <input type="date" />
+              </div>
 
-<form class="profile-form">
-
-<h3>Account Information</h3>
-
-<div class="form-grid">
-
-<div class="form-group">
-<label>First Name</label>
-<input type="text" value="Angeline">
-</div>
-
-<div class="form-group">
-<label>Last Name</label>
-<input type="text" value="Santos">
-</div>
-
-<div class="form-group">
-<label>Email</label>
-<input type="email" value="angeline@email.com">
-</div>
-
-<div class="form-group">
-<label>Mobile Number</label>
-<input type="text" value="09123456789">
-</div>
-
-<div class="form-group">
-<label>Birthday</label>
-<input type="date">
-</div>
-
-<div class="form-group">
-<label>Program</label>
-<select>
-<option>BSCS</option>
-<option>BSOA</option>
-<option>BSED</option>
-<option>BEED</option>
-</select>
-</div>
-
-</div>
-
-<div class="buttons">
-
-<button class="save-btn">Save Changes</button>
-
-<button type="button" class="cancel-btn">Cancel</button>
-
-</div>
-
-</form>
-
-</div>
-
-</div>
-
-</body>
+              <div class="form-group">
+                <label>Program</label>
+                <select>
+                  <option>BSCS</option>
+                  <option>BSOA</option>
+                  <option>BSED</option>
+                  <option>BEED</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+      </main>
+    </div>
+  </body>
 </html>
