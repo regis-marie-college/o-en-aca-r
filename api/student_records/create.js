@@ -11,24 +11,25 @@ module.exports = async (req, res) => {
     const body = await bodyParser(req);
 
     const {
+      student_id,   
       student_name,
       course_id,
       course_name,
       school_year,
     } = body;
 
-
-    if (!student_name || !course_id || !course_name || !school_year) {
+    if (!student_id || !student_name || !course_id || !course_name || !school_year) {
       return badRequest(res, "Missing required fields");
     }
 
-    
     const result = await db.query(
-      `insert into student_records 
-      (student_name, course_id, course_name, school_year)
-      values ($1,$2,$3,$4)
-      returning id, student_name, course_id, course_name, school_year, created_at`,
-      [student_name, course_id, course_name, school_year]
+      `
+      INSERT INTO student_records 
+      (student_id, student_name, course_id, course_name, school_year)
+      VALUES ($1,$2,$3,$4,$5)
+      RETURNING id, student_id, student_name, course_id, course_name, school_year, created_at
+      `,
+      [student_id, student_name, course_id, course_name, school_year]
     );
 
     const student = result.rows[0];

@@ -6,23 +6,21 @@ module.exports = async (req, res) => {
     return notAllowed(res);
   }
 
-  const { search } = req.query;
+  const { student_id } = req.query;
+
+  if (!student_id) {
+    return badRequest(res, "student_id is required");
+  }
 
   try {
     const result = await db.query(
       `
-      SELECT *
+      SELECT course_id, course_name, school_year
       FROM student_records
-      WHERE 
-        $1::text IS NULL OR
-        id::text ILIKE '%' || $1 || '%' OR
-        student_name ILIKE '%' || $1 || '%' OR
-        course_id ILIKE '%' || $1 || '%' OR
-        course_name ILIKE '%' || $1 || '%' OR
-        school_year ILIKE '%' || $1 || '%'
+      WHERE student_id = $1
       ORDER BY created_at DESC
       `,
-      [search || null],
+      [student_id]
     );
 
     return okay(res, result.rows);

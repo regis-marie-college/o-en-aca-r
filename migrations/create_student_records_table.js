@@ -9,18 +9,24 @@ async function up() {
     create table if not exists ${table} (
       id uuid primary key default gen_random_uuid(),
 
+      student_id varchar(50) not null,
       student_name varchar(150) not null,
+
       course_id varchar(50) not null,
       course_name varchar(150) not null,
+
       school_year varchar(20) not null,
 
       created_at timestamp default now(),
       updated_at timestamp default now(),
       deleted_at timestamp
     );
+
+    create index if not exists idx_${table}_student_id
+    on ${table}(student_id);
   `);
 
-  console.log("${table} table created");
+  console.log(`${table} table created`);
 }
 
 async function down() {
@@ -30,7 +36,7 @@ async function down() {
     drop table if exists ${table};
   `);
 
-  console.log("${table} table dropped");
+  console.log(`${table} table dropped`);
 }
 
 module.exports = { up, down };
