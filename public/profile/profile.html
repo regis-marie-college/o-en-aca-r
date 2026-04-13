@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/index.css" rel="stylesheet" />
     <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/user.js" defer></script>
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Profile</title>
@@ -19,9 +20,9 @@
 
         <div class="profile-card">
           <div class="profile-header">
-            <div class="profile-picture">A</div>
+            <div class="profile-picture">S</div>
 
-            <h2>Angeline</h2>
+            <h2 class="profile-name">Student</h2>
             <p class="role">Student Account</p>
           </div>
 
@@ -31,42 +32,130 @@
             <div class="form-grid">
               <div class="form-group">
                 <label>First Name</label>
-                <input type="text" value="Angeline" />
+                <input type="text" name="first_name" value="" readonly />
               </div>
 
               <div class="form-group">
                 <label>Last Name</label>
-                <input type="text" value="Santos" />
+                <input type="text" name="last_name" value="" readonly />
               </div>
 
               <div class="form-group">
                 <label>Email</label>
-                <input type="email" value="angeline@email.com" />
+                <input type="email" name="email" value="" readonly />
               </div>
 
               <div class="form-group">
                 <label>Mobile Number</label>
-                <input type="text" value="09123456789" />
+                <input type="text" name="mobile" value="" readonly />
               </div>
 
               <div class="form-group">
                 <label>Birthday</label>
-                <input type="date" />
+                <input type="date" name="birthday" value="" readonly />
               </div>
 
               <div class="form-group">
                 <label>Program</label>
-                <select>
-                  <option>BSCS</option>
-                  <option>BSOA</option>
-                  <option>BSED</option>
-                  <option>BEED</option>
-                </select>
+                <input type="text" name="program" value="" readonly />
+              </div>
+
+              <div class="form-group">
+                <label>Year Level</label>
+                <input type="text" name="year_level" value="" readonly />
+              </div>
+
+              <div class="form-group">
+                <label>Semester</label>
+                <input type="text" name="semester" value="" readonly />
+              </div>
+
+              <div class="form-group">
+                <label>Total Paid</label>
+                <input type="text" name="total_paid" value="" readonly />
+              </div>
+
+              <div class="form-group">
+                <label>Balance</label>
+                <input type="text" name="total_balance" value="" readonly />
+              </div>
+
+              <div class="form-group">
+                <label>Current Courses</label>
+                <input type="text" name="current_courses" value="" readonly />
+              </div>
+
+              <div class="form-group">
+                <label>Completed Courses</label>
+                <input type="text" name="taken_courses" value="" readonly />
               </div>
             </div>
           </form>
         </div>
       </main>
     </div>
+    <script>
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
+      }
+
+      async function loadProfile() {
+        const currentUser = auth();
+
+        if (!currentUser?.email) {
+          window.location.assign("/auth/login.html");
+          return;
+        }
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/students/portal?email=${encodeURIComponent(currentUser.email)}`,
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load profile");
+        }
+
+        const { user, enrollment, current_courses, taken_courses, total_paid, total_balance } = data;
+        const form = document.querySelector(".profile-form");
+        const profileName = document.querySelector(".profile-name");
+        const profilePicture = document.querySelector(".profile-picture");
+
+        const firstName = user?.first_name || "";
+        const lastName = user?.last_name || "";
+        const fullName = `${firstName} ${lastName}`.trim();
+
+        profileName.textContent = fullName || "Student";
+        profilePicture.textContent = (firstName || "S").charAt(0).toUpperCase();
+
+        form.querySelector('[name="first_name"]').value = firstName;
+        form.querySelector('[name="last_name"]').value = lastName;
+        form.querySelector('[name="email"]').value = user?.email || currentUser.email || "";
+        form.querySelector('[name="mobile"]').value = user?.mobile || enrollment?.mobile || "-";
+        form.querySelector('[name="birthday"]').value = enrollment?.birthday || "";
+        form.querySelector('[name="program"]').value = enrollment?.program_name || enrollment?.program_code || "-";
+        form.querySelector('[name="year_level"]').value = enrollment?.year_level || "-";
+        form.querySelector('[name="semester"]').value = enrollment?.semester || "-";
+        form.querySelector('[name="total_paid"]').value = formatCurrency(total_paid || 0);
+        form.querySelector('[name="total_balance"]').value = formatCurrency(total_balance || 0);
+        form.querySelector('[name="current_courses"]').value = String(
+          Array.isArray(current_courses) ? current_courses.length : 0,
+        );
+        form.querySelector('[name="taken_courses"]').value = String(
+          Array.isArray(taken_courses) ? taken_courses.length : 0,
+        );
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        try {
+          await loadProfile();
+        } catch (error) {
+          console.error(error);
+        }
+      });
+    </script>
   </body>
 </html>

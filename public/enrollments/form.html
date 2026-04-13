@@ -9,7 +9,6 @@
     <script src="../scripts/load-component.js" defer></script>
     <title>Enrollments</title>
   </head>
-
   <body>
     <div class="form-enrollment">
       <form id="enrollmentForm">
@@ -86,30 +85,47 @@
           <input type="file" id="others" />
         </div>
 
-        <h2>Select Program & Courses</h2>
+        <h2>Select Program and Courses</h2>
 
         <div class="form-group">
           <label>Program</label>
-
-          <select name="program" required>
+          <select name="program" id="program" required>
             <option value="">Select Program</option>
-
-            <option value="BSCS">BSCS</option>
-            <option value="BSOA">BSOA</option>
-            <option value="BSED">BSED</option>
-            <option value="BEED">BEED</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label>Courses</label>
+          <label>Year Level</label>
+          <select name="year_level" id="year_level" required>
+            <option value="">Select Year Level</option>
+            <option value="1st Year">1st Year</option>
+            <option value="2nd Year">2nd Year</option>
+            <option value="3rd Year">3rd Year</option>
+          </select>
+        </div>
 
-          <!-- clickable list -->
+        <div class="form-group">
+          <label>Semester</label>
+          <select name="semester" id="semester" required>
+            <option value="">Select Semester</option>
+            <option value="1st Sem">1st Sem</option>
+            <option value="2nd Sem">2nd Sem</option>
+            <option value="3rd Sem">3rd Sem</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Available Courses</label>
           <div id="course-options" class="select-list"></div>
-
-          <!-- selected items -->
           <div id="course-selected" class="selected-list"></div>
         </div>
+
+        <section class="table-section" style="margin-top: 16px">
+          <h3>Assessment Preview</h3>
+          <p><strong>Rate per Unit:</strong> PHP 300.00</p>
+          <p><strong>Total Units:</strong> <span id="total-units">0</span></p>
+          <p><strong>Total Tuition:</strong> <span id="total-amount">PHP 0.00</span></p>
+        </section>
 
         <button type="button" class="btn btn-primary btn-lg btn-enroll">
           Submit Enrollment
@@ -119,79 +135,156 @@
       </form>
     </div>
     <script>
-      const courses = [
-        { id: "class1", name: "Class 1" },
-        { id: "class2", name: "Class 2" },
-        { id: "class3", name: "Class 3" },
-        { id: "class4", name: "Class 4" },
-      ];
-
+      const RATE_PER_UNIT = 300;
+      let courses = [];
       const selectedCourses = new Set();
 
+      const form = document.querySelector("#enrollmentForm");
+      const message = document.getElementById("formMessage");
       const optionsEl = document.querySelector("#course-options");
       const selectedEl = document.querySelector("#course-selected");
+      const totalUnitsEl = document.querySelector("#total-units");
+      const totalAmountEl = document.querySelector("#total-amount");
+      const programEl = document.querySelector("#program");
+      const yearLevelEl = document.querySelector("#year_level");
+      const semesterEl = document.querySelector("#semester");
+
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
+      }
+
+      function getSelectedCourseObjects() {
+        return [...selectedCourses]
+          .map((id) => courses.find((course) => course.id === id))
+          .filter(Boolean);
+      }
+
+      function updateAssessment() {
+        const totalUnits = getSelectedCourseObjects().reduce(
+          (sum, course) => sum + Number(course.units || 0),
+          0,
+        );
+        const totalAmount = totalUnits * RATE_PER_UNIT;
+
+        totalUnitsEl.textContent = totalUnits;
+        totalAmountEl.textContent = formatCurrency(totalAmount);
+      }
 
       function renderOptions() {
+        if (!courses.length) {
+          optionsEl.innerHTML =
+            "<div class='select-item' style='pointer-events:none;opacity:.7;'>Select a program, year level, and semester to view available courses.</div>";
+          return;
+        }
+
         optionsEl.innerHTML = courses
           .map(
-            (c) => `
-    <div class="select-item" data-id="${c.id}">
-      ${c.name}
-    </div>
-  `,
+            (course) => `
+              <div class="select-item" data-id="${course.id}">
+                ${course.name} (${course.units} units)
+              </div>
+            `,
           )
           .join("");
       }
 
       function renderSelected() {
-        selectedEl.innerHTML = [...selectedCourses]
-          .map((id) => {
-            const course = courses.find((c) => c.id === id);
-
-            return `
-      <div class="selected-item" data-id="${id}">
-        ${course.name} ✕
-      </div>
-
-      <input type="hidden" name="course[]" value="${id}">
-    `;
-          })
+        selectedEl.innerHTML = getSelectedCourseObjects()
+          .map(
+            (course) => `
+              <div class="selected-item" data-id="${course.id}">
+                ${course.name} (${course.units} units) x
+              </div>
+              <input type="hidden" name="course[]" value="${course.id}">
+            `,
+          )
           .join("");
+
+        updateAssessment();
       }
 
-      optionsEl.addEventListener("click", (e) => {
-        const item = e.target.closest(".select-item");
+      async function loadPrograms() {
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/programs/list`,
+        );
+        const data = await response.json();
 
-        if (!item) return;
+        programEl.innerHTML = `<option value="">Select Program</option>`;
 
-        const id = item.dataset.id;
+        data.forEach((program) => {
+          const option = document.createElement("option");
+          option.value = `${program.id}:${program.name}:${program.code || ""}`;
+          option.textContent = `${program.code || program.name} - ${program.name}`;
+          programEl.appendChild(option);
+        });
+      }
 
-        selectedCourses.add(id);
+      async function loadAvailableCourses() {
+        selectedCourses.clear();
+        renderSelected();
 
+        const [programId] = (programEl.value || "").split(":");
+        const yearLevel = yearLevelEl.value;
+        const semester = semesterEl.value;
+
+        if (!programId || !yearLevel || !semester) {
+          courses = [];
+          renderOptions();
+          return;
+        }
+
+        const query = new URLSearchParams({
+          program_id: programId,
+          year_level: yearLevel,
+          semester: semester,
+        });
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/courses/list?${query.toString()}`,
+        );
+        const data = await response.json();
+
+        courses = Array.isArray(data) ? data : [];
+        renderOptions();
+      }
+
+      optionsEl.addEventListener("click", (event) => {
+        const item = event.target.closest(".select-item");
+
+        if (!item || !courses.length) return;
+
+        selectedCourses.add(item.dataset.id);
         renderSelected();
       });
 
-      selectedEl.addEventListener("click", (e) => {
-        const item = e.target.closest(".selected-item");
+      selectedEl.addEventListener("click", (event) => {
+        const item = event.target.closest(".selected-item");
 
         if (!item) return;
 
-        const id = item.dataset.id;
-
-        selectedCourses.delete(id);
-
+        selectedCourses.delete(item.dataset.id);
         renderSelected();
       });
 
-      renderOptions();
-
-      const form = document.querySelector("#enrollmentForm");
-      const message = document.getElementById("formMessage");
+      [programEl, yearLevelEl, semesterEl].forEach((element) => {
+        element.addEventListener("change", loadAvailableCourses);
+      });
 
       form
         .querySelector("button.btn-enroll")
-        .addEventListener("click", async (e) => {
-          e.preventDefault();
+        .addEventListener("click", async (event) => {
+          event.preventDefault();
+
+          const selectedCourseObjects = getSelectedCourseObjects();
+
+          if (!selectedCourseObjects.length) {
+            message.innerHTML =
+              "<span class='error'>Please select at least one available course.</span>";
+            return;
+          }
 
           const fileInputs = {
             form137: document.getElementById("form137").files[0],
@@ -202,7 +295,6 @@
             others: document.getElementById("others").files[0],
           };
 
-          // 👉 GET FILE NAMES ONLY (for now)
           const documents = {};
 
           for (let key in fileInputs) {
@@ -215,6 +307,15 @@
           button.disabled = true;
           button.textContent = "Submitting...";
 
+          const totalUnits = selectedCourseObjects.reduce(
+            (sum, course) => sum + Number(course.units || 0),
+            0,
+          );
+          const totalAmount = totalUnits * RATE_PER_UNIT;
+          const [program_id, program_name, program_code] = (
+            form.program.value || ""
+          ).split(":");
+
           const formData = {
             last_name: form.last_name.value,
             first_name: form.first_name.value,
@@ -222,12 +323,25 @@
             email: form.email.value,
             mobile: form.mobile.value,
             birthday: form.birthday.value,
-            documents: documents, // 👈 now structured
+            program_id,
+            program_name,
+            program_code,
+            year_level: form.year_level.value,
+            semester: form.semester.value,
+            selected_courses: selectedCourseObjects.map((course) => ({
+              id: course.id,
+              name: course.name,
+              units: Number(course.units || 0),
+              amount: Number(course.units || 0) * RATE_PER_UNIT,
+            })),
+            total_units: totalUnits,
+            total_amount: totalAmount,
+            documents,
           };
 
           try {
             const response = await fetch(
-              "http://localhost:8000/api/enrollments/create",
+              `${window.APP_CONFIG.API_BASE_URL}/enrollments/create`,
               {
                 method: "POST",
                 headers: {
@@ -240,13 +354,16 @@
             const data = await response.json();
 
             if (!response.ok) {
-              throw new Error(data.message || "Something went wrong");
+              throw new Error(data.message || data.error || "Something went wrong");
             }
 
             message.innerHTML =
               "<span class='success'>Enrollment submitted successfully!</span>";
-
             form.reset();
+            courses = [];
+            selectedCourses.clear();
+            renderOptions();
+            renderSelected();
           } catch (error) {
             message.innerHTML = `<span class='error'>${error.message}</span>`;
           } finally {
@@ -254,6 +371,12 @@
             button.textContent = "Submit Enrollment";
           }
         });
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        await loadPrograms();
+        renderOptions();
+        renderSelected();
+      });
     </script>
   </body>
 </html>

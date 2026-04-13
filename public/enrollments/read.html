@@ -139,7 +139,7 @@
             <p><strong>ID:</strong> ${data.id}</p>
             <p><strong>Name:</strong> ${data.first_name} ${data.middle_name} ${data.last_name}</p>
             <p><strong>Email:</strong> ${data.email}</p>
-            <p><strong>Mobile:</strong> ${data.mobile_number}</p>
+            <p><strong>Mobile:</strong> ${data.mobile || "-"}</p>
             <p><strong>Birthday:</strong> ${defaultDate(data.birthday)}</p>
             <p><strong>Created:</strong> ${defaultDate(data.created_at)}</p>
             <p><strong>Updated:</strong> ${defaultDate(data.updated_at)}</p>

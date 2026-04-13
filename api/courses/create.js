@@ -26,6 +26,8 @@ module.exports = async (req, res) => {
     // Basic validation
     if (
       !name ||
+      !program_id ||
+      !program_name ||
       !year_level ||
       !Number.isInteger(unitsValue) ||
       unitsValue < 1 ||

@@ -1,20 +1,16 @@
-/* BACKGROUND GLOW */
 .background {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(
-    circle at 25% 50%,
-    rgba(59, 130, 246, 0.25),
-    transparent 60%
-  );
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(215, 181, 109, 0.18), transparent 24%),
+    radial-gradient(circle at 80% 18%, rgba(111, 157, 221, 0.18), transparent 20%),
+    linear-gradient(135deg, rgba(6, 12, 22, 0.35), rgba(6, 12, 22, 0.05));
   z-index: 0;
 }
 
-/* HEADER */
 .header {
   position: absolute;
-  top: 40px;
+  top: 42px;
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
@@ -22,245 +18,164 @@
 }
 
 .header h1 {
-  font-family: "Orbitron", sans-serif;
-  font-size: 32px;
-  letter-spacing: 6px;
+  font-size: clamp(2.1rem, 3vw, 3.6rem);
+  letter-spacing: 0.2em;
   font-weight: 700;
   text-transform: uppercase;
-  margin-bottom: 20px;
-
-  text-shadow:
-    0 0 10px rgba(41, 46, 58, 0.6),
-    0 0 25px rgba(42, 55, 74, 0.4);
+  color: #fff7e7;
+  text-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* TIGER */
 .tiger {
   position: absolute;
-  left: 6%;
+  left: 7%;
   top: 50%;
   transform: translateY(-50%);
-  width: 550px;
-  max-width: 45%;
+  width: min(560px, 42vw);
   z-index: 1;
-  filter: drop-shadow(0 30px 60px rgba(37, 99, 235, 0.4));
-  animation: float 6s ease-in-out infinite;
-  margin-left: 20px;
-  margin-top: 10px;
+  filter: drop-shadow(0 34px 80px rgba(0, 0, 0, 0.4));
+  animation: float 7s ease-in-out infinite;
 }
 
-/* FLOAT ANIMATION */
 @keyframes float {
   0%,
   100% {
     transform: translateY(-50%) translateX(0);
   }
   50% {
-    transform: translateY(-53%) translateX(10px);
+    transform: translateY(-53%) translateX(12px);
   }
 }
 
-/* ===============================
-   ULTRA FUTURISTIC NEON LOGIN CARD
-================================= */
-
-/* LOGIN CARD - CLEAN VERSION */
-.login-card {
+.login-card,
+.register-card {
   position: absolute;
-  right: 10%;
+  right: 8%;
   top: 50%;
   transform: translateY(-50%);
-  width: 400px;
-  padding: 45px;
-  border-radius: 20px;
-
-  background: white;
-  backdrop-filter: blur(12px);
-
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-
+  width: min(440px, calc(100% - 32px));
+  padding: 42px;
+  border-radius: 28px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96),
+    rgba(247, 242, 234, 0.92)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
   z-index: 2;
 }
 
-/* TITLE */
-.login-card h2 {
-  font-size: 26px;
-  color: black;
-  margin-bottom: 8px;
+.login-card::before,
+.register-card::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(18, 28, 47, 0.08);
+  pointer-events: none;
 }
 
-/* SUBTEXT */
-.login-card p {
-  color: black;
-  margin-bottom: 25px;
-  font-size: 14px;
+.login-card h2,
+.register-card h2 {
+  color: #122033;
+  font-size: 2.35rem;
+  margin-bottom: 6px;
 }
 
-.login-card input {
-  margin-bottom: 18px;
+.login-card p,
+.register-card p,
+.extra-links {
+  color: #526079;
 }
 
-.login-card input:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px #2563eb;
+.login-card form,
+.register-card form {
+  margin-top: 24px;
 }
 
-/* BUTTON */
-.login-btn {
+.login-card input,
+.register-card input {
   width: 100%;
+  margin-bottom: 16px;
+  padding: 15px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(18, 32, 51, 0.1);
+  background: rgba(18, 32, 51, 0.04);
+  color: #122033;
+}
+
+.login-card input:focus,
+.register-card input:focus {
+  outline: none;
+  border-color: rgba(215, 181, 109, 0.55);
+  box-shadow: 0 0 0 4px rgba(215, 181, 109, 0.14);
+}
+
+.login-btn,
+.register-btn {
+  width: 100%;
+  min-height: 54px;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 999px;
   border: none;
-
-  background: #2563eb;
-  color: white;
-  font-weight: bold;
-  letter-spacing: 1px;
-
+  background: linear-gradient(135deg, #1d2e4a, #2c4568);
+  color: #fff8eb;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: 0.3s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 18px 34px rgba(17, 33, 56, 0.24);
 }
 
-.login-btn:hover {
-  background: #1e40af;
+.login-btn:hover,
+.register-btn:hover {
   transform: translateY(-2px);
+  box-shadow: 0 24px 40px rgba(17, 33, 56, 0.3);
 }
 
-/* LINKS */
 .extra-links {
   margin-top: 18px;
   font-size: 13px;
-  color: black;
 }
 
 .extra-links a {
-  font-weight: 500;
+  color: #16294a;
+  font-weight: 800;
   text-decoration: none;
 }
 
 .extra-links a:hover {
-  text-decoration: underline;
+  color: #8d6724;
 }
 
-/*REGISTER*/
-
-/* BACKGROUND SOFT LIGHT */
-.background {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(
-    circle at 25% 50%,
-    rgba(59, 130, 246, 0.15),
-    transparent 60%
-  );
-  z-index: 0;
-}
-
-/* HEADER */
-.header {
-  position: absolute;
-  top: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  z-index: 3;
-}
-
-.header h1 {
-  font-family: "Orbitron", sans-serif;
-  font-size: 32px;
-  letter-spacing: 6px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: white;
-}
-
-/* TIGER */
-.tiger {
-  position: absolute;
-  left: 6%;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 550px;
-  max-width: 45%;
-  z-index: 1;
-  filter: drop-shadow(0 30px 60px rgba(37, 99, 235, 0.4));
-  animation: float 6s ease-in-out infinite;
-  margin-left: 20px;
-  margin-top: 10px;
-}
-
-/* FLOAT ANIMATION */
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(-50%) translateX(0);
+@media (max-width: 980px) {
+  .tiger {
+    opacity: 0.18;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(520px, 88vw);
   }
-  50% {
-    transform: translateY(-53%) translateX(10px);
+
+  .login-card,
+  .register-card {
+    position: relative;
+    right: auto;
+    top: auto;
+    transform: none;
+    margin: 160px auto 32px;
   }
 }
 
-/* REGISTER CARD */
-.register-card {
-  position: absolute;
-  right: 10%;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 400px;
-  padding: 45px;
-  border-radius: 20px;
+@media (max-width: 640px) {
+  .header {
+    top: 28px;
+  }
 
-  background: white;
-
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-
-  z-index: 2;
-}
-
-/* TITLE */
-.register-card h2 {
-  font-size: 26px;
-  color: black;
-  margin-bottom: 8px;
-}
-
-.register-card p {
-  color: black;
-  margin-bottom: 25px;
-  font-size: 14px;
-}
-
-/* INPUTS */
-.register-card input {
-  margin-bottom: 18px;
-}
-
-.register-card input:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px #2563eb;
-}
-
-/* BUTTON */
-.register-btn {
-  width: 100%;
-  padding: 14px;
-  border-radius: 14px;
-  border: none;
-
-  background: #2563eb;
-  color: white;
-  font-weight: bold;
-  letter-spacing: 1px;
-
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.register-btn:hover {
-  background: #1e40af;
-  transform: translateY(-2px);
+  .login-card,
+  .register-card {
+    padding: 28px 20px;
+    border-radius: 22px;
+  }
 }

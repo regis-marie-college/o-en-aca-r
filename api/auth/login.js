@@ -16,7 +16,11 @@ module.exports = async (req, res) => {
   try {
     const body = await bodyParser(req);
 
-    const { email } = body;
+    const { email, password } = body;
+
+    if (!email || !password) {
+      return badRequest(res, "Email and password are required");
+    }
 
     const result = await db.query(`select * from users where email = $1`, [
       email,
@@ -26,19 +30,25 @@ module.exports = async (req, res) => {
       return notFound(res, "User not found");
     }
 
+    const user = result.rows[0];
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      return badRequest(res, "Invalid email or password");
+    }
+
     // Create session for the current user
-    const session = await db.query(
+    await db.query(
       `insert into sessions (user_id, name)
       values ($1,$2)
       returning id, user_id, name
       `,
       [
-        result.rows[0].id,
-        `${result.rows[0].last_name} ${result.rows[0].first_name}`,
+        user.id,
+        `${user.last_name} ${user.first_name}`,
       ],
     );
 
-    let user = result.rows[0];
     delete user.password;
 
     return okay(res, user);

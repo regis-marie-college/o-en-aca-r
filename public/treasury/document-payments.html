@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Document Payment Approvals</title>
+  </head>
+  <body>
+    <div class="users">
+      <div data-component="../../components/sidebar.html"></div>
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+        <section class="table-section">
+          <h2>Document Payment Approvals</h2>
+          <table id="table-document-payments">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Document</th>
+                <th>Amount</th>
+                <th>Proof</th>
+                <th>Payment Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+    <script>
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
+      }
+
+      async function loadRequests() {
+        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/document_requests/list`);
+        const data = await response.json();
+        const tbody = document.querySelector("#table-document-payments tbody");
+        tbody.innerHTML = "";
+
+        data.forEach((request) => {
+          const canReview = request.payment_status === "Submitted";
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${request.student_name}<br /><small>${request.email}</small></td>
+            <td>${request.document_type}</td>
+            <td>${formatCurrency(request.amount)}</td>
+            <td>${request.proof_of_payment || "-"}</td>
+            <td>${request.payment_status}</td>
+            <td>
+              ${canReview ? `
+                <button type="button" class="btn btn-primary btn-sm btn-payment-action" data-id="${request.id}" data-status="Approved">Approve</button>
+                <button type="button" class="btn btn-danger btn-sm btn-payment-action" data-id="${request.id}" data-status="Denied">Deny</button>
+              ` : "-"}
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        bindActions();
+      }
+
+      function bindActions() {
+        document.querySelectorAll(".btn-payment-action").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const user = JSON.parse(localStorage.getItem("user") || "{}");
+            const nextStatus = button.dataset.status;
+            const nextRequestStatus =
+              nextStatus === "Approved" ? "Payment Approved" : "Pending Payment";
+
+            const response = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/document_requests/update`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  id: button.dataset.id,
+                  payment_status: nextStatus,
+                  request_status: nextRequestStatus,
+                  treasury_reviewed_by: user.email || user.first_name || "Treasury",
+                }),
+              },
+            );
+
+            const data = await response.json();
+            if (!response.ok) {
+              alert(data.error || "Failed to review payment");
+              return;
+            }
+
+            await loadRequests();
+          });
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", loadRequests);
+    </script>
+  </body>
+</html>

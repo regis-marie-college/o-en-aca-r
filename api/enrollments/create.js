@@ -17,6 +17,14 @@ module.exports = async (req, res) => {
       email,
       mobile,
       birthday,
+      program_id,
+      program_name,
+      program_code,
+      year_level,
+      semester,
+      selected_courses,
+      total_units,
+      total_amount,
       documents,
     } = body;
 
@@ -30,17 +38,97 @@ module.exports = async (req, res) => {
     }
 
     // ✅ Validation
-    if (!last_name || !first_name || !email) {
+    if (
+      !last_name ||
+      !first_name ||
+      !email ||
+      !program_id ||
+      !year_level ||
+      !semester
+    ) {
       return badRequest(res, "Missing required fields");
+    }
+
+    if (!Array.isArray(selected_courses) || selected_courses.length === 0) {
+      return badRequest(res, "Please select at least one course");
+    }
+
+    const mobileNumberColumn = await db.query(
+      `
+      select 1
+      from information_schema.columns
+      where table_name = 'enrollments'
+        and column_name = 'mobile_number'
+      limit 1
+      `,
+    );
+
+    const hasMobileNumberColumn = mobileNumberColumn.rows.length > 0;
+
+    const columns = [
+      "last_name",
+      "first_name",
+      "middle_name",
+      "email",
+      "mobile",
+      "birthday",
+    ];
+    const values = [
+      last_name,
+      first_name,
+      middle_name,
+      email,
+      mobile,
+      birthday,
+    ];
+
+    if (hasMobileNumberColumn) {
+      columns.push("mobile_number");
+      values.push(mobile);
+    }
+
+    columns.push(
+      "program_id",
+      "program_name",
+      "program_code",
+      "year_level",
+      "semester",
+      "selected_courses",
+      "total_units",
+      "total_amount",
+      "status",
+    );
+    values.push(
+      program_id,
+      program_name || null,
+      program_code || null,
+      year_level,
+      semester,
+      JSON.stringify(selected_courses),
+      Number(total_units || 0),
+      Number(total_amount || 0).toFixed(2),
+      "Pending",
+    );
+
+    const placeholders = values.map((_, index) => {
+      const value = values[index];
+      return Array.isArray(value) || typeof value === "object"
+        ? `$${index + 1}::jsonb`
+        : `$${index + 1}`;
+    });
+
+    if (columns.includes("selected_courses")) {
+      const selectedCourseIndex = columns.indexOf("selected_courses");
+      placeholders[selectedCourseIndex] = `$${selectedCourseIndex + 1}::jsonb`;
     }
 
     // ✅ Insert enrollment
     const result = await db.query(
       `insert into enrollments 
-      (last_name, first_name, middle_name, email, mobile_number, birthday, status)
-      values ($1,$2,$3,$4,$5,$6,'Pending')
-      returning id, last_name, first_name, middle_name, email, mobile_number, created_at`,
-      [last_name, first_name, middle_name, email, mobile, birthday]
+      (${columns.join(", ")})
+      values (${placeholders.join(", ")})
+      returning id, last_name, first_name, middle_name, email, mobile, program_name, program_code, year_level, semester, selected_courses, total_units, total_amount, created_at`,
+      values,
     );
 
     const enrollment = result.rows[0];

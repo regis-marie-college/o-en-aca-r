@@ -71,16 +71,24 @@
           const data = await response.json();
 
           if (!response.ok) {
-            throw new Error(data.message || "Something went wrong");
+            throw new Error(data.error || data.message || "Something went wrong");
           }
 
-          window.location.assign("/admin/dashboard.html");
-
           localStorage.setItem("user", JSON.stringify(data));
+
+          const dashboardPath =
+            data.type === "student"
+              ? "/student/dashboard.html"
+              : data.type === "records"
+                ? "/records/dashboard.html"
+                : "/admin/dashboard.html";
+
+          window.location.assign(dashboardPath);
 
           form.reset();
         } catch (error) {
           console.error(error);
+          alert(error.message);
         } finally {
           submit.disabled = false;
           submit.textContent = "Sign In";

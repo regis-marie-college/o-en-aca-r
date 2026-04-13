@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Billing</title>
+  </head>
+  <body>
+    <div class="users">
+      <div data-component="../../components/sidebar.html"></div>
+
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+
+        <form id="billing-form" class="table-section" style="margin-bottom: 24px">
+          <h2>Create Billing</h2>
+          <div class="stats" style="margin-top: 16px">
+            <input name="student_name" placeholder="Student name" required />
+            <input name="email" type="email" placeholder="Student email" required />
+            <input name="description" placeholder="Billing description" required />
+            <input name="amount" type="number" min="0.01" step="0.01" placeholder="Amount" required />
+            <input name="due_date" type="date" />
+            <button type="submit">Save Billing</button>
+          </div>
+        </form>
+
+        <input class="search-box" value="" placeholder="Search billing" />
+
+        <section class="table-section">
+          <table id="table-billings">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Description</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
+      }
+
+      async function loadBillings(search = "") {
+        const url = `${window.APP_CONFIG.API_BASE_URL}/billings/list${
+          search ? `?search=${encodeURIComponent(search)}` : ""
+        }`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const tbody = document.querySelector("#table-billings tbody");
+
+        tbody.innerHTML = "";
+
+        data.forEach((billing) => {
+          const row = document.createElement("tr");
+
+          row.innerHTML = `
+            <td>${billing.student_name}<br /><small>${billing.email}</small></td>
+            <td>${billing.description}</td>
+            <td>${formatCurrency(billing.amount)}</td>
+            <td>${formatCurrency(billing.amount_paid)}</td>
+            <td>${formatCurrency(billing.balance)}</td>
+            <td>${billing.due_date ? defaultDate(billing.due_date) : "-"}</td>
+            <td><span class="status ${String(billing.status || "").toLowerCase()}">${billing.status}</span></td>
+            <td>
+              <button type="button" data-id="${billing.id}" data-balance="${billing.balance}" class="btn-pay">
+                Record Payment
+              </button>
+            </td>
+          `;
+
+          tbody.appendChild(row);
+        });
+
+        bindPaymentButtons();
+      }
+
+      function bindPaymentButtons() {
+        document.querySelectorAll(".btn-pay").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const balance = Number(button.dataset.balance || 0);
+
+            if (balance <= 0) {
+              alert("This billing is already fully paid.");
+              return;
+            }
+
+            const amount = window.prompt(`Enter payment amount (Remaining: ${balance})`);
+
+            if (!amount) return;
+
+            const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+            const response = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/billings/update`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  id: button.dataset.id,
+                  payment_amount: amount,
+                  payment_method: "Cash",
+                  processed_by: user.first_name || user.email || "Treasury",
+                }),
+              },
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              alert(data.error || "Failed to record payment");
+              return;
+            }
+
+            await loadBillings(document.querySelector(".search-box").value);
+          });
+        });
+      }
+
+      async function initCreateBilling() {
+        const form = document.querySelector("#billing-form");
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const formData = new FormData(form);
+          const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/billings/create`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                student_name: formData.get("student_name"),
+                email: formData.get("email"),
+                description: formData.get("description"),
+                amount: formData.get("amount"),
+                due_date: formData.get("due_date"),
+                created_by: user.first_name || user.email || "Treasury",
+              }),
+            },
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Failed to create billing");
+            return;
+          }
+
+          form.reset();
+          await loadBillings();
+        });
+      }
+
+      function initSearch() {
+        const searchBox = document.querySelector(".search-box");
+        searchBox.addEventListener("keyup", (event) => {
+          if (event.code === "Enter") {
+            loadBillings(searchBox.value);
+          }
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        initSearch();
+        await initCreateBilling();
+        await loadBillings();
+      });
+    </script>
+  </body>
+</html>

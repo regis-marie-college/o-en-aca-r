@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/user.js" defer></script>
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Student Portal</title>
+  </head>
+  <body>
+    <div class="dashboard">
+      <div data-component="../../components/sidebar.html"></div>
+
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+
+        <section class="stats">
+          <div class="card card-taking">
+            <h3>Currently Taking</h3>
+            <p>0</p>
+          </div>
+          <div class="card card-completed">
+            <h3>Completed Courses</h3>
+            <p>0</p>
+          </div>
+          <div class="card card-paid">
+            <h3>Total Paid</h3>
+            <p>PHP 0.00</p>
+          </div>
+          <div class="card card-balance">
+            <h3>Need To Pay</h3>
+            <p>PHP 0.00</p>
+          </div>
+        </section>
+
+        <section class="table-section" style="margin-bottom: 24px">
+          <h2>Request Documents</h2>
+          <form id="document-request-form" class="stats" style="margin-top: 16px">
+            <select name="document_type" required>
+              <option value="">Select Document</option>
+              <option value="Certificate of Enrollment">Certificate of Enrollment</option>
+              <option value="Certificate of Registration">Certificate of Registration</option>
+              <option value="Transcript of Records">Transcript of Records</option>
+              <option value="Good Moral">Good Moral</option>
+            </select>
+            <input name="purpose" placeholder="Purpose of request" required />
+            <input name="amount" type="number" min="1" step="0.01" placeholder="Amount" required />
+            <button type="submit" class="btn btn-primary">Submit Request</button>
+          </form>
+        </section>
+
+        <section class="table-section" style="margin-bottom: 24px">
+          <h2>Currently Taking</h2>
+          <table id="table-current-courses">
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Units</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <section class="table-section" style="margin-bottom: 24px">
+          <h2>Completed Courses</h2>
+          <table id="table-completed-courses">
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>School Year</th>
+                <th>Recorded At</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <section class="table-section" style="margin-bottom: 24px">
+          <h2>Billing Summary</h2>
+          <table id="table-billings">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <section class="table-section">
+          <h2>Document Requests</h2>
+          <table id="table-document-requests">
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Amount</th>
+                <th>Payment</th>
+                <th>Request Status</th>
+                <th>Proof</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
+      }
+
+      function setCard(selector, value) {
+        const card = document.querySelector(selector);
+        if (!card) return;
+        card.querySelector("p").textContent = value;
+      }
+
+      async function loadPortal() {
+        const user = auth();
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/students/portal?email=${encodeURIComponent(user.email)}`,
+        );
+        const data = await response.json();
+
+        renderCurrentCourses(data.current_courses || []);
+        renderCompletedCourses(data.taken_courses || []);
+        renderBillings(data.billings || []);
+        renderRequests(data.document_requests || []);
+
+        setCard(".card-taking", String((data.current_courses || []).length));
+        setCard(".card-completed", String((data.taken_courses || []).length));
+        setCard(".card-paid", formatCurrency(data.total_paid || 0));
+        setCard(".card-balance", formatCurrency(data.total_balance || 0));
+      }
+
+      function renderCurrentCourses(courses) {
+        const tbody = document.querySelector("#table-current-courses tbody");
+        tbody.innerHTML = "";
+
+        courses.forEach((course) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${course.name}</td>
+            <td>${course.units}</td>
+            <td>${formatCurrency(course.amount)}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      function renderCompletedCourses(courses) {
+        const tbody = document.querySelector("#table-completed-courses tbody");
+        tbody.innerHTML = "";
+
+        courses.forEach((course) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${course.course_name}</td>
+            <td>${course.school_year}</td>
+            <td>${defaultDate(course.created_at)}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      function renderBillings(billings) {
+        const tbody = document.querySelector("#table-billings tbody");
+        tbody.innerHTML = "";
+
+        billings.forEach((billing) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${billing.description}</td>
+            <td>${formatCurrency(billing.amount)}</td>
+            <td>${formatCurrency(billing.amount_paid)}</td>
+            <td>${formatCurrency(billing.balance)}</td>
+            <td><span class="status ${String(billing.status || "").toLowerCase()}">${billing.status}</span></td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      function renderRequests(requests) {
+        const tbody = document.querySelector("#table-document-requests tbody");
+        tbody.innerHTML = "";
+
+        requests.forEach((request) => {
+          const row = document.createElement("tr");
+          const canUploadProof = request.payment_status === "Unpaid" || request.payment_status === "Denied";
+          row.innerHTML = `
+            <td>${request.document_type}</td>
+            <td>${formatCurrency(request.amount)}</td>
+            <td>${request.payment_status}</td>
+            <td>${request.request_status}</td>
+            <td>${request.proof_of_payment || "-"}</td>
+            <td>
+              ${canUploadProof ? `<button type="button" class="btn btn-secondary btn-sm btn-upload-proof" data-id="${request.id}">Upload Proof</button>` : "-"}
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+
+        bindProofButtons();
+      }
+
+      function bindProofButtons() {
+        document.querySelectorAll(".btn-upload-proof").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const proofName = window.prompt("Enter proof of payment file name");
+            if (!proofName) return;
+
+            const user = auth();
+            const response = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/document_requests/update`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  id: button.dataset.id,
+                  payment_status: "Submitted",
+                  request_status: "Payment Submitted",
+                  proof_of_payment: proofName,
+                  notes: `Submitted by ${user.email}`,
+                }),
+              },
+            );
+
+            const data = await response.json();
+            if (!response.ok) {
+              alert(data.error || "Failed to upload proof");
+              return;
+            }
+
+            await loadPortal();
+          });
+        });
+      }
+
+      function initRequestForm() {
+        const form = document.querySelector("#document-request-form");
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const formData = new FormData(form);
+          const user = auth();
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/document_requests/create`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                student_id: user.id,
+                student_name: `${user.first_name} ${user.last_name}`,
+                email: user.email,
+                document_type: formData.get("document_type"),
+                purpose: formData.get("purpose"),
+                amount: formData.get("amount"),
+              }),
+            },
+          );
+
+          const data = await response.json();
+          if (!response.ok) {
+            alert(data.error || "Failed to submit request");
+            return;
+          }
+
+          form.reset();
+          await loadPortal();
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        initRequestForm();
+        await loadPortal();
+      });
+    </script>
+  </body>
+</html>

@@ -1,71 +1,8 @@
-.enrollments {
-  display: flex;
-  height: 100vh;
-
-  .info-holder {
-    margin-bottom: 16px;
-  }
-
-  .search-box {
-    width: 20%;
-  }
-
-  .link-enrollment-form {
-    display: block;
-    width: 100%;
-    text-align: right;
-  }
-
-  .form-group {
-    width: 30%;
-  }
-
-  #preview {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: none;
-    background: rgba(0, 0, 0, 0.6);
-    justify-content: center;
-    align-items: center;
-  }
-
-  .preview-box {
-    background: #fff;
-    padding: 10px;
-    border-radius: 8px;
-    width: 700px;
-    height: 500px;
-    position: relative;
-  }
-
-  .preview-box button {
-    position: absolute;
-    top: 5px;
-    right: 8px;
-    border: none;
-    background: none;
-    font-size: 20px;
-    cursor: pointer;
-    font-weight: bold;
-    color: black;
-  }
-
-  #frame {
-    width: 100%;
-    height: 100%;
-    border: none;
-  }
-}
-
-/* LOGO */
 .logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: var(--white);
+  color: #fff4dc;
   font-size: 18px;
   font-weight: 600;
   letter-spacing: 1px;
@@ -78,5 +15,131 @@
 }
 
 .form-enrollment {
-  padding: 32px 64px;
+  padding: 42px 18px;
+}
+
+.form-enrollment form {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 34px;
+  border-radius: 30px;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 20, 36, 0.94),
+    rgba(8, 16, 29, 0.92)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-lg);
+}
+
+.form-enrollment h2 {
+  margin: 26px 0 16px;
+  color: #fff7ea;
+  font-size: 2rem;
+}
+
+.form-enrollment h2:first-of-type {
+  margin-top: 8px;
+}
+
+.form-enrollment .form-group,
+.form-enrollment .requirement-item {
+  margin-bottom: 16px;
+}
+
+.requirement-item {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.requirement-item label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted-strong);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.requirement-item input[type="file"] {
+  width: 100%;
+  color: var(--text);
+}
+
+.info-holder {
+  margin-bottom: 18px;
+  padding: 22px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.info-holder p {
+  color: var(--muted-strong);
+  margin-bottom: 8px;
+}
+
+.link-enrollment-form {
+  display: inline-flex;
+  justify-content: center;
+  margin: 0 0 18px auto;
+  color: #fff4dc;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+#preview {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  background: rgba(2, 8, 17, 0.78);
+  justify-content: center;
+  align-items: center;
+  z-index: 1500;
+}
+
+.preview-box {
+  background: #f6f2ea;
+  padding: 12px;
+  border-radius: 20px;
+  width: min(92vw, 900px);
+  height: min(82vh, 620px);
+  position: relative;
+  box-shadow: var(--shadow-lg);
+}
+
+.preview-box button {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: none;
+  background: rgba(18, 32, 51, 0.08);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  font-weight: 700;
+  color: #0c1525;
+}
+
+#frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 14px;
+}
+
+@media (max-width: 768px) {
+  .form-enrollment {
+    padding: 18px 12px;
+  }
+
+  .form-enrollment form {
+    padding: 22px 16px;
+    border-radius: 22px;
+  }
 }

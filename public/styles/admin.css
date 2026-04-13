@@ -1,71 +1,100 @@
-/* Layout */
-.dashboard {
-  display: flex;
-  height: 100vh;
-}
-
-/* Stats */
 .stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  margin-bottom: 40px;
+  gap: 18px;
+  margin-bottom: 28px;
 }
 
 .card {
-  background: rgba(15, 23, 42, 0.9);
-  padding: 25px;
-  border-radius: 14px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  transition: 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  min-height: 148px;
+  padding: 24px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(215, 181, 109, 0.14), transparent 30%),
+    linear-gradient(180deg, rgba(12, 24, 42, 0.94), rgba(8, 16, 28, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-md);
+  transition: transform 0.22s ease, border-color 0.22s ease,
+    box-shadow 0.22s ease;
 }
 
 .card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-4px);
+  border-color: rgba(215, 181, 109, 0.18);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.26);
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  left: 24px;
+  bottom: 20px;
+  width: 46px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), transparent);
 }
 
 .card h3 {
-  font-size: 14px;
-  color: #94a3b8;
-  margin-bottom: 10px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 12px;
 }
 
 .card p {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: clamp(1.8rem, 2.2vw, 2.5rem);
+  font-weight: 800;
+  color: #fffaf0;
 }
 
-/* Status Badges */
 .status {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .status.active {
-  background: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
+  background: rgba(106, 221, 180, 0.16);
+  color: var(--success);
 }
 
 .status.pending {
-  background: rgba(250, 204, 21, 0.2);
-  color: #facc15;
+  background: rgba(240, 201, 109, 0.16);
+  color: var(--warning);
+}
+
+.status.paid {
+  background: rgba(106, 221, 180, 0.16);
+  color: var(--success);
+}
+
+.status.partial {
+  background: rgba(106, 150, 216, 0.16);
+  color: #8cb4f0;
+}
+
+.status.unpaid {
+  background: rgba(255, 122, 122, 0.16);
+  color: #ff9d9d;
 }
 
 .status.archived {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  background: rgba(255, 255, 255, 0.08);
+  color: #c8d0de;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
-  .sidebar {
-    display: none;
-  }
-
-  .main {
-    padding: 20px;
+  .stats {
+    grid-template-columns: 1fr;
   }
 }

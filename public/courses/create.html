@@ -50,16 +50,14 @@
                 <option value="">-- Select Semester --</option>
                 <option value="1st Sem">1st Sem</option>
                 <option value="2nd Sem">2nd Sem</option>
+                <option value="3rd Sem">3rd Sem</option>
               </select>
             </div>
 
             <div class="form-group">
               <label for="program">Programs</label>
               <select id="program" name="program" required>
-                <option value="Pending">-- Select Program --</option>
-                <option value="Approved">Approved</option>
-                <option value="Pending">Pending</option>
-                <option value="Declined">Declined</option>
+                <option value="">-- Select Program --</option>
               </select>
             </div>
 
@@ -90,9 +88,18 @@
 
           const formData = new FormData(form);
 
-          const [program_id, program_name, program_code] = formData
-            .get("program")
-            .split(":");
+          const selectedProgram = formData.get("program");
+
+          if (!selectedProgram) {
+            message.innerHTML =
+              "<span class='error'>Please select a valid program.</span>";
+            button.disabled = false;
+            button.textContent = "Create course";
+            return;
+          }
+
+          const [program_id, program_name, program_code] =
+            selectedProgram.split(":");
 
           const payload = {
             name: formData.get("name"),
@@ -120,11 +127,11 @@
             const data = await response.json();
 
             if (!response.ok) {
-              throw new Error(data.message || "Something went wrong");
+              throw new Error(data.error || data.message || "Something went wrong");
             }
 
             message.innerHTML =
-              "<span class='success'>course created successfully!</span>";
+              "<span class='success'>Course created successfully!</span>";
             form.reset();
           } catch (error) {
             message.innerHTML = `<span class='error'>${error.message}</span>`;
@@ -143,7 +150,12 @@
           const data = await res.json();
 
           const select_programs = document.querySelector("select#program");
-          select_programs.innerHTML = "";
+          select_programs.innerHTML =
+            '<option value="">-- Select Program --</option>';
+
+          if (!Array.isArray(data) || !data.length) {
+            return;
+          }
 
           data.forEach((program) => {
             const option = document.createElement("option");
@@ -151,12 +163,14 @@
             const { id, name, code } = program;
 
             option.value = `${id}:${name}:${code}`;
-            option.textContent = name;
+            option.textContent = code ? `${code} - ${name}` : name;
 
             select_programs.appendChild(option);
           });
         } catch (err) {
           console.error("Failed to load programs:", err);
+          document.getElementById("formMessage").innerHTML =
+            "<span class='error'>Failed to load programs. Please try again.</span>";
         }
       }
 

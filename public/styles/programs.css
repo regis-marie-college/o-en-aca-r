@@ -1,4 +1,4 @@
-.programs {
-  display: flex;
-  height: 100vh;
+.programs .table-section,
+.programs .form-card {
+  overflow: hidden;
 }

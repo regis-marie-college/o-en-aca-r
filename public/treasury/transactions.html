@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Transaction History</title>
+  </head>
+  <body>
+    <div class="users">
+      <div data-component="../../components/sidebar.html"></div>
+
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+        <input class="search-box" value="" placeholder="Search transaction history" />
+
+        <section class="table-section">
+          <table id="table-transactions">
+            <thead>
+              <tr>
+                <th>Reference No.</th>
+                <th>Student</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Payment Method</th>
+                <th>Processed By</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
+      }
+
+      async function loadTransactions(search = "") {
+        const url = `${window.APP_CONFIG.API_BASE_URL}/treasury/transactions/list${
+          search ? `?search=${encodeURIComponent(search)}` : ""
+        }`;
+        const response = await fetch(url);
+        const data = await response.json();
+        const tbody = document.querySelector("#table-transactions tbody");
+
+        tbody.innerHTML = "";
+
+        data.forEach((transaction) => {
+          const row = document.createElement("tr");
+
+          row.innerHTML = `
+            <td>${transaction.reference_no}</td>
+            <td>${transaction.student_name}<br /><small>${transaction.email}</small></td>
+            <td>${transaction.description}</td>
+            <td>${formatCurrency(transaction.amount)}</td>
+            <td>${transaction.payment_method}</td>
+            <td>${transaction.processed_by || "-"}</td>
+            <td>${defaultDate(transaction.created_at)}</td>
+          `;
+
+          tbody.appendChild(row);
+        });
+      }
+
+      function initSearch() {
+        const searchBox = document.querySelector(".search-box");
+        searchBox.addEventListener("keyup", (event) => {
+          if (event.code === "Enter") {
+            loadTransactions(searchBox.value);
+          }
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        initSearch();
+        loadTransactions();
+      });
+    </script>
+  </body>
+</html>

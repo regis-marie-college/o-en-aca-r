@@ -71,7 +71,7 @@
               first_name,
               middle_name,
               email,
-              mobile_number, 
+              mobile,
               birthday,
               status
             } = enrollment;
@@ -84,7 +84,7 @@
               </td>
               <td>${last_name} ${first_name} ${middle_name || ""}</td>
               <td>${email}</td>
-              <td>${mobile_number}</td>
+              <td>${mobile || "-"}</td>
               <td>${defaultDate(birthday)}</td>
               <td>
                 <span class="status ${status}">

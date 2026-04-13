@@ -1,38 +1,29 @@
-.users {
-  display: flex;
-  height: 100vh;
-}
-
-/* Status Badges */
 .status {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .status.active {
-  background: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
+  background: rgba(106, 221, 180, 0.16);
+  color: var(--success);
 }
 
 .status.pending {
-  background: rgba(250, 204, 21, 0.2);
-  color: #facc15;
+  background: rgba(240, 201, 109, 0.16);
+  color: var(--warning);
 }
 
 .status.archived {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+  background: rgba(255, 122, 122, 0.14);
+  color: #ff9d9d;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .sidebar {
-    display: none;
-  }
-
-  .main {
-    padding: 20px;
-  }
+.users .table-section {
+  overflow: hidden;
 }

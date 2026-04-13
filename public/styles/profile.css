@@ -1,21 +1,24 @@
-.profile {
-  display: flex;
-  height: 100vh;
-}
-
 .profile-card {
-  padding: 40px;
-  color: white;
-  width: 70%;
+  padding: 34px;
+  color: var(--text);
+  width: min(100%, 920px);
   display: block;
   margin: auto;
+  background: linear-gradient(
+    180deg,
+    rgba(12, 23, 40, 0.92),
+    rgba(9, 17, 30, 0.88)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  box-shadow: var(--shadow-lg);
 }
 
 .profile-picture {
   width: 90px;
   height: 90px;
 
-  background: #3b82f6;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
 
   border-radius: 50%;
 
@@ -25,6 +28,7 @@
 
   font-size: 36px;
   font-weight: bold;
+  color: #132031;
 
   margin: auto;
 
@@ -33,7 +37,7 @@
 
 .role {
   font-size: 13px;
-  color: #e5e7eb;
+  color: var(--muted);
 }
 
 /* ===============================
@@ -42,6 +46,8 @@ FORM
 
 .profile-form h3 {
   margin-bottom: 20px;
+  color: #fff8ea;
+  font-size: 1.8rem;
 }
 
 .form-grid {
@@ -60,21 +66,16 @@ FORM
 .form-group label {
   font-size: 13px;
   margin-bottom: 5px;
-
-  color: #e5e7eb;
+  color: var(--muted);
 }
 
 .form-group input,
 .form-group select {
-  padding: 10px;
-
-  border-radius: 8px;
-
-  border: 1px solid rgba(255, 255, 255, 0.3);
-
-  background: rgba(255, 255, 255, 0.1);
-
-  color: white;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
 }
 
 /* ===============================
@@ -91,33 +92,21 @@ BUTTONS
 
 .save-btn {
   padding: 12px 28px;
-
   border: none;
-
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
-
-  border-radius: 25px;
-
-  color: white;
-
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  border-radius: 999px;
+  color: #132031;
   font-weight: 600;
-
   cursor: pointer;
-
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.5);
+  box-shadow: 0 16px 30px rgba(215, 181, 109, 0.24);
 }
 
 .cancel-btn {
   padding: 12px 28px;
-
-  border-radius: 25px;
-
-  border: 1px solid rgba(255, 255, 255, 0.4);
-
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   background: transparent;
-
-  color: white;
-
+  color: var(--text);
   cursor: pointer;
 }
 /* ===============================
@@ -132,21 +121,13 @@ TOP BAR
 
 .back-btn {
   padding: 8px 16px;
-
   border: none;
-
-  background: rgba(255, 255, 255, 0.15);
-
-  border: 1px solid rgba(255, 255, 255, 0.3);
-
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: white;
-
-  border-radius: 10px;
-
+  border-radius: 999px;
   cursor: pointer;
-
   font-size: 14px;
-
   transition: 0.3s;
 }
 

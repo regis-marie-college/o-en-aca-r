@@ -6,19 +6,22 @@ module.exports = async (req, res) => {
     return notAllowed(res);
   }
 
+  const { search, status } = req.query;
+
   try {
-    const { program_id, year_level, semester } = req.query;
     const result = await db.query(
       `
-      SELECT *
-      FROM courses
-      WHERE
-        ($1::text is null or program_id = $1) and
-        ($2::text is null or year_level = $2) and
-        ($3::text is null or semester = $3)
-      ORDER BY program_code asc, year_level asc, semester asc, name asc
+      select *
+      from billings
+      where
+        ($1::text is null or
+          student_name ilike '%' || $1 || '%' or
+          email ilike '%' || $1 || '%' or
+          description ilike '%' || $1 || '%') and
+        ($2::text is null or status ilike $2)
+      order by created_at desc
       `,
-      [program_id || null, year_level || null, semester || null],
+      [search || null, status || null],
     );
 
     return okay(res, result.rows);

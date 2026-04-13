@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
         [type],
       );
     } else {
-      result = await db.query(`SELET * FROM users`);
+      result = await db.query(`SELECT * FROM users ORDER BY created_at DESC`);
     }
 
     return okay(res, result.rows);

@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
         first_name ILIKE '%' || $1 || '%' OR
         middle_name ILIKE '%' || $1 || '%' OR
         email ILIKE '%' || $1 || '%' OR
-        mobile_number ILIKE '%' || $1 || '%' OR
+        mobile ILIKE '%' || $1 || '%' OR
         status ILIKE '%' || $1 || '%'
       ORDER BY id DESC
       `,

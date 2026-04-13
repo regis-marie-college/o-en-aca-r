@@ -40,17 +40,38 @@
             <h3>My Courses</h3>
             <p>0</p>
           </div>
+          <div class="card card-billings">
+            <h3>Total Billings</h3>
+            <p>0</p>
+          </div>
+          <div class="card card-paid-billings">
+            <h3>Paid Billings</h3>
+            <p>0</p>
+          </div>
+          <div class="card card-collected">
+            <h3>Total Collected</h3>
+            <p>PHP 0.00</p>
+          </div>
+          <div class="card card-outstanding">
+            <h3>Outstanding Balance</h3>
+            <p>PHP 0.00</p>
+          </div>
+          <div class="card card-transactions">
+            <h3>Total Transactions</h3>
+            <p>0</p>
+          </div>
         </section>
 
         <!-- Table -->
         <section class="table-section">
+          <h2 class="table-title">Recent Enrollments</h2>
           <table id="table-enrollments">
             <thead>
               <tr>
-                <th>Full Name</th>
-                <th>Email</th>
-                <th>Mobile number</th>
-                <th>Birthday</th>
+                <th>Primary</th>
+                <th>Secondary</th>
+                <th>Third</th>
+                <th>Fourth</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -63,12 +84,30 @@
       const ROLE_CONFIG = {
         admin: {
           showTable: true,
-          stats: ["students", "enrollments", "pending", "archived"],
+          stats: [
+            "students",
+            "enrollments",
+            "pending",
+            "billings",
+            "paid-billings",
+            "collected",
+            "outstanding",
+            "transactions",
+          ],
+          table: "enrollments",
         },
 
         treasury: {
           showTable: true,
-          stats: ["enrollments", "pending", "archived"],
+          stats: [
+            "billings",
+            "paid-billings",
+            "collected",
+            "outstanding",
+            "transactions",
+            "pending",
+          ],
+          table: "transactions",
         },
 
         student: {
@@ -77,47 +116,61 @@
         },
       };
 
-      async function countStudents() {
-        const res = await fetch(
-          `${window.APP_CONFIG.API_BASE_URL}/users/list?type=student`,
-        );
-        const data = await res.json();
-
-        document.querySelector(".card-students").innerHTML = `
-      <h3>Total Students</h3>
-      <p>${data.length}</p>
-    `;
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
       }
 
-      async function countEnrollments() {
+      async function getStatistics() {
         const res = await fetch(
-          `${window.APP_CONFIG.API_BASE_URL}/enrollments/list`,
+          `${window.APP_CONFIG.API_BASE_URL}/treasury/statistics`,
         );
-        const data = await res.json();
-
-        document.querySelector(".card-enrollments").innerHTML = `
-      <h3>Active Enrollment</h3>
-      <p>${data.length}</p>
-    `;
+        return res.json();
       }
 
-      async function countPendingEnrollments() {
-        const res = await fetch(
-          `${window.APP_CONFIG.API_BASE_URL}/enrollments/list?search=Pending`,
-        );
-        const data = await res.json();
+      function setCard(selector, title, value) {
+        const card = document.querySelector(selector);
+        if (!card) return;
 
-        document.querySelector(".card-pending").innerHTML = `
-      <h3>Pending Approval</h3>
-      <p>${data.length}</p>
-    `;
+        card.innerHTML = `
+          <h3>${title}</h3>
+          <p>${value}</p>
+        `;
       }
 
-      async function countArchived() {
-        document.querySelector(".card-archived").innerHTML = `
-      <h3>Archived Records</h3>
-      <p>0</p>
-    `;
+      async function renderStatistics() {
+        const stats = await getStatistics();
+
+        setCard(".card-students", "Total Students", stats.students || 0);
+        setCard(".card-enrollments", "Active Enrollment", stats.enrollments || 0);
+        setCard(
+          ".card-pending",
+          "Pending Approval",
+          stats.pending_enrollments || 0,
+        );
+        setCard(".card-billings", "Total Billings", stats.total_billings || 0);
+        setCard(
+          ".card-paid-billings",
+          "Paid Billings",
+          stats.paid_billings || 0,
+        );
+        setCard(
+          ".card-collected",
+          "Total Collected",
+          formatCurrency(stats.total_collected),
+        );
+        setCard(
+          ".card-outstanding",
+          "Outstanding Balance",
+          formatCurrency(stats.total_outstanding),
+        );
+        setCard(
+          ".card-transactions",
+          "Total Transactions",
+          stats.total_transactions || 0,
+        );
       }
 
       async function loadEnrollments() {
@@ -137,7 +190,7 @@
             first_name,
             middle_name,
             email,
-            mobile_number,
+            mobile,
             birthday,
             status,
           } = enrollment;
@@ -145,12 +198,48 @@
           const row = document.createElement("tr");
 
           row.innerHTML = `
-        <td>${last_name} ${first_name} ${middle_name}</td>
+        <td>${last_name} ${first_name} ${middle_name || ""}</td>
         <td>${email}</td>
-        <td>${mobile_number}</td>
+        <td>${mobile || "-"}</td>
         <td>${defaultDate(birthday)}</td>
         <td>${status}</td>
       `;
+
+          tbody.appendChild(row);
+        });
+      }
+
+      async function loadTransactions() {
+        const res = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/treasury/transactions/list`,
+        );
+        const data = await res.json();
+        const tbody = document.querySelector("#table-enrollments tbody");
+        const thead = document.querySelector("#table-enrollments thead");
+        const tableTitle = document.querySelector(".table-title");
+
+        tableTitle.textContent = "Recent Treasury Transactions";
+        thead.innerHTML = `
+          <tr>
+            <th>Reference</th>
+            <th>Student</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Status</th>
+          </tr>
+        `;
+        tbody.innerHTML = "";
+
+        data.forEach((transaction) => {
+          const row = document.createElement("tr");
+
+          row.innerHTML = `
+            <td>${transaction.reference_no}</td>
+            <td>${transaction.student_name}</td>
+            <td>${transaction.description}</td>
+            <td>${formatCurrency(transaction.amount)}</td>
+            <td>${transaction.status}</td>
+          `;
 
           tbody.appendChild(row);
         });
@@ -177,18 +266,14 @@
 
         config.stats.forEach(showStat);
 
-        if (config.stats.includes("students")) await countStudents();
-
-        if (config.stats.includes("enrollments")) await countEnrollments();
-
-        if (config.stats.includes("pending")) await countPendingEnrollments();
-
-        if (config.stats.includes("archived")) await countArchived();
-
-        if (config.stats.includes("courses")) await countArchived();
+        await renderStatistics();
 
         if (config.showTable) {
-          await loadEnrollments();
+          if (config.table === "transactions") {
+            await loadTransactions();
+          } else {
+            await loadEnrollments();
+          }
         } else {
           document.querySelector(".table-section")?.remove();
         }

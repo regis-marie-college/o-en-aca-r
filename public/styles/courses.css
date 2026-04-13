@@ -1,4 +1,4 @@
-.courses {
-  display: flex;
-  height: 100vh;
+.courses .table-section,
+.courses .form-card {
+  overflow: hidden;
 }

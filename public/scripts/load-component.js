@@ -137,7 +137,10 @@
           { href: "../admin/dashboard.html", label: "Dashboard" },
           { href: "../enrollments/list.html", label: "Enrollments" },
           { href: "../students/list.html", label: "Students" },
+          { href: "../treasury/billing.html", label: "Billing" },
+          { href: "../treasury/transactions.html", label: "Transactions" },
           { href: "../admin/admin-list.html", label: "Admins" },
+          { href: "../records/accounts.html", label: "Records Accounts" },
           { href: "../programs/list.html", label: "Programs" },
           { href: "../courses/list.html", label: "Courses" },
         ];
@@ -147,6 +150,9 @@
         links = [
           { href: "../admin/dashboard.html", label: "Dashboard" },
           { href: "../enrollments/list.html", label: "Enrollments" },
+          { href: "../treasury/billing.html", label: "Billing" },
+          { href: "../treasury/document-payments.html", label: "Doc Payments" },
+          { href: "../treasury/transactions.html", label: "Transactions" },
           { href: "../programs/list.html", label: "Programs" },
           { href: "../courses/list.html", label: "Courses" },
         ];
@@ -155,7 +161,16 @@
       case "student":
         links = [
           { href: "../student/dashboard.html", label: "Dashboard" },
+          { href: "../profile/profile.html", label: "Profile" },
           { href: "../courses/list.html", label: "My Courses" },
+        ];
+        break;
+
+      case "records":
+        links = [
+          { href: "../records/dashboard.html", label: "Dashboard" },
+          { href: "../records/accounts.html", label: "Accounts" },
+          { href: "../students/list.html", label: "Students" },
         ];
         break;
 
@@ -170,6 +185,16 @@
   `,
       )
       .join("");
+
+    const currentPath = window.location.pathname.split("/").pop();
+
+    menu.querySelectorAll("a").forEach((link) => {
+      const linkPath = link.getAttribute("href")?.split("/").pop();
+
+      if (linkPath && linkPath === currentPath) {
+        link.classList.add("active");
+      }
+    });
   }
 
   document.addEventListener("DOMContentLoaded", async function () {
