@@ -7,7 +7,12 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const result = await db.query(`SELECT * FROM courses`);
+    const { program_id } = req.query;
+    const result = program_id
+      ? await db.query(`SELECT * FROM courses WHERE program_id = $1`, [
+          program_id,
+        ])
+      : await db.query(`SELECT * FROM courses`);
 
     return okay(res, result.rows);
   } catch (err) {

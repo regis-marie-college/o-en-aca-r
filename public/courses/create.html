@@ -29,6 +29,31 @@
             </div>
 
             <div class="form-group">
+              <label>Year Level</label>
+              <select name="year_level" required>
+                <option value="">-- Select Year Level --</option>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Units</label>
+              <input type="number" name="units" min="1" required />
+            </div>
+
+            <div class="form-group">
+              <label>Semester</label>
+              <select name="semester" required>
+                <option value="">-- Select Semester --</option>
+                <option value="1st Sem">1st Sem</option>
+                <option value="2nd Sem">2nd Sem</option>
+              </select>
+            </div>
+
+            <div class="form-group">
               <label for="program">Programs</label>
               <select id="program" name="program" required>
                 <option value="Pending">-- Select Program --</option>
@@ -75,6 +100,9 @@
             program_id,
             program_name,
             program_code,
+            year_level: formData.get("year_level"),
+            units: formData.get("units"),
+            semester: formData.get("semester"),
           };
 
           try {

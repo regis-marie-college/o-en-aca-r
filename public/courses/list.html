@@ -28,6 +28,9 @@
                 <th>Name</th>
                 <th>Description</th>
                 <th>Program</th>
+                <th>Year Level</th>
+                <th>Units</th>
+                <th>Semester</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -50,13 +53,25 @@
           data.forEach((course) => {
             const row = document.createElement("tr");
 
-            const { id, name, description, program_code, status } = course;
+            const {
+              id,
+              name,
+              description,
+              program_code,
+              year_level,
+              units,
+              semester,
+              status,
+            } = course;
 
             row.innerHTML = `
               <td><a href="read.html?id=${id}">${id.substring(0, 6)}</a></td>
               <td>${name}</td>
               <td>${description}</td>
               <td>${program_code}</td>
+              <td>${year_level}</td>
+              <td>${units}</td>
+              <td>${semester}</td>
               <td>${status}</td>
             `;
 
