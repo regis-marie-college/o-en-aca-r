@@ -138,6 +138,7 @@
           { href: "../enrollments/list.html", label: "Enrollments" },
           { href: "../students/list.html", label: "Students" },
           { href: "../treasury/billing.html", label: "Billing" },
+          { href: "../treasury/document-payments.html", label: "Doc Payments" },
           { href: "../treasury/transactions.html", label: "Transactions" },
           { href: "../admin/admin-list.html", label: "Admins" },
           { href: "../records/accounts.html", label: "Records Accounts" },

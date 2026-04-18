@@ -1,5 +1,6 @@
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const db = require("../../services/supabase");
+const config = require("../../lib/config");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -62,6 +63,18 @@ module.exports = async (req, res) => {
       [email],
     );
 
+    const documentsResult = enrollment
+      ? await db.query(
+          `
+          select *
+          from documents
+          where enrollment_id = $1
+          order by created_at asc, id asc
+          `,
+          [enrollment.id],
+        )
+      : { rows: [] };
+
     const totalPaid = billingsResult.rows.reduce(
       (sum, item) => sum + Number(item.amount_paid || 0),
       0,
@@ -82,6 +95,11 @@ module.exports = async (req, res) => {
       total_paid: totalPaid,
       total_balance: totalBalance,
       document_requests: requestsResult.rows,
+      submitted_documents: documentsResult.rows,
+      id_picture:
+        documentsResult.rows.find((document) => document.type === "idpic") ||
+        null,
+      payment_options: config.payment_accounts,
     });
   } catch (err) {
     console.error(err);

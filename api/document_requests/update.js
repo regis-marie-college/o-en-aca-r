@@ -1,6 +1,10 @@
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
+const {
+  recordDocumentPaymentTransaction,
+  notifyDocumentRequestStatus,
+} = require("./helpers");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -22,6 +26,8 @@ async function updateDocumentRequest(data) {
     id,
     request_status,
     payment_status,
+    payment_method,
+    reference_no,
     proof_of_payment,
     notes,
     reviewed_by,
@@ -32,15 +38,33 @@ async function updateDocumentRequest(data) {
     throw new Error("Document request ID is required");
   }
 
+  const existingResult = await db.query(
+    `
+    select *
+    from document_requests
+    where id = $1
+    limit 1
+    `,
+    [id],
+  );
+
+  if (!existingResult.rows.length) {
+    throw new Error("Document request not found");
+  }
+
+  const existingRequest = existingResult.rows[0];
+
   const result = await db.query(
     `
     update document_requests
     set request_status = coalesce($2, request_status),
         payment_status = coalesce($3, payment_status),
-        proof_of_payment = coalesce($4, proof_of_payment),
-        notes = coalesce($5, notes),
-        reviewed_by = coalesce($6, reviewed_by),
-        treasury_reviewed_by = coalesce($7, treasury_reviewed_by),
+        payment_method = coalesce($4, payment_method),
+        reference_no = coalesce($5, reference_no),
+        proof_of_payment = coalesce($6, proof_of_payment),
+        notes = coalesce($7, notes),
+        reviewed_by = coalesce($8, reviewed_by),
+        treasury_reviewed_by = coalesce($9, treasury_reviewed_by),
         updated_at = now()
     where id = $1
     returning *
@@ -49,6 +73,8 @@ async function updateDocumentRequest(data) {
       id,
       request_status || null,
       payment_status || null,
+      payment_method || null,
+      reference_no || null,
       proof_of_payment || null,
       notes || null,
       reviewed_by || null,
@@ -56,29 +82,22 @@ async function updateDocumentRequest(data) {
     ],
   );
 
-  if (!result.rows.length) {
-    throw new Error("Document request not found");
-  }
+  const updatedRequest = result.rows[0];
+  const previousPaymentStatus = String(existingRequest.payment_status || "");
+  const nextPaymentStatus = String(updatedRequest.payment_status || "");
+  const hasPaymentDecisionChanged = previousPaymentStatus !== nextPaymentStatus;
 
-  if (payment_status === "Approved") {
-    const request = result.rows[0];
-
-    await db.query(
-      `
-      insert into treasury_transactions
-      (student_name, email, reference_no, description, amount, payment_method, status, processed_by)
-      values ($1,$2,$3,$4,$5,'Proof of Payment','Paid',$6)
-      `,
-      [
-        request.student_name,
-        request.email,
-        `DOC-${Date.now()}`,
-        `${request.document_type} request payment`,
-        Number(request.amount || 0).toFixed(2),
-        treasury_reviewed_by || "Treasury",
-      ],
+  if (nextPaymentStatus === "Approved" && hasPaymentDecisionChanged) {
+    await recordDocumentPaymentTransaction(
+      updatedRequest,
+      treasury_reviewed_by || reviewed_by || "Treasury",
     );
+    await notifyDocumentRequestStatus(updatedRequest, "Approved");
   }
 
-  return result.rows[0];
+  if (nextPaymentStatus === "Denied" && hasPaymentDecisionChanged) {
+    await notifyDocumentRequestStatus(updatedRequest, "Rejected");
+  }
+
+  return updatedRequest;
 }

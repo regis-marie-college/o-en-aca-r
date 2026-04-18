@@ -20,7 +20,10 @@
 
         <div class="profile-card">
           <div class="profile-header">
-            <div class="profile-picture">S</div>
+            <div class="profile-picture" data-has-image="false">
+              <span class="profile-picture-fallback">S</span>
+              <span class="profile-picture-file">No 1x1 submitted</span>
+            </div>
 
             <h2 class="profile-name">Student</h2>
             <p class="role">Student Account</p>
@@ -91,15 +94,111 @@
               </div>
             </div>
           </form>
+
+          <section class="profile-section">
+            <div class="section-heading">
+              <h3>Submitted Requirements</h3>
+              <p>These are the files submitted during enrollment.</p>
+            </div>
+            <div class="requirements-list" id="submitted-requirements"></div>
+          </section>
+
+          <section class="profile-section">
+            <div class="section-heading">
+              <h3>Payment Channels</h3>
+              <p>Students can pay using GCash, BPI, RCBC, and Metrobank.</p>
+            </div>
+            <div class="payment-options" id="payment-options"></div>
+          </section>
         </div>
       </main>
     </div>
     <script>
+      const DOCUMENT_LABELS = {
+        form137: "Form 137",
+        idpic: "1x1 ID Picture",
+        psa: "PSA Birth Certificate",
+        moral: "Good Moral",
+        diploma: "Diploma",
+        others: "Other Documents",
+      };
+
       function formatCurrency(value) {
         return new Intl.NumberFormat("en-PH", {
           style: "currency",
           currency: "PHP",
         }).format(Number(value || 0));
+      }
+
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
+      }
+
+      function renderDocuments(documents) {
+        const container = document.querySelector("#submitted-requirements");
+
+        if (!Array.isArray(documents) || documents.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state">No submitted requirements found yet.</div>';
+          return;
+        }
+
+        container.innerHTML = documents
+          .map((document) => {
+            const typeLabel =
+              DOCUMENT_LABELS[document.type] || document.type || "Requirement";
+
+            return `
+              <article class="document-card">
+                <span class="document-type">${escapeHtml(typeLabel)}</span>
+                <strong>${escapeHtml(document.name || "Unnamed file")}</strong>
+                <small>${escapeHtml(document.category || "Requirement")}</small>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function renderPaymentOptions(options) {
+        const container = document.querySelector("#payment-options");
+
+        if (!Array.isArray(options) || options.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state">No payment channels configured yet.</div>';
+          return;
+        }
+
+        container.innerHTML = options
+          .map(
+            (option) => `
+              <article class="payment-card">
+                <h4>${escapeHtml(option.label || "Payment Option")}</h4>
+                <p><span>Account Name</span><strong>${escapeHtml(option.account_name || "Not yet configured")}</strong></p>
+                <p><span>Account No.</span><strong>${escapeHtml(option.account_number || "Not yet configured")}</strong></p>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      function renderProfilePicture(firstName, idPicture) {
+        const profilePicture = document.querySelector(".profile-picture");
+        const fallback = profilePicture.querySelector(".profile-picture-fallback");
+        const fileLabel = profilePicture.querySelector(".profile-picture-file");
+
+        fallback.textContent = (firstName || "S").charAt(0).toUpperCase();
+        fileLabel.textContent = idPicture?.name || "No 1x1 submitted";
+        profilePicture.dataset.hasImage = idPicture?.name ? "true" : "false";
       }
 
       async function loadProfile() {
@@ -119,17 +218,26 @@
           throw new Error(data.error || "Failed to load profile");
         }
 
-        const { user, enrollment, current_courses, taken_courses, total_paid, total_balance } = data;
+        const {
+          user,
+          enrollment,
+          current_courses,
+          taken_courses,
+          total_paid,
+          total_balance,
+          submitted_documents,
+          id_picture,
+          payment_options,
+        } = data;
         const form = document.querySelector(".profile-form");
         const profileName = document.querySelector(".profile-name");
-        const profilePicture = document.querySelector(".profile-picture");
 
         const firstName = user?.first_name || "";
         const lastName = user?.last_name || "";
         const fullName = `${firstName} ${lastName}`.trim();
 
         profileName.textContent = fullName || "Student";
-        profilePicture.textContent = (firstName || "S").charAt(0).toUpperCase();
+        renderProfilePicture(firstName, id_picture);
 
         form.querySelector('[name="first_name"]').value = firstName;
         form.querySelector('[name="last_name"]').value = lastName;
@@ -147,6 +255,9 @@
         form.querySelector('[name="taken_courses"]').value = String(
           Array.isArray(taken_courses) ? taken_courses.length : 0,
         );
+
+        renderDocuments(submitted_documents || []);
+        renderPaymentOptions(payment_options || []);
       }
 
       document.addEventListener("DOMContentLoaded", async () => {

@@ -71,6 +71,9 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(18px);
+  position: relative;
+  z-index: 200;
+  overflow: visible;
 }
 
 .topbar h1 {
@@ -84,6 +87,7 @@
   align-items: center;
   gap: 12px;
   position: relative;
+  z-index: 210;
   cursor: pointer;
   padding: 10px 14px;
   border-radius: 18px;
@@ -118,11 +122,11 @@
 
 .user .dropdown {
   position: absolute;
-  z-index: 1201;
+  z-index: 220;
   top: calc(100% + 12px);
   right: 0;
-  min-width: 180px;
-  padding: 8px;
+  min-width: 220px;
+  padding: 10px;
   border-radius: 18px;
   background: rgba(8, 18, 34, 0.96);
   border: 1px solid rgba(215, 181, 109, 0.16);
@@ -138,6 +142,7 @@
   font-size: 14px;
   text-decoration: none;
   color: var(--muted-strong);
+  white-space: nowrap;
 }
 
 .user .dropdown a:hover {

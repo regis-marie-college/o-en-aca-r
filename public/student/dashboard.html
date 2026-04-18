@@ -47,9 +47,53 @@
               <option value="Good Moral">Good Moral</option>
             </select>
             <input name="purpose" placeholder="Purpose of request" required />
-            <input name="amount" type="number" min="1" step="0.01" placeholder="Amount" required />
+            <select name="payment_method" required>
+              <option value="">Select Payment Method</option>
+              <option value="Online">Online</option>
+              <option value="Cash">Cash</option>
+            </select>
+            <input
+              name="amount"
+              type="text"
+              value="PHP 300.00"
+              readonly
+              aria-label="Document request amount"
+            />
+            <div class="portal-form-note" id="cash-payment-note">
+              Cash payments are auto-approved.
+            </div>
+            <div class="portal-online-fields" id="online-payment-fields" hidden>
+              <select name="payment_channel">
+                <option value="">Select Payment Channel</option>
+              </select>
+              <input
+                name="reference_no"
+                placeholder="Reference Number"
+                autocomplete="off"
+              />
+              <input
+                name="proof_of_payment"
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                aria-label="Upload proof of payment"
+              />
+              <div class="portal-form-note">
+                Upload proof of payment and enter the online payment reference number.
+              </div>
+            </div>
             <button type="submit" class="btn btn-primary">Submit Request</button>
           </form>
+        </section>
+
+        <section class="table-section portal-grid-section" style="margin-bottom: 24px">
+          <div>
+            <h2>Submitted Requirements</h2>
+            <div class="portal-card-grid" id="submitted-requirements"></div>
+          </div>
+          <div>
+            <h2>Payment Channels</h2>
+            <div class="portal-card-grid" id="payment-options"></div>
+          </div>
         </section>
 
         <section class="table-section" style="margin-bottom: 24px">
@@ -103,6 +147,8 @@
               <tr>
                 <th>Document</th>
                 <th>Amount</th>
+                <th>Method</th>
+                <th>Reference</th>
                 <th>Payment</th>
                 <th>Request Status</th>
                 <th>Proof</th>
@@ -116,6 +162,17 @@
     </div>
 
     <script>
+      const DOCUMENT_REQUEST_AMOUNT = 300;
+      let availablePaymentOptions = [];
+      const DOCUMENT_LABELS = {
+        form137: "Form 137",
+        idpic: "1x1 ID Picture",
+        psa: "PSA Birth Certificate",
+        moral: "Good Moral",
+        diploma: "Diploma",
+        others: "Other Documents",
+      };
+
       function formatCurrency(value) {
         return new Intl.NumberFormat("en-PH", {
           style: "currency",
@@ -123,10 +180,136 @@
         }).format(Number(value || 0));
       }
 
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
+      }
+
       function setCard(selector, value) {
         const card = document.querySelector(selector);
         if (!card) return;
         card.querySelector("p").textContent = value;
+      }
+
+      function getSelectedPaymentChannel() {
+        const form = document.querySelector("#document-request-form");
+        return form?.querySelector('[name="payment_channel"]')?.value || "";
+      }
+
+      function populatePaymentChannels(options) {
+        const channelSelect = document.querySelector(
+          '#document-request-form [name="payment_channel"]',
+        );
+
+        if (!channelSelect) return;
+
+        channelSelect.innerHTML = `
+          <option value="">Select Payment Channel</option>
+          ${options
+            .map(
+              (option) => `
+                <option value="${escapeHtml(option.key || "")}">
+                  ${escapeHtml(option.label || "Payment Channel")}
+                </option>
+              `,
+            )
+            .join("")}
+        `;
+      }
+
+      function renderProofCell(value) {
+        const proofValue = String(value || "").trim();
+
+        if (!proofValue) {
+          return "-";
+        }
+
+        if (proofValue.startsWith("/uploads/")) {
+          const label = escapeHtml(proofValue.split("/").pop() || "View Proof");
+          const href = escapeHtml(proofValue);
+          return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        }
+
+        return escapeHtml(proofValue);
+      }
+
+      function pickProofFile() {
+        return new Promise((resolve) => {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = ".jpg,.jpeg,.png,.pdf";
+
+          input.addEventListener("change", () => {
+            resolve(input.files?.[0] || null);
+          });
+
+          input.click();
+        });
+      }
+
+      async function uploadProofFile(file) {
+        if (!file) {
+          return null;
+        }
+
+        const uploadData = new FormData();
+        uploadData.append("proof_of_payment", file);
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/document_requests/upload-proof`,
+          {
+            method: "POST",
+            body: uploadData,
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to upload proof of payment");
+        }
+
+        return data;
+      }
+
+      function togglePaymentFields() {
+        const form = document.querySelector("#document-request-form");
+        const method = form.querySelector('[name="payment_method"]').value;
+        const onlineFields = document.querySelector("#online-payment-fields");
+        const cashNote = document.querySelector("#cash-payment-note");
+        const channelInput = form.querySelector('[name="payment_channel"]');
+        const referenceInput = form.querySelector('[name="reference_no"]');
+        const proofInput = form.querySelector('[name="proof_of_payment"]');
+        const isOnline = method === "Online";
+
+        onlineFields.hidden = !isOnline;
+        cashNote.hidden = method !== "Cash";
+        channelInput.required = isOnline;
+        referenceInput.required = isOnline;
+        proofInput.required = isOnline;
+
+        if (!isOnline) {
+          channelInput.value = "";
+          referenceInput.value = "";
+          proofInput.value = "";
+        }
+
+        renderPaymentOptions(availablePaymentOptions, {
+          selectedKey: isOnline ? channelInput.value : "",
+          prompt:
+            method === "Cash"
+              ? "Cash selected. No online payment channel needed."
+              : "Select an online payment channel to view the account details.",
+        });
       }
 
       async function loadPortal() {
@@ -140,6 +323,15 @@
         renderCompletedCourses(data.taken_courses || []);
         renderBillings(data.billings || []);
         renderRequests(data.document_requests || []);
+        renderDocuments(data.submitted_documents || []);
+        availablePaymentOptions = Array.isArray(data.payment_options)
+          ? data.payment_options
+          : [];
+        populatePaymentChannels(availablePaymentOptions);
+        renderPaymentOptions(availablePaymentOptions, {
+          selectedKey: getSelectedPaymentChannel(),
+          prompt: "Select an online payment channel to view the account details.",
+        });
 
         setCard(".card-taking", String((data.current_courses || []).length));
         setCard(".card-completed", String((data.taken_courses || []).length));
@@ -194,21 +386,83 @@
         });
       }
 
+      function renderDocuments(documents) {
+        const container = document.querySelector("#submitted-requirements");
+
+        if (!Array.isArray(documents) || documents.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state">No requirements submitted yet.</div>';
+          return;
+        }
+
+        container.innerHTML = documents
+          .map(
+            (document) => `
+              <article class="portal-mini-card">
+                <span>${escapeHtml(DOCUMENT_LABELS[document.type] || document.type || "Requirement")}</span>
+                <strong>${escapeHtml(document.name || "Unnamed file")}</strong>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      function renderPaymentOptions(options, config = {}) {
+        const container = document.querySelector("#payment-options");
+        const {
+          selectedKey = "",
+          prompt = "Select a payment channel to view account details.",
+        } = config;
+
+        if (!Array.isArray(options) || options.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state">No payment channels configured yet.</div>';
+          return;
+        }
+
+        if (!selectedKey) {
+          container.innerHTML = `<div class="empty-state">${escapeHtml(prompt)}</div>`;
+          return;
+        }
+
+        const selectedOption = options.find((option) => option.key === selectedKey);
+
+        if (!selectedOption) {
+          container.innerHTML =
+            '<div class="empty-state">Selected payment channel is not available.</div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <article class="portal-mini-card">
+            <span>${escapeHtml(selectedOption.label || "Payment Option")}</span>
+            <strong>${escapeHtml(selectedOption.account_name || "Not yet configured")}</strong>
+            <small>${escapeHtml(selectedOption.account_number || "Not yet configured")}</small>
+          </article>
+        `;
+      }
+
       function renderRequests(requests) {
         const tbody = document.querySelector("#table-document-requests tbody");
         tbody.innerHTML = "";
 
         requests.forEach((request) => {
           const row = document.createElement("tr");
-          const canUploadProof = request.payment_status === "Unpaid" || request.payment_status === "Denied";
+          const canUploadProof =
+            request.payment_method === "Online" &&
+            (request.payment_status === "Denied" || request.payment_status === "Unpaid");
           row.innerHTML = `
-            <td>${request.document_type}</td>
+            <td>${escapeHtml(request.document_type)}</td>
             <td>${formatCurrency(request.amount)}</td>
-            <td>${request.payment_status}</td>
-            <td>${request.request_status}</td>
-            <td>${request.proof_of_payment || "-"}</td>
+            <td>${escapeHtml(request.payment_method || "-")}</td>
+            <td>${escapeHtml(request.reference_no || "-")}</td>
+            <td>${escapeHtml(request.payment_status)}</td>
+            <td>${escapeHtml(request.request_status)}</td>
+            <td>${renderProofCell(request.proof_of_payment)}</td>
             <td>
-              ${canUploadProof ? `<button type="button" class="btn btn-secondary btn-sm btn-upload-proof" data-id="${request.id}">Upload Proof</button>` : "-"}
+              ${canUploadProof ? `<button type="button" class="btn btn-secondary btn-sm btn-upload-proof" data-id="${request.id}">Resubmit Proof</button>` : escapeHtml(
+                request.payment_method === "Cash" ? "Auto Approved" : "-"
+              )}
             </td>
           `;
           tbody.appendChild(row);
@@ -220,44 +474,94 @@
       function bindProofButtons() {
         document.querySelectorAll(".btn-upload-proof").forEach((button) => {
           button.addEventListener("click", async () => {
-            const proofName = window.prompt("Enter proof of payment file name");
-            if (!proofName) return;
+            const referenceNo = window.prompt("Enter reference number");
+            if (!referenceNo) return;
+
+            const proofFile = await pickProofFile();
+            if (!proofFile) return;
 
             const user = auth();
-            const response = await fetch(
-              `${window.APP_CONFIG.API_BASE_URL}/document_requests/update`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  id: button.dataset.id,
-                  payment_status: "Submitted",
-                  request_status: "Payment Submitted",
-                  proof_of_payment: proofName,
-                  notes: `Submitted by ${user.email}`,
-                }),
-              },
-            );
+            try {
+              const uploadedProof = await uploadProofFile(proofFile);
+              const response = await fetch(
+                `${window.APP_CONFIG.API_BASE_URL}/document_requests/update`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    id: button.dataset.id,
+                    payment_status: "Submitted",
+                    request_status: "Payment Submitted",
+                    reference_no: referenceNo,
+                    proof_of_payment: uploadedProof.file_url,
+                    notes: `Submitted by ${user.email}`,
+                  }),
+                },
+              );
 
-            const data = await response.json();
-            if (!response.ok) {
-              alert(data.error || "Failed to upload proof");
-              return;
+              const data = await response.json();
+              if (!response.ok) {
+                alert(data.error || "Failed to upload proof");
+                return;
+              }
+
+              await loadPortal();
+            } catch (error) {
+              alert(error.message || "Failed to upload proof");
             }
-
-            await loadPortal();
           });
         });
       }
 
       function initRequestForm() {
         const form = document.querySelector("#document-request-form");
+        const amountInput = form.querySelector('[name="amount"]');
+        const paymentMethodInput = form.querySelector('[name="payment_method"]');
+        const paymentChannelInput = form.querySelector('[name="payment_channel"]');
+
+        if (amountInput) {
+          amountInput.value = formatCurrency(DOCUMENT_REQUEST_AMOUNT);
+        }
+
+        paymentMethodInput.addEventListener("change", togglePaymentFields);
+        paymentChannelInput.addEventListener("change", () => {
+          renderPaymentOptions(availablePaymentOptions, {
+            selectedKey: paymentChannelInput.value,
+            prompt: "Select an online payment channel to view the account details.",
+          });
+        });
+        togglePaymentFields();
 
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
 
+          if (!form.reportValidity()) {
+            return;
+          }
+
           const formData = new FormData(form);
           const user = auth();
+          const paymentMethod = formData.get("payment_method");
+          const proofInput = form.querySelector('[name="proof_of_payment"]');
+          const proofFile = proofInput?.files?.[0] || null;
+
+          if (paymentMethod === "Online" && (!formData.get("reference_no") || !proofFile)) {
+            alert("Reference number and proof of payment are required for online payment.");
+            return;
+          }
+
+          let proofUrl = null;
+
+          if (paymentMethod === "Online") {
+            try {
+              const uploadedProof = await uploadProofFile(proofFile);
+              proofUrl = uploadedProof.file_url;
+            } catch (error) {
+              alert(error.message || "Failed to upload proof of payment.");
+              return;
+            }
+          }
+
           const response = await fetch(
             `${window.APP_CONFIG.API_BASE_URL}/document_requests/create`,
             {
@@ -269,7 +573,10 @@
                 email: user.email,
                 document_type: formData.get("document_type"),
                 purpose: formData.get("purpose"),
-                amount: formData.get("amount"),
+                payment_method: paymentMethod,
+                reference_no: formData.get("reference_no"),
+                proof_of_payment: proofUrl,
+                amount: DOCUMENT_REQUEST_AMOUNT,
               }),
             },
           );
@@ -281,6 +588,8 @@
           }
 
           form.reset();
+          amountInput.value = formatCurrency(DOCUMENT_REQUEST_AMOUNT);
+          togglePaymentFields();
           await loadPortal();
         });
       }
