@@ -8,45 +8,640 @@
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Billing</title>
+    <style>
+      body.billing-page {
+        background:
+          radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 26%),
+          radial-gradient(circle at 90% 12%, rgba(147, 197, 253, 0.38), transparent 20%),
+          linear-gradient(180deg, #f7fbff 0%, #eef5ff 48%, #e7f0ff 100%);
+        color: #16324f;
+      }
+
+      body.billing-page::before {
+        background-image:
+          linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+        opacity: 0.55;
+        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent 95%);
+      }
+
+      .billing-page .sidebar {
+        background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%);
+        border-right: 1px solid rgba(148, 184, 255, 0.55);
+        box-shadow: 12px 0 40px rgba(30, 64, 175, 0.08);
+      }
+
+      .billing-page .logo {
+        color: #1d4ed8;
+      }
+
+      .billing-page .sidebar nav a {
+        color: #355071;
+      }
+
+      .billing-page .sidebar nav a:hover,
+      .billing-page .sidebar nav a.active {
+        color: #1d4ed8;
+        background: linear-gradient(135deg, #e0edff, #f8fbff);
+        border-color: rgba(96, 165, 250, 0.55);
+      }
+
+      .billing-page .topbar {
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(148, 184, 255, 0.38);
+        box-shadow: 0 18px 48px rgba(37, 99, 235, 0.1);
+      }
+
+      .billing-page .topbar h1,
+      .billing-page .topbar span.auth-name {
+        color: #16324f;
+      }
+
+      .billing-page .topbar span.auth-type {
+        background: linear-gradient(135deg, #2563eb, #60a5fa);
+        color: #ffffff;
+      }
+
+      .billing-page .user {
+        background: #f8fbff;
+        border-color: rgba(148, 184, 255, 0.42);
+      }
+
+      .billing-page .avatar {
+        background: linear-gradient(135deg, #1d4ed8, #60a5fa);
+        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
+      }
+
+      .billing-page .user .dropdown {
+        background: #ffffff;
+        border-color: rgba(148, 184, 255, 0.42);
+      }
+
+      .billing-page .user .dropdown a {
+        color: #355071;
+      }
+
+      .billing-page .user .dropdown a:hover {
+        color: #1d4ed8;
+        background: #eff6ff;
+      }
+
+      .billing-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .billing-hero,
+      .billing-panel {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(148, 184, 255, 0.34);
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(30, 64, 175, 0.1);
+      }
+
+      .billing-hero {
+        padding: 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+      }
+
+      .billing-hero-copy {
+        max-width: 680px;
+      }
+
+      .billing-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-size: 0.76rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .billing-hero h2 {
+        margin: 14px 0 12px;
+        font-size: clamp(2rem, 4vw, 3.3rem);
+        color: #123055;
+      }
+
+      .billing-hero p {
+        max-width: 56ch;
+        color: #54708f;
+        font-size: 1rem;
+      }
+
+      .billing-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(140px, 1fr));
+        gap: 14px;
+        width: min(100%, 420px);
+      }
+
+      .summary-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: linear-gradient(180deg, #ffffff, #eef5ff);
+        border: 1px solid rgba(147, 197, 253, 0.55);
+      }
+
+      .summary-card span {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #5f7c9d;
+      }
+
+      .summary-card strong {
+        font-size: 1.55rem;
+        color: #123055;
+      }
+
+      .summary-card strong.text-alert {
+        color: #b45309;
+      }
+
+      .billing-panel {
+        padding: 26px;
+      }
+
+      .billing-panel h3 {
+        margin-bottom: 8px;
+        font-size: 1.85rem;
+        color: #123055;
+      }
+
+      .panel-copy {
+        color: #587595;
+        margin-bottom: 20px;
+      }
+
+      .billing-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .field-group.field-wide {
+        grid-column: span 2;
+      }
+
+      .field-group label {
+        font-size: 0.84rem;
+        font-weight: 700;
+        color: #365271;
+      }
+
+      .field-group input {
+        min-height: 50px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid #c8dafc;
+        background: #f8fbff;
+        color: #16324f;
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease,
+          transform 0.2s ease;
+      }
+
+      .field-group input::placeholder {
+        color: #8aa3bf;
+      }
+
+      .field-group input:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
+        transform: translateY(-1px);
+      }
+
+      .billing-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .helper-text {
+        color: #6782a1;
+        font-size: 0.92rem;
+      }
+
+      .billing-button {
+        border: none;
+        border-radius: 999px;
+        min-height: 48px;
+        padding: 0 22px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease,
+          background 0.2s ease;
+      }
+
+      .billing-button.primary {
+        background: linear-gradient(135deg, #2563eb, #60a5fa);
+        color: #ffffff;
+        box-shadow: 0 14px 30px rgba(37, 99, 235, 0.22);
+      }
+
+      .billing-button.primary:hover,
+      .billing-button.secondary:hover {
+        transform: translateY(-2px);
+      }
+
+      .billing-button.secondary {
+        background: #eff6ff;
+        color: #1d4ed8;
+        box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.35);
+      }
+
+      .billing-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .billing-toolbar-copy h3 {
+        margin-bottom: 4px;
+      }
+
+      .billing-toolbar-copy p {
+        color: #5d7897;
+      }
+
+      .billing-page .search-box {
+        margin: 0;
+        max-width: 360px;
+        border: 1px solid #c8dafc;
+        background: #f8fbff;
+        color: #16324f;
+        box-shadow: none;
+      }
+
+      .billing-page .search-box:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.16);
+      }
+
+      .billing-page small {
+        color: #65809f;
+      }
+
+      .billing-table-wrap {
+        overflow-x: auto;
+      }
+
+      .billing-page table {
+        min-width: 1480px;
+      }
+
+      .billing-page thead {
+        color: #6984a2;
+      }
+
+      .billing-page th {
+        background: #f5f9ff;
+        font-weight: 800;
+      }
+
+      .billing-page th,
+      .billing-page td {
+        padding: 16px 14px;
+      }
+
+      .billing-page tbody tr {
+        border-top: 1px solid #e3edff;
+      }
+
+      .billing-page tbody tr:hover {
+        background: #f8fbff;
+      }
+
+      .billing-page .status {
+        font-size: 0.72rem;
+        letter-spacing: 0.05em;
+      }
+
+      .billing-page .status.paid {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .billing-page .status.partial {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+
+      .billing-page .status.unpaid {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .billing-page .stage-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .billing-page .payment-pending {
+        color: #b45309;
+        font-weight: 700;
+      }
+
+      .billing-empty {
+        padding: 36px 18px;
+        text-align: center;
+        color: #6984a2;
+      }
+
+      .billing-breakdown {
+        grid-column: span 2;
+        padding: 18px;
+        border-radius: 20px;
+        background: linear-gradient(180deg, #f8fbff, #ffffff);
+        border: 1px solid rgba(147, 197, 253, 0.45);
+      }
+
+      .billing-breakdown h4 {
+        margin-bottom: 8px;
+        color: #123055;
+      }
+
+      .billing-breakdown-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .billing-breakdown-item {
+        padding: 14px;
+        border-radius: 16px;
+        background: #ffffff;
+        border: 1px solid rgba(191, 219, 254, 0.9);
+      }
+
+      .billing-breakdown-item span {
+        display: block;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6480a0;
+      }
+
+      .billing-breakdown-item strong {
+        display: block;
+        margin-top: 8px;
+        color: #123055;
+      }
+
+      @media (max-width: 1100px) {
+        .billing-hero {
+          flex-direction: column;
+        }
+
+        .billing-summary {
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .billing-shell {
+          gap: 18px;
+        }
+
+        .billing-hero,
+        .billing-panel {
+          padding: 20px;
+          border-radius: 22px;
+        }
+
+        .billing-form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .field-group.field-wide {
+          grid-column: span 1;
+        }
+
+        .billing-breakdown {
+          grid-column: span 1;
+        }
+
+        .billing-actions,
+        .billing-toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .billing-summary {
+          grid-template-columns: 1fr;
+        }
+
+        .billing-breakdown-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .billing-page .search-box {
+          max-width: 100%;
+          width: 100%;
+        }
+      }
+    </style>
   </head>
-  <body>
+  <body class="billing-page">
     <div class="users">
       <div data-component="../../components/sidebar.html"></div>
 
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
 
-        <form id="billing-form" class="table-section" style="margin-bottom: 24px">
-          <h2>Create Billing</h2>
-          <div class="stats" style="margin-top: 16px">
-            <input name="student_name" placeholder="Student name" required />
-            <input name="email" type="email" placeholder="Student email" required />
-            <input name="description" placeholder="Billing description" required />
-            <input name="amount" type="number" min="0.01" step="0.01" placeholder="Amount" required />
-            <input name="due_date" type="date" />
-            <button type="submit">Save Billing</button>
-          </div>
-        </form>
+        <div class="billing-shell">
+          <section class="billing-hero">
+            <div class="billing-hero-copy">
+              <span class="billing-eyebrow">Treasury Billing</span>
+              <h2>Simple billing workspace for quick student payment tracking.</h2>
+              <p>
+                Gumawa ng billing, i-monitor ang balances, at mag-record ng
+                payments sa isang malinis na white-and-blue layout na madaling
+                basahin.
+              </p>
+            </div>
 
-        <input class="search-box" value="" placeholder="Search billing" />
+            <div class="billing-summary">
+              <article class="summary-card">
+                <span>Total Billings</span>
+                <strong id="summary-count">0</strong>
+              </article>
+              <article class="summary-card">
+                <span>Need To Pay</span>
+                <strong id="summary-balance" class="text-alert">PHP 0.00</strong>
+              </article>
+              <article class="summary-card">
+                <span>Collected</span>
+                <strong id="summary-paid">PHP 0.00</strong>
+              </article>
+            </div>
+          </section>
 
-        <section class="table-section">
-          <table id="table-billings">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Description</th>
-                <th>Total</th>
-                <th>Paid</th>
-                <th>Balance</th>
-                <th>Due Date</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </section>
+          <form id="billing-form" class="billing-panel">
+            <h3>Create Billing</h3>
+            <p class="panel-copy">
+              Fill out the student billing details below to add a new billing
+              record.
+            </p>
+
+            <div class="billing-form-grid">
+              <div class="field-group">
+                <label for="student_name">Student Name</label>
+                <input
+                  id="student_name"
+                  name="student_name"
+                  placeholder="Enter full student name"
+                  required
+                />
+              </div>
+
+              <div class="field-group">
+                <label for="email">Student Email</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="Enter active email address"
+                  required
+                />
+              </div>
+
+              <div class="field-group field-wide">
+                <label for="description">Billing Description</label>
+                <input
+                  id="description"
+                  name="description"
+                  placeholder="e.g. Tuition fee for 1st semester"
+                  required
+                />
+              </div>
+
+              <div class="field-group">
+                <label for="amount">Total Assessment</label>
+                <input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Enter total amount"
+                  required
+                />
+              </div>
+
+              <div class="field-group">
+                <label for="due_date">Due Date</label>
+                <input id="due_date" name="due_date" type="date" />
+              </div>
+
+              <div class="billing-breakdown">
+                <h4>Automatic Payment Breakdown</h4>
+                <p class="panel-copy" style="margin: 0">
+                  Downpayment is fixed at PHP 2,000.00, then the remaining
+                  balance is divided equally into 1st to 4th payment.
+                </p>
+                <div class="billing-breakdown-grid" id="billing-breakdown-preview">
+                  <article class="billing-breakdown-item">
+                    <span>Downpayment</span>
+                    <strong>PHP 0.00</strong>
+                  </article>
+                  <article class="billing-breakdown-item">
+                    <span>1st Payment</span>
+                    <strong>PHP 0.00</strong>
+                  </article>
+                  <article class="billing-breakdown-item">
+                    <span>2nd Payment</span>
+                    <strong>PHP 0.00</strong>
+                  </article>
+                  <article class="billing-breakdown-item">
+                    <span>3rd Payment</span>
+                    <strong>PHP 0.00</strong>
+                  </article>
+                  <article class="billing-breakdown-item">
+                    <span>4th Payment</span>
+                    <strong>PHP 0.00</strong>
+                  </article>
+                </div>
+              </div>
+            </div>
+
+            <div class="billing-actions">
+              <p class="helper-text">
+                Keep billing records clear so treasury updates stay easy to
+                manage.
+              </p>
+              <button type="submit" class="billing-button primary">
+                Save Billing
+              </button>
+            </div>
+          </form>
+
+          <section class="billing-panel">
+            <div class="billing-toolbar">
+              <div class="billing-toolbar-copy">
+                <h3>Billing Records</h3>
+                <p>Search students or review payment progress below.</p>
+              </div>
+
+              <input class="search-box" value="" placeholder="Search billing" />
+            </div>
+
+            <div class="billing-table-wrap">
+              <table id="table-billings">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Payment Stage</th>
+                    <th>Description</th>
+                    <th>Total</th>
+                    <th>Paid</th>
+                    <th>Need To Pay</th>
+                    <th>Method</th>
+                    <th>Channel</th>
+                    <th>Reference</th>
+                    <th>Proof</th>
+                    <th>Payment Status</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
       </main>
     </div>
 
@@ -58,6 +653,112 @@
         }).format(Number(value || 0));
       }
 
+      function buildBillingBreakdown(totalAmount) {
+        const total = Number(totalAmount || 0);
+        const downpayment = Math.min(2000, Math.max(total, 0));
+        const remainingBalance = Math.max(total - downpayment, 0);
+        const baseInstallment = Number((remainingBalance / 4).toFixed(2));
+        const installments = [];
+
+        for (let index = 0; index < 4; index += 1) {
+          if (index < 3) {
+            installments.push(baseInstallment);
+            continue;
+          }
+
+          const allocated = installments.reduce((sum, amount) => sum + amount, 0);
+          installments.push(Number((remainingBalance - allocated).toFixed(2)));
+        }
+
+        return [downpayment, ...installments];
+      }
+
+      function renderBillingBreakdown(totalAmount) {
+        const preview = document.querySelector("#billing-breakdown-preview");
+        const labels = [
+          "Downpayment",
+          "1st Payment",
+          "2nd Payment",
+          "3rd Payment",
+          "4th Payment",
+        ];
+        const amounts = buildBillingBreakdown(totalAmount);
+
+        preview.innerHTML = labels
+          .map((label, index) => {
+            return `
+              <article class="billing-breakdown-item">
+                <span>${label}</span>
+                <strong>${formatCurrency(amounts[index] || 0)}</strong>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
+      }
+
+      function renderProofCell(value) {
+        const proofValue = String(value || "").trim();
+
+        if (!proofValue) {
+          return "-";
+        }
+
+        if (proofValue.startsWith("/uploads/")) {
+          const label = escapeHtml(proofValue.split("/").pop() || "View Proof");
+          const href = escapeHtml(proofValue);
+          return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        }
+
+        return escapeHtml(proofValue);
+      }
+
+      function getBillingStageLabel(description) {
+        const text = String(description || "").toLowerCase();
+
+        if (text.includes("downpayment")) return "Downpayment";
+        if (text.includes("1st")) return "1st Payment";
+        if (text.includes("2nd")) return "2nd Payment";
+        if (text.includes("3rd")) return "3rd Payment";
+        if (text.includes("4th")) return "4th Payment";
+
+        return "Other";
+      }
+
+      function normalizeValue(value) {
+        return String(value || "").trim().toLowerCase();
+      }
+
+      function updateSummary(data) {
+        const totalBalance = data.reduce(
+          (sum, billing) => sum + Number(billing.balance || 0),
+          0,
+        );
+        const totalPaid = data.reduce(
+          (sum, billing) => sum + Number(billing.amount_paid || 0),
+          0,
+        );
+
+        document.querySelector("#summary-count").textContent = data.length;
+        document.querySelector("#summary-balance").textContent =
+          formatCurrency(totalBalance);
+        document.querySelector("#summary-paid").textContent =
+          formatCurrency(totalPaid);
+      }
+
       async function loadBillings(search = "") {
         const url = `${window.APP_CONFIG.API_BASE_URL}/billings/list${
           search ? `?search=${encodeURIComponent(search)}` : ""
@@ -67,22 +768,68 @@
         const tbody = document.querySelector("#table-billings tbody");
 
         tbody.innerHTML = "";
+        updateSummary(data);
+
+        if (!data.length) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="14" class="billing-empty">
+                No billing records found for the current search.
+              </td>
+            </tr>
+          `;
+          return;
+        }
 
         data.forEach((billing) => {
           const row = document.createElement("tr");
+          const paymentMethod = normalizeValue(billing.payment_method);
+          const paymentStatus = normalizeValue(billing.payment_status);
+          const canReviewOnlinePayment =
+            paymentMethod === "online" && paymentStatus === "submitted";
+          const canCollectCash = Number(billing.balance || 0) > 0 && !canReviewOnlinePayment;
 
           row.innerHTML = `
             <td>${billing.student_name}<br /><small>${billing.email}</small></td>
-            <td>${billing.description}</td>
+            <td><span class="stage-pill">${getBillingStageLabel(billing.description)}</span></td>
+            <td>${escapeHtml(billing.description)}</td>
             <td>${formatCurrency(billing.amount)}</td>
             <td>${formatCurrency(billing.amount_paid)}</td>
             <td>${formatCurrency(billing.balance)}</td>
+            <td>${escapeHtml(billing.payment_method || "-")}</td>
+            <td>${escapeHtml(billing.payment_channel || "-")}</td>
+            <td>${escapeHtml(billing.reference_no || "-")}</td>
+            <td>${renderProofCell(billing.proof_of_payment)}</td>
+            <td class="${canReviewOnlinePayment ? "payment-pending" : ""}">${escapeHtml(billing.payment_status || "-")}</td>
             <td>${billing.due_date ? defaultDate(billing.due_date) : "-"}</td>
             <td><span class="status ${String(billing.status || "").toLowerCase()}">${billing.status}</span></td>
             <td>
-              <button type="button" data-id="${billing.id}" data-balance="${billing.balance}" class="btn-pay">
-                Record Payment
-              </button>
+              ${
+                canReviewOnlinePayment
+                  ? `
+                    <button type="button" class="billing-button secondary btn-review-payment" data-id="${billing.id}" data-status="Approved">
+                      Approve
+                    </button>
+                    <button type="button" class="billing-button secondary btn-review-payment" data-id="${billing.id}" data-status="Denied">
+                      Reject
+                    </button>
+                  `
+                  : canCollectCash
+                    ? `
+                      <button type="button" data-id="${billing.id}" data-balance="${billing.balance}" class="billing-button secondary btn-pay">
+                        Collect Payment
+                      </button>
+                    `
+                    : escapeHtml(
+                        paymentMethod === "online" && paymentStatus === "approved"
+                          ? "Online Payment Approved"
+                          : paymentMethod === "online" && paymentStatus === "denied"
+                            ? "Online Payment Rejected"
+                          : Number(billing.balance || 0) <= 0
+                            ? "Fully Paid"
+                            : "-"
+                      )
+              }
             </td>
           `;
 
@@ -90,6 +837,7 @@
         });
 
         bindPaymentButtons();
+        bindReviewButtons();
       }
 
       function bindPaymentButtons() {
@@ -134,8 +882,44 @@
         });
       }
 
+      function bindReviewButtons() {
+        document.querySelectorAll(".btn-review-payment").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const user = JSON.parse(localStorage.getItem("user") || "{}");
+            const response = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/billings/update`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  id: button.dataset.id,
+                  payment_status: button.dataset.status,
+                  processed_by: user.first_name || user.email || "Treasury",
+                  treasury_reviewed_by: user.email || user.first_name || "Treasury",
+                }),
+              },
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              alert(data.error || "Failed to review billing payment");
+              return;
+            }
+
+            await loadBillings(document.querySelector(".search-box").value);
+          });
+        });
+      }
+
       async function initCreateBilling() {
         const form = document.querySelector("#billing-form");
+        const amountInput = form.querySelector('[name="amount"]');
+
+        amountInput.addEventListener("input", () => {
+          renderBillingBreakdown(amountInput.value);
+        });
+        renderBillingBreakdown(amountInput.value);
 
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
@@ -167,6 +951,8 @@
           }
 
           form.reset();
+          renderBillingBreakdown(0);
+          alert("Billing breakdown created successfully: downpayment plus 1st to 4th payment.");
           await loadBillings();
         });
       }

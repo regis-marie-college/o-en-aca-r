@@ -15,8 +15,8 @@
 .empty-state {
   padding: 16px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(248, 251, 255, 0.96);
+  border: 1px solid rgba(148, 184, 255, 0.22);
 }
 
 .portal-mini-card span,
@@ -25,7 +25,7 @@
 }
 
 .portal-mini-card span {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;

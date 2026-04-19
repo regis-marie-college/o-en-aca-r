@@ -97,6 +97,14 @@ module.exports = async (req, res) => {
       document_requests: requestsResult.rows,
       submitted_documents: documentsResult.rows,
       id_picture:
+        (enrollment?.idpic_url
+          ? {
+              name:
+                documentsResult.rows.find((document) => document.type === "idpic")
+                  ?.name || "1x1 ID Picture",
+              url: enrollment.idpic_url,
+            }
+          : null) ||
         documentsResult.rows.find((document) => document.type === "idpic") ||
         null,
       payment_options: config.payment_accounts,

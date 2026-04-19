@@ -1,6 +1,6 @@
 /* BODY */
 .requirements-body {
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  background: linear-gradient(135deg, #f8fbff, #eef5ff, #e3efff);
   height: 100vh;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -9,7 +9,7 @@
 /* LEFT SIDE */
 .left-panel {
   padding: 70px;
-  color: white;
+  color: #18324d;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -27,7 +27,7 @@
 
 /* RIGHT SIDE */
 .right-panel {
-  background: white;
+  background: rgba(255, 255, 255, 0.96);
   padding: 50px 70px;
   display: flex;
   flex-direction: column;
@@ -37,7 +37,7 @@
 
 .right-panel h2 {
   margin-bottom: 25px;
-  color: #2c5364;
+  color: #1d4ed8;
   font-size: 24px;
 }
 
@@ -72,17 +72,18 @@ input[type="file"] {
 }
 
 input:focus {
-  border-color: #2c5364;
+  border-color: #3b82f6;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(44, 83, 100, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 /* REQUIREMENTS BOX */
 .requirements-box {
-  background: #f8f9fb;
+  background: #f8fbff;
   padding: 25px;
   border-radius: 12px;
   margin-bottom: 20px;
+  border: 1px solid #dbeafe;
 }
 
 .requirement-item {
@@ -95,7 +96,7 @@ button {
   padding: 15px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #0f2027, #2c5364);
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
   color: white;
   font-size: 16px;
   font-weight: 600;
@@ -106,7 +107,7 @@ button {
 
 button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.2);
 }
 
 /* NOTE TEXT */

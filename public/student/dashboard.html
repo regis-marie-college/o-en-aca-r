@@ -9,6 +9,99 @@
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Student Portal</title>
+    <style>
+      .billing-payment-layout {
+        display: grid;
+        grid-template-columns: 1.3fr 0.9fr;
+        gap: 24px;
+        align-items: start;
+      }
+
+      .installment-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .installment-card {
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid rgba(96, 165, 250, 0.2);
+        background: linear-gradient(180deg, #ffffff, #f8fbff);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+      }
+
+      .installment-card span {
+        display: block;
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #5b708a;
+      }
+
+      .installment-card strong {
+        display: block;
+        margin: 10px 0 6px;
+        font-size: 1.1rem;
+        color: #16324f;
+      }
+
+      .installment-card small {
+        display: block;
+        color: #6b7d93;
+      }
+
+      .installment-card.is-paid {
+        border-color: rgba(34, 197, 94, 0.3);
+        background: linear-gradient(180deg, #f0fdf4, #ffffff);
+      }
+
+      .portal-payment-form {
+        display: grid;
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .portal-payment-form select,
+      .portal-payment-form input {
+        width: 100%;
+      }
+
+      .portal-payment-note {
+        margin: 0;
+        color: #60758d;
+        font-size: 0.92rem;
+      }
+
+      .portal-billing-highlight {
+        padding: 18px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #eff6ff, #ffffff);
+        border: 1px solid rgba(96, 165, 250, 0.22);
+      }
+
+      .portal-billing-highlight span {
+        display: block;
+        font-size: 0.78rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #5f7590;
+      }
+
+      .portal-billing-highlight strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 1.9rem;
+        color: #123055;
+      }
+
+      @media (max-width: 960px) {
+        .billing-payment-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="dashboard">
@@ -16,6 +109,37 @@
 
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
+
+        <section
+          class="table-section"
+          style="margin-bottom: 24px; display: flex; align-items: center; gap: 16px"
+        >
+          <div
+            id="student-portal-photo"
+            style="
+              width: 72px;
+              height: 72px;
+              border-radius: 22px;
+              background: linear-gradient(135deg, #2563eb, #60a5fa);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              overflow: hidden;
+              color: #fff;
+              font-size: 1.5rem;
+              font-weight: 800;
+              flex-shrink: 0;
+            "
+          >
+            S
+          </div>
+          <div>
+            <h2 id="student-portal-name" style="margin-bottom: 4px">Student</h2>
+            <p class="portal-form-note">
+              Welcome to your student portal dashboard.
+            </p>
+          </div>
+        </section>
 
         <section class="stats">
           <div class="card card-taking">
@@ -33,6 +157,71 @@
           <div class="card card-balance">
             <h3>Need To Pay</h3>
             <p>PHP 0.00</p>
+          </div>
+        </section>
+
+        <section class="table-section" style="margin-bottom: 24px">
+          <div class="billing-payment-layout">
+            <div>
+              <h2>School Billing Payments</h2>
+              <p class="portal-form-note">
+                Piliin ang billing item na may balance para mabayaran ang
+                downpayment o anumang 1st to 4th payment installment.
+              </p>
+              <div class="installment-grid" id="installment-cards"></div>
+            </div>
+
+            <div>
+              <div class="portal-billing-highlight">
+                <span>Current Need To Pay</span>
+                <strong id="billing-need-to-pay">PHP 0.00</strong>
+              </div>
+
+              <form id="billing-payment-form" class="portal-payment-form">
+                <select name="billing_id" required>
+                  <option value="">Select Billing To Pay</option>
+                </select>
+                <input
+                  name="payment_amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  placeholder="Enter payment amount"
+                  required
+                />
+                <select name="payment_method" required>
+                  <option value="Cash">Cash</option>
+                  <option value="Online">Online</option>
+                </select>
+                <div class="portal-form-note" id="billing-cash-payment-note">
+                  Cash billing payments can be posted directly.
+                </div>
+                <div id="billing-online-payment-fields" hidden>
+                  <select name="payment_channel">
+                    <option value="">Select Payment Channel</option>
+                  </select>
+                  <input
+                    name="reference_no"
+                    placeholder="Reference Number"
+                    autocomplete="off"
+                  />
+                  <input
+                    name="proof_of_payment"
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    aria-label="Upload billing proof of payment"
+                  />
+                  <div class="portal-form-note">
+                    Upload proof of payment for online billing transactions.
+                  </div>
+                  <div class="portal-card-grid" id="billing-payment-options"></div>
+                </div>
+                <p class="portal-payment-note" id="selected-billing-note">
+                  Select a billing item to see its remaining balance.
+                </p>
+                <button type="submit" class="btn btn-primary">Pay Billing</button>
+              </form>
+            </div>
           </div>
         </section>
 
@@ -133,7 +322,12 @@
                 <th>Total</th>
                 <th>Paid</th>
                 <th>Balance</th>
+                <th>Method</th>
+                <th>Payment Status</th>
+                <th>Reference</th>
+                <th>Proof</th>
                 <th>Status</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -164,6 +358,14 @@
     <script>
       const DOCUMENT_REQUEST_AMOUNT = 300;
       let availablePaymentOptions = [];
+      let outstandingBillings = [];
+      const INSTALLMENT_ORDER = [
+        "Downpayment",
+        "1st Payment",
+        "2nd Payment",
+        "3rd Payment",
+        "4th Payment",
+      ];
       const DOCUMENT_LABELS = {
         form137: "Form 137",
         idpic: "1x1 ID Picture",
@@ -200,14 +402,136 @@
         card.querySelector("p").textContent = value;
       }
 
+      function summarizeBillings(billings) {
+        return (Array.isArray(billings) ? billings : []).reduce(
+          (summary, billing) => {
+            summary.totalAmount += Number(billing.amount || 0);
+            summary.totalPaid += Number(billing.amount_paid || 0);
+            summary.totalBalance += Number(billing.balance || 0);
+            return summary;
+          },
+          { totalAmount: 0, totalPaid: 0, totalBalance: 0 },
+        );
+      }
+
+      function getBillingStageLabel(description) {
+        const text = String(description || "").toLowerCase();
+
+        if (text.includes("downpayment")) {
+          return "Downpayment";
+        }
+
+        if (text.includes("1st")) {
+          return "1st Payment";
+        }
+
+        if (text.includes("2nd")) {
+          return "2nd Payment";
+        }
+
+        if (text.includes("3rd")) {
+          return "3rd Payment";
+        }
+
+        if (text.includes("4th")) {
+          return "4th Payment";
+        }
+
+        return "Other Billing";
+      }
+
+      function normalizeValue(value) {
+        return String(value || "").trim().toLowerCase();
+      }
+
+      function buildInstallmentCards(billings) {
+        const grouped = new Map();
+
+        (Array.isArray(billings) ? billings : []).forEach((billing) => {
+          const label = getBillingStageLabel(billing.description);
+          if (!grouped.has(label)) {
+            grouped.set(label, {
+              label,
+              amount: 0,
+              amount_paid: 0,
+              balance: 0,
+              status: "Unpaid",
+            });
+          }
+
+          const item = grouped.get(label);
+          item.amount += Number(billing.amount || 0);
+          item.amount_paid += Number(billing.amount_paid || 0);
+          item.balance += Number(billing.balance || 0);
+          item.status = item.balance <= 0 ? "Paid" : item.amount_paid > 0 ? "Partial" : "Unpaid";
+        });
+
+        return INSTALLMENT_ORDER.map((label) => {
+          return (
+            grouped.get(label) || {
+              label,
+              amount: 0,
+              amount_paid: 0,
+              balance: 0,
+              status: "Unpaid",
+            }
+          );
+        });
+      }
+
+      function renderStudentHeader(user, enrollment, idPicture) {
+        const nameEl = document.querySelector("#student-portal-name");
+        const photoEl = document.querySelector("#student-portal-photo");
+        const firstName = user?.first_name || enrollment?.first_name || "";
+        const lastName = user?.last_name || enrollment?.last_name || "";
+        const fullName = `${firstName} ${lastName}`.trim();
+
+        nameEl.textContent = fullName || "Student";
+
+        if (idPicture?.url) {
+          photoEl.innerHTML = `<img src="${escapeHtml(idPicture.url)}" alt="${escapeHtml(
+            fullName || "Student",
+          )}" style="width:100%;height:100%;object-fit:cover;" />`;
+          return;
+        }
+
+        photoEl.textContent = (firstName || "S").charAt(0).toUpperCase();
+      }
+
       function getSelectedPaymentChannel() {
         const form = document.querySelector("#document-request-form");
+        return form?.querySelector('[name="payment_channel"]')?.value || "";
+      }
+
+      function getSelectedBillingPaymentChannel() {
+        const form = document.querySelector("#billing-payment-form");
         return form?.querySelector('[name="payment_channel"]')?.value || "";
       }
 
       function populatePaymentChannels(options) {
         const channelSelect = document.querySelector(
           '#document-request-form [name="payment_channel"]',
+        );
+
+        if (!channelSelect) return;
+
+        channelSelect.innerHTML = `
+          <option value="">Select Payment Channel</option>
+          ${options
+            .map(
+              (option) => `
+                <option value="${escapeHtml(option.key || "")}">
+                  ${escapeHtml(option.label || "Payment Channel")}
+                </option>
+              `,
+            )
+            .join("")}
+        `;
+      }
+
+      function populateBillingPaymentChannels(options) {
+        const channelSelect = document.querySelector(
+          '#billing-payment-form [name="payment_channel"]',
         );
 
         if (!channelSelect) return;
@@ -312,31 +636,79 @@
         });
       }
 
+      function toggleBillingPaymentFields() {
+        const form = document.querySelector("#billing-payment-form");
+        const method = form.querySelector('[name="payment_method"]').value;
+        const onlineFields = document.querySelector("#billing-online-payment-fields");
+        const cashNote = document.querySelector("#billing-cash-payment-note");
+        const channelInput = form.querySelector('[name="payment_channel"]');
+        const referenceInput = form.querySelector('[name="reference_no"]');
+        const proofInput = form.querySelector('[name="proof_of_payment"]');
+        const isOnline = method === "Online";
+
+        onlineFields.hidden = !isOnline;
+        cashNote.hidden = method !== "Cash";
+        channelInput.required = isOnline;
+        referenceInput.required = isOnline;
+        proofInput.required = isOnline;
+
+        if (!isOnline) {
+          channelInput.value = "";
+          referenceInput.value = "";
+          proofInput.value = "";
+        }
+
+        renderBillingPaymentOptions(availablePaymentOptions, {
+          selectedKey: isOnline ? channelInput.value : "",
+          prompt:
+            method === "Cash"
+              ? "Cash selected. No online billing account needed."
+              : "Select an online payment channel to view the billing account details.",
+        });
+      }
+
       async function loadPortal() {
         const user = auth();
         const response = await fetch(
           `${window.APP_CONFIG.API_BASE_URL}/students/portal?email=${encodeURIComponent(user.email)}`,
         );
         const data = await response.json();
+        const billings = Array.isArray(data.billings) ? data.billings : [];
 
         renderCurrentCourses(data.current_courses || []);
         renderCompletedCourses(data.taken_courses || []);
-        renderBillings(data.billings || []);
+        renderBillings(billings);
         renderRequests(data.document_requests || []);
         renderDocuments(data.submitted_documents || []);
+        renderStudentHeader(data.user, data.enrollment, data.id_picture);
+        const billingSummary = summarizeBillings(billings);
+        outstandingBillings = billings.filter(
+          (billing) =>
+            Number(billing.balance || 0) > 0 && billing.payment_status !== "Submitted",
+        );
+        renderInstallmentCards(billings);
+        populateBillingPaymentOptions(outstandingBillings);
         availablePaymentOptions = Array.isArray(data.payment_options)
           ? data.payment_options
           : [];
         populatePaymentChannels(availablePaymentOptions);
+        populateBillingPaymentChannels(availablePaymentOptions);
         renderPaymentOptions(availablePaymentOptions, {
           selectedKey: getSelectedPaymentChannel(),
           prompt: "Select an online payment channel to view the account details.",
         });
+        renderBillingPaymentOptions(availablePaymentOptions, {
+          selectedKey: getSelectedBillingPaymentChannel(),
+          prompt: "Select an online payment channel to view the billing account details.",
+        });
 
         setCard(".card-taking", String((data.current_courses || []).length));
         setCard(".card-completed", String((data.taken_courses || []).length));
-        setCard(".card-paid", formatCurrency(data.total_paid || 0));
-        setCard(".card-balance", formatCurrency(data.total_balance || 0));
+        setCard(".card-paid", formatCurrency(billingSummary.totalPaid));
+        setCard(".card-balance", formatCurrency(billingSummary.totalBalance));
+        document.querySelector("#billing-need-to-pay").textContent = formatCurrency(
+          billingSummary.totalBalance,
+        );
       }
 
       function renderCurrentCourses(courses) {
@@ -373,17 +745,113 @@
         const tbody = document.querySelector("#table-billings tbody");
         tbody.innerHTML = "";
 
+        if (!Array.isArray(billings) || billings.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="10">No billing records found.</td>
+            </tr>
+          `;
+          return;
+        }
+
         billings.forEach((billing) => {
           const row = document.createElement("tr");
+          const paymentMethod = normalizeValue(billing.payment_method);
+          const paymentStatus = normalizeValue(billing.payment_status);
+          const canResubmitProof =
+            paymentMethod === "online" && paymentStatus === "denied";
           row.innerHTML = `
             <td>${billing.description}</td>
             <td>${formatCurrency(billing.amount)}</td>
             <td>${formatCurrency(billing.amount_paid)}</td>
             <td>${formatCurrency(billing.balance)}</td>
+            <td>${escapeHtml(billing.payment_method || "-")}</td>
+            <td>${escapeHtml(billing.payment_status || "-")}</td>
+            <td>${escapeHtml(billing.reference_no || "-")}</td>
+            <td>${renderProofCell(billing.proof_of_payment)}</td>
             <td><span class="status ${String(billing.status || "").toLowerCase()}">${billing.status}</span></td>
+            <td>
+              ${canResubmitProof ? `<button type="button" class="btn btn-secondary btn-sm btn-resubmit-billing-proof" data-id="${billing.id}">Resubmit Proof</button>` : escapeHtml(
+                paymentMethod === "online" && paymentStatus === "submitted"
+                  ? "For Treasury Review"
+                : "-"
+              )}
+            </td>
           `;
           tbody.appendChild(row);
         });
+
+        bindBillingProofButtons();
+      }
+
+      function renderInstallmentCards(billings) {
+        const container = document.querySelector("#installment-cards");
+        const cards = buildInstallmentCards(billings);
+
+        container.innerHTML = cards
+          .map((item) => {
+            return `
+              <article class="installment-card ${item.balance <= 0 && item.amount > 0 ? "is-paid" : ""}">
+                <span>${escapeHtml(item.label)}</span>
+                <strong>${formatCurrency(item.balance > 0 ? item.balance : item.amount)}</strong>
+                <small>Total: ${formatCurrency(item.amount)}</small>
+                <small>Paid: ${formatCurrency(item.amount_paid)}</small>
+                <small>Need to Pay: ${formatCurrency(item.balance)}</small>
+                <small>Status: ${escapeHtml(item.status)}</small>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function populateBillingPaymentOptions(billings) {
+        const billingSelect = document.querySelector(
+          '#billing-payment-form [name="billing_id"]',
+        );
+
+        if (!billingSelect) return;
+
+        billingSelect.innerHTML = `
+          <option value="">Select Billing To Pay</option>
+          ${billings
+            .map((billing) => {
+              const label = getBillingStageLabel(billing.description);
+              return `
+                <option value="${escapeHtml(billing.id)}">
+                  ${escapeHtml(label)} - ${escapeHtml(billing.description)} (${formatCurrency(billing.balance)})
+                </option>
+              `;
+            })
+            .join("")}
+        `;
+
+        updateSelectedBillingNote();
+      }
+
+      function updateSelectedBillingNote() {
+        const billingSelect = document.querySelector(
+          '#billing-payment-form [name="billing_id"]',
+        );
+        const note = document.querySelector("#selected-billing-note");
+        const amountInput = document.querySelector(
+          '#billing-payment-form [name="payment_amount"]',
+        );
+        const selectedBilling = outstandingBillings.find(
+          (billing) => billing.id === billingSelect.value,
+        );
+
+        if (!selectedBilling) {
+          note.textContent = outstandingBillings.length
+            ? "Select a billing item to see its remaining balance."
+            : "No outstanding billing balance to pay right now.";
+          amountInput.max = "";
+          return;
+        }
+
+        amountInput.max = Number(selectedBilling.balance || 0).toFixed(2);
+        note.textContent = `${getBillingStageLabel(selectedBilling.description)} remaining balance: ${formatCurrency(
+          selectedBilling.balance,
+        )}`;
       }
 
       function renderDocuments(documents) {
@@ -430,6 +898,43 @@
         if (!selectedOption) {
           container.innerHTML =
             '<div class="empty-state">Selected payment channel is not available.</div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <article class="portal-mini-card">
+            <span>${escapeHtml(selectedOption.label || "Payment Option")}</span>
+            <strong>${escapeHtml(selectedOption.account_name || "Not yet configured")}</strong>
+            <small>${escapeHtml(selectedOption.account_number || "Not yet configured")}</small>
+          </article>
+        `;
+      }
+
+      function renderBillingPaymentOptions(options, config = {}) {
+        const container = document.querySelector("#billing-payment-options");
+        const {
+          selectedKey = "",
+          prompt = "Select a payment channel to view billing account details.",
+        } = config;
+
+        if (!container) return;
+
+        if (!Array.isArray(options) || options.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state">No payment channels configured yet.</div>';
+          return;
+        }
+
+        if (!selectedKey) {
+          container.innerHTML = `<div class="empty-state">${escapeHtml(prompt)}</div>`;
+          return;
+        }
+
+        const selectedOption = options.find((option) => option.key === selectedKey);
+
+        if (!selectedOption) {
+          container.innerHTML =
+            '<div class="empty-state">Selected billing payment channel is not available.</div>';
           return;
         }
 
@@ -508,6 +1013,51 @@
               await loadPortal();
             } catch (error) {
               alert(error.message || "Failed to upload proof");
+            }
+          });
+        });
+      }
+
+      function bindBillingProofButtons() {
+        document.querySelectorAll(".btn-resubmit-billing-proof").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const billing = outstandingBillings.find((item) => item.id === button.dataset.id);
+            const referenceNo = window.prompt("Enter reference number");
+
+            if (!billing || !referenceNo) return;
+
+            const proofFile = await pickProofFile();
+            if (!proofFile) return;
+
+            try {
+              const user = auth();
+              const uploadedProof = await uploadProofFile(proofFile);
+              const response = await fetch(
+                `${window.APP_CONFIG.API_BASE_URL}/billings/update`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    id: billing.id,
+                    payment_amount: billing.pending_payment_amount || billing.balance,
+                    payment_method: "Online",
+                    payment_channel: billing.payment_channel,
+                    reference_no: referenceNo,
+                    proof_of_payment: uploadedProof.file_url,
+                    processed_by: user.email || user.id || "Student",
+                  }),
+                },
+              );
+
+              const data = await response.json();
+              if (!response.ok) {
+                alert(data.error || "Failed to resubmit billing proof");
+                return;
+              }
+
+              await loadPortal();
+            } catch (error) {
+              alert(error.message || "Failed to resubmit billing proof");
             }
           });
         });
@@ -594,8 +1144,108 @@
         });
       }
 
+      function initBillingPaymentForm() {
+        const form = document.querySelector("#billing-payment-form");
+        const billingSelect = form.querySelector('[name="billing_id"]');
+        const paymentMethodInput = form.querySelector('[name="payment_method"]');
+        const paymentChannelInput = form.querySelector('[name="payment_channel"]');
+
+        billingSelect.addEventListener("change", updateSelectedBillingNote);
+        paymentMethodInput.addEventListener("change", toggleBillingPaymentFields);
+        paymentChannelInput.addEventListener("change", () => {
+          renderBillingPaymentOptions(availablePaymentOptions, {
+            selectedKey: paymentChannelInput.value,
+            prompt: "Select an online payment channel to view the billing account details.",
+          });
+        });
+        toggleBillingPaymentFields();
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          if (!form.reportValidity()) {
+            return;
+          }
+
+          const formData = new FormData(form);
+          const billing = outstandingBillings.find(
+            (item) => item.id === formData.get("billing_id"),
+          );
+
+          if (!billing) {
+            alert("Please select a valid billing item.");
+            return;
+          }
+
+          const paymentAmount = Number(formData.get("payment_amount") || 0);
+          const remainingBalance = Number(billing.balance || 0);
+          const paymentMethod = formData.get("payment_method");
+
+          if (paymentAmount <= 0) {
+            alert("Payment amount must be greater than zero.");
+            return;
+          }
+
+          if (paymentAmount > remainingBalance) {
+            alert("Payment amount cannot exceed the remaining balance.");
+            return;
+          }
+
+          let proofUrl = null;
+
+          if (paymentMethod === "Online") {
+            const proofInput = form.querySelector('[name="proof_of_payment"]');
+            const proofFile = proofInput?.files?.[0] || null;
+
+            if (!formData.get("reference_no") || !formData.get("payment_channel") || !proofFile) {
+              alert("Payment channel, reference number, and proof of payment are required for online billing.");
+              return;
+            }
+
+            try {
+              const uploadedProof = await uploadProofFile(proofFile);
+              proofUrl = uploadedProof.file_url;
+            } catch (error) {
+              alert(error.message || "Failed to upload billing proof of payment.");
+              return;
+            }
+          }
+
+          const user = auth();
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/billings/update`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                id: billing.id,
+                payment_amount: paymentAmount,
+                payment_method: paymentMethod,
+                payment_channel: formData.get("payment_channel"),
+                reference_no: formData.get("reference_no"),
+                proof_of_payment: proofUrl,
+                processed_by: user.email || user.id || "Student",
+              }),
+            },
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Failed to pay billing.");
+            return;
+          }
+
+          form.reset();
+          toggleBillingPaymentFields();
+          updateSelectedBillingNote();
+          await loadPortal();
+        });
+      }
+
       document.addEventListener("DOMContentLoaded", async () => {
         initRequestForm();
+        initBillingPaymentForm();
         await loadPortal();
       });
     </script>

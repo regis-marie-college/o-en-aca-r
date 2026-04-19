@@ -198,7 +198,27 @@
 
         fallback.textContent = (firstName || "S").charAt(0).toUpperCase();
         fileLabel.textContent = idPicture?.name || "No 1x1 submitted";
-        profilePicture.dataset.hasImage = idPicture?.name ? "true" : "false";
+        profilePicture.dataset.hasImage = idPicture?.url ? "true" : "false";
+
+        if (idPicture?.url) {
+          profilePicture.innerHTML = `
+            <img
+              src="${escapeHtml(idPicture.url)}"
+              alt="${escapeHtml(firstName || "Student")}"
+              style="width:100%;height:100%;object-fit:cover;border-radius:22px;"
+            />
+          `;
+          return;
+        }
+
+        profilePicture.innerHTML = `
+          <span class="profile-picture-fallback">${escapeHtml(
+            (firstName || "S").charAt(0).toUpperCase(),
+          )}</span>
+          <span class="profile-picture-file">${escapeHtml(
+            idPicture?.name || "No 1x1 submitted",
+          )}</span>
+        `;
       }
 
       async function loadProfile() {

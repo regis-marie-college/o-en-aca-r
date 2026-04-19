@@ -136,7 +136,7 @@
           const info = document.querySelector(".info-holder");
 
           info.innerHTML = `
-            <p><strong>ID:</strong> ${data.id}</p>
+            <p><strong>ID:</strong> <span style="color: #ffffff;">${data.id}</span></p>
             <p><strong>Name:</strong> ${data.first_name} ${data.middle_name} ${data.last_name}</p>
             <p><strong>Email:</strong> ${data.email}</p>
             <p><strong>Mobile:</strong> ${data.mobile || "-"}</p>

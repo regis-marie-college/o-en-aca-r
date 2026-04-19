@@ -56,33 +56,8 @@
 
         <h2>Requirements</h2>
         <div class="requirement-item">
-          <label>Form 137</label>
-          <input type="file" id="form137" required />
-        </div>
-
-        <div class="requirement-item">
           <label>1x1 ID Picture</label>
-          <input type="file" id="idpic" required />
-        </div>
-
-        <div class="requirement-item">
-          <label>PSA Birth Certificate</label>
-          <input type="file" id="psa" required />
-        </div>
-
-        <div class="requirement-item">
-          <label>Good Moral</label>
-          <input type="file" id="moral" />
-        </div>
-
-        <div class="requirement-item">
-          <label>Diploma</label>
-          <input type="file" id="diploma" />
-        </div>
-
-        <div class="requirement-item">
-          <label>Other Documents</label>
-          <input type="file" id="others" />
+          <input type="file" id="idpic" accept=".jpg,.jpeg,.png,.webp" required />
         </div>
 
         <h2>Select Program and Courses</h2>
@@ -154,6 +129,27 @@
           style: "currency",
           currency: "PHP",
         }).format(Number(value || 0));
+      }
+
+      async function uploadIdPicture(file) {
+        const uploadData = new FormData();
+        uploadData.append("id_picture", file);
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/enrollments/upload-id-picture`,
+          {
+            method: "POST",
+            body: uploadData,
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to upload 1x1 ID picture");
+        }
+
+        return data;
       }
 
       function getSelectedCourseObjects() {
@@ -286,21 +282,12 @@
             return;
           }
 
-          const fileInputs = {
-            form137: document.getElementById("form137").files[0],
-            idpic: document.getElementById("idpic").files[0],
-            psa: document.getElementById("psa").files[0],
-            moral: document.getElementById("moral").files[0],
-            diploma: document.getElementById("diploma").files[0],
-            others: document.getElementById("others").files[0],
-          };
+          const idPictureFile = document.getElementById("idpic").files[0];
 
-          const documents = {};
-
-          for (let key in fileInputs) {
-            if (fileInputs[key]) {
-              documents[key] = fileInputs[key].name;
-            }
+          if (!idPictureFile) {
+            message.innerHTML =
+              "<span class='error'>Please upload the student's 1x1 ID picture.</span>";
+            return;
           }
 
           const button = form.querySelector("button");
@@ -336,10 +323,11 @@
             })),
             total_units: totalUnits,
             total_amount: totalAmount,
-            documents,
           };
 
           try {
+            const uploadedIdPicture = await uploadIdPicture(idPictureFile);
+
             const response = await fetch(
               `${window.APP_CONFIG.API_BASE_URL}/enrollments/create`,
               {
@@ -347,7 +335,16 @@
                 headers: {
                   "Content-Type": "application/json",
                 },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({
+                  ...formData,
+                  idpic_url: uploadedIdPicture.file_url,
+                  documents: {
+                    idpic: {
+                      name: uploadedIdPicture.file_name,
+                      url: uploadedIdPicture.file_url,
+                    },
+                  },
+                }),
               },
             );
 
