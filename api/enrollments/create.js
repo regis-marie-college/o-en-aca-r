@@ -1,7 +1,7 @@
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
-const MISC_FEE = 1500;
+const MISC_FEE = 0;
 const ID_FEE = 300;
 const DOWNPAYMENT_AMOUNT = 2000;
 const PAYMENT_SUBMITTED_STATUS = "Payment Submitted";

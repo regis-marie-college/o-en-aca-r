@@ -95,17 +95,6 @@
           <div id="course-selected" class="selected-list"></div>
         </div>
 
-        <section class="table-section" style="margin-top: 16px">
-          <h3>Assessment Preview</h3>
-          <p><strong>Rate per Unit:</strong> PHP 300.00</p>
-          <p><strong>Total Units:</strong> <span id="total-units">0</span></p>
-          <p><strong>Total Tuition:</strong> <span id="total-amount">PHP 0.00</span></p>
-          <p><strong>Misc Fee:</strong> PHP 1,500.00</p>
-          <p><strong>ID Fee:</strong> PHP 300.00</p>
-          <p><strong>Total Assessment:</strong> <span id="total-assessment">PHP 0.00</span></p>
-          <p><strong>Minimum Downpayment:</strong> <span id="minimum-downpayment">PHP 0.00</span></p>
-        </section>
-
         <h2>Downpayment</h2>
         <p class="portal-form-note" style="margin-bottom: 14px">
           Submit your downpayment proof now. Treasury must approve this payment
@@ -157,7 +146,7 @@
     </div>
     <script>
       const RATE_PER_UNIT = 300;
-      const MISC_FEE = 1500;
+      const MISC_FEE = 0;
       const ID_FEE = 300;
       const MIN_DOWNPAYMENT = 2000;
       let courses = [];
@@ -168,10 +157,6 @@
       const message = document.getElementById("formMessage");
       const optionsEl = document.querySelector("#course-options");
       const selectedEl = document.querySelector("#course-selected");
-      const totalUnitsEl = document.querySelector("#total-units");
-      const totalAmountEl = document.querySelector("#total-amount");
-      const totalAssessmentEl = document.querySelector("#total-assessment");
-      const minimumDownpaymentEl = document.querySelector("#minimum-downpayment");
       const programEl = document.querySelector("#program");
       const yearLevelEl = document.querySelector("#year_level");
       const semesterEl = document.querySelector("#semester");
@@ -233,7 +218,7 @@
           .filter(Boolean);
       }
 
-      function updateAssessment() {
+      function updateDownpaymentMinimum() {
         const totalUnits = getSelectedCourseObjects().reduce(
           (sum, course) => sum + Number(course.units || 0),
           0,
@@ -243,10 +228,6 @@
         const minimumDownpayment =
           totalUnits > 0 ? Math.min(MIN_DOWNPAYMENT, totalAssessment) : MIN_DOWNPAYMENT;
 
-        totalUnitsEl.textContent = totalUnits;
-        totalAmountEl.textContent = formatCurrency(totalAmount);
-        totalAssessmentEl.textContent = formatCurrency(totalAssessment);
-        minimumDownpaymentEl.textContent = formatCurrency(minimumDownpayment);
         downpaymentAmountEl.min = minimumDownpayment.toFixed(2);
 
         if (Number(downpaymentAmountEl.value || 0) < minimumDownpayment) {
@@ -340,7 +321,7 @@
           )
           .join("");
 
-        updateAssessment();
+        updateDownpaymentMinimum();
       }
 
       async function loadPrograms() {

@@ -17,6 +17,7 @@ module.exports = async (req, res) => {
         ($1::text is null or
           student_name ilike '%' || $1 || '%' or
           email ilike '%' || $1 || '%' or
+          reference_no ilike '%' || $1 || '%' or
           description ilike '%' || $1 || '%') and
         ($2::text is null or status ilike $2)
       order by created_at desc

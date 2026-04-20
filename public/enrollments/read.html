@@ -27,6 +27,23 @@
             <option value="Declined">Declined</option>
           </select>
         </div>
+        <div class="form-group">
+          <label for="misc-fee">Misc Fee</label>
+          <input
+            id="misc-fee"
+            name="misc_fee"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Enter misc fee"
+          />
+          <small>
+            Treasury can set the miscellaneous fee here before enrollment approval.
+          </small>
+          <div style="margin-top: 10px">
+            <button type="button" id="save-misc-fee">Save Misc Fee</button>
+          </div>
+        </div>
         <section class="table-section">
           <h2>Submitted Documents</h2>
           <table id="table-documents">
@@ -56,6 +73,7 @@
       async function initApproval() {
         try {
           const approval = document.querySelector("#approval");
+          const miscFeeInput = document.querySelector("#misc-fee");
 
           const params = new URLSearchParams(window.location.search);
           const id = params.get("id");
@@ -64,9 +82,10 @@
             delete user_data.status;
 
             const payload = {
+              ...user_data,
               id,
               status: approval.value,
-              ...user_data,
+              misc_fee: miscFeeInput.value,
             };
 
             const response = await fetch(
@@ -126,6 +145,43 @@
         }
       }
 
+      async function saveMiscFee() {
+        try {
+          const approval = document.querySelector("#approval");
+          const miscFeeInput = document.querySelector("#misc-fee");
+          const params = new URLSearchParams(window.location.search);
+          const id = params.get("id");
+
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/update-status`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                id,
+                status: approval.value || user_data.status || "Pending",
+                misc_fee: miscFeeInput.value,
+              }),
+            },
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Failed to save misc fee");
+            return;
+          }
+
+          alert("Misc fee saved.");
+          await readEnrollment();
+        } catch (err) {
+          console.error("Failed to save misc fee:", err);
+          alert("Failed to save misc fee");
+        }
+      }
+
       async function readEnrollment() {
         try {
           const params = new URLSearchParams(window.location.search);
@@ -139,6 +195,7 @@
 
           user_data = data;
           const approval = document.querySelector("#approval");
+          const miscFeeInput = document.querySelector("#misc-fee");
           const downpayment = data.downpayment_billing || {};
           const proofValue = String(downpayment.proof_of_payment || "").trim();
           const proofLink = proofValue
@@ -156,6 +213,7 @@
             <p><strong>Created:</strong> ${defaultDate(data.created_at)}</p>
             <p><strong>Updated:</strong> ${defaultDate(data.updated_at)}</p>
             <p><strong>Status:</strong> ${data.status || "Pending"}</p>
+            <p><strong>Misc Fee:</strong> ${formatCurrency(data.misc_fee || 0)}</p>
             <hr style="margin:16px 0;border:none;border-top:1px solid rgba(255,255,255,.2);" />
             <p><strong>Downpayment:</strong> ${formatCurrency(downpayment.amount || 0)}</p>
             <p><strong>Payment Status:</strong> ${escapeHtml(downpayment.payment_status || "No payment submitted")}</p>
@@ -166,6 +224,7 @@
           `;
 
           approval.value = data.status || "Pending";
+          miscFeeInput.value = Number(data.misc_fee || 0);
         } catch (err) {
           console.error("Failed to load enrollments:", err);
         }
@@ -216,6 +275,9 @@
 
       document.addEventListener("DOMContentLoaded", function () {
         initApproval();
+        document
+          .querySelector("#save-misc-fee")
+          .addEventListener("click", saveMiscFee);
         loadDocuments();
         readEnrollment();
       });

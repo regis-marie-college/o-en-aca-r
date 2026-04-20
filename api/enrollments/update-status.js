@@ -4,6 +4,8 @@ const db = require("../../services/supabase");
 const { createUser } = require("../users/create");
 const sendEmail = require("../sendMail/sendMail");
 const bcrypt = require("bcrypt");
+const PDFDocument = require("pdfkit");
+const ID_FEE = 300;
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -12,7 +14,7 @@ module.exports = async (req, res) => {
 
   try {
     const body = await bodyParser(req);
-    const { id, status, reason } = body;
+    const { id, status, reason, misc_fee } = body;
 
     console.log("Enrollment details:");
     console.log(body);
@@ -33,8 +35,22 @@ module.exports = async (req, res) => {
 
     const normalizedStatus =
       String(status || "").toLowerCase() === "denied" ? "Declined" : status;
+    const hasMiscFeeValue =
+      misc_fee !== undefined && misc_fee !== null && String(misc_fee).trim() !== "";
+    const parsedMiscFee = hasMiscFeeValue ? Number(misc_fee) : Number(enrollment.misc_fee || 0);
+
+    if (Number.isNaN(parsedMiscFee) || parsedMiscFee < 0) {
+      return badRequest(res, "Misc fee must be a valid non-negative amount");
+    }
 
     if (normalizedStatus === "Approved") {
+      if (!hasMiscFeeValue && Number(enrollment.misc_fee || 0) <= 0) {
+        return badRequest(
+          res,
+          "Treasury must set the misc fee before enrollment approval",
+        );
+      }
+
       const downpayment = await getApprovedDownpayment(id);
 
       if (!downpayment) {
@@ -47,11 +63,16 @@ module.exports = async (req, res) => {
 
     const result = await db.query(
       `UPDATE enrollments
-       SET status = $1
+       SET status = $1,
+           misc_fee = $3,
+           updated_at = now()
        WHERE id = $2
        RETURNING *`,
-      [normalizedStatus, id],
+      [normalizedStatus, id, parsedMiscFee.toFixed(2)],
     );
+    const updatedEnrollment = result.rows[0];
+
+    await syncEnrollmentBillings(updatedEnrollment);
 
     const {
       last_name,
@@ -121,7 +142,7 @@ module.exports = async (req, res) => {
         generatedPassword,
         approvedDownpayment,
       });
-      const corDocument = buildCorDocument({
+      const corDocument = await buildCorPdfBuffer({
         enrollment,
         student,
         approvedDownpayment,
@@ -134,9 +155,9 @@ module.exports = async (req, res) => {
         message,
         [
           {
-            filename: `COR-${String(id).slice(0, 8)}.doc`,
+            filename: `COR-${String(id).slice(0, 8)}.pdf`,
             content: corDocument,
-            contentType: "application/msword",
+            contentType: "application/pdf",
           },
         ],
       );
@@ -175,12 +196,113 @@ module.exports = async (req, res) => {
       await sendEmail(email, "Admin Declined Enrollment", message);
     }
 
-    return okay(res, result.rows[0]);
+    return okay(res, updatedEnrollment);
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);
   }
 };
+
+async function syncEnrollmentBillings(enrollment) {
+  if (!enrollment?.id) {
+    return;
+  }
+
+  const result = await db.query(
+    `
+    select *
+    from billings
+    where enrollment_id = $1
+    order by created_at asc
+    `,
+    [enrollment.id],
+  );
+
+  if (!result.rows.length) {
+    return;
+  }
+
+  const billings = result.rows;
+  const downpaymentBilling = billings.find((billing) =>
+    String(billing.description || "").toLowerCase().includes("downpayment"),
+  );
+
+  if (!downpaymentBilling) {
+    return;
+  }
+
+  const miscFee = Number(enrollment.misc_fee || 0);
+  const courseAmount = Number(enrollment.total_amount || 0);
+  const totalAssessment = courseAmount + miscFee + ID_FEE;
+  const downpaymentAmount = Number(downpaymentBilling.amount || 0);
+  const installmentBillings = billings.filter((billing) => billing.id !== downpaymentBilling.id);
+  const remainingBalance = Math.max(totalAssessment - downpaymentAmount, 0);
+  const installmentAmounts = splitAmounts(remainingBalance, installmentBillings.length);
+
+  await db.query(
+    `
+    update billings
+    set description = $2,
+        balance = greatest(amount - amount_paid, 0),
+        status = case
+          when greatest(amount - amount_paid, 0) <= 0 and amount > 0 then 'Paid'
+          when amount_paid > 0 then 'Partial'
+          else 'Unpaid'
+        end,
+        updated_at = now()
+    where id = $1
+    `,
+    [
+      downpaymentBilling.id,
+      `Downpayment - Tuition and Fees (Course Fee: PHP ${courseAmount.toFixed(
+        2,
+      )}, Misc Fee: PHP ${miscFee.toFixed(2)}, ID Fee: PHP ${ID_FEE.toFixed(2)})`,
+    ],
+  );
+
+  for (const [index, billing] of installmentBillings.entries()) {
+    const nextAmount = Number(installmentAmounts[index] || 0);
+
+    await db.query(
+      `
+      update billings
+      set amount = $2,
+          balance = greatest($2 - amount_paid, 0),
+          status = case
+            when greatest($2 - amount_paid, 0) <= 0 and $2 > 0 then 'Paid'
+            when amount_paid > 0 then 'Partial'
+            else 'Unpaid'
+          end,
+          updated_at = now()
+      where id = $1
+      `,
+      [billing.id, nextAmount.toFixed(2)],
+    );
+  }
+}
+
+function splitAmounts(total, count) {
+  const safeCount = Number(count || 0);
+
+  if (safeCount <= 0) {
+    return [];
+  }
+
+  const amounts = [];
+  const baseAmount = Number((Number(total || 0) / safeCount).toFixed(2));
+
+  for (let index = 0; index < safeCount; index += 1) {
+    if (index < safeCount - 1) {
+      amounts.push(baseAmount);
+      continue;
+    }
+
+    const allocated = amounts.reduce((sum, value) => sum + value, 0);
+    amounts.push(Number((Number(total || 0) - allocated).toFixed(2)));
+  }
+
+  return amounts;
+}
 
 function buildStudentPassword(lastName, birthday) {
   const trimmedLastName = String(lastName || "")
@@ -253,7 +375,7 @@ function buildApprovalEmail({ enrollment, student, generatedPassword, approvedDo
   } = enrollment;
   const courses = parseSelectedCourses(selected_courses);
   const tuition = Number(total_amount || 0);
-  const miscFee = 1500;
+  const miscFee = Number(enrollment.misc_fee || 0);
   const idFee = 300;
   const totalFees = tuition + miscFee + idFee;
   const paidAmount = Number(approvedDownpayment?.amount_paid || approvedDownpayment?.amount || 0);
@@ -329,7 +451,7 @@ function buildApprovalEmail({ enrollment, student, generatedPassword, approvedDo
   `;
 }
 
-function buildCorDocument({ enrollment, student, approvedDownpayment }) {
+function buildCorPdfBuffer({ enrollment, student, approvedDownpayment }) {
   const {
     last_name,
     first_name,
@@ -345,194 +467,277 @@ function buildCorDocument({ enrollment, student, approvedDownpayment }) {
   } = enrollment;
   const courses = parseSelectedCourses(selected_courses);
   const tuition = Number(total_amount || 0);
-  const miscFee = 1500;
+  const miscFee = Number(enrollment.misc_fee || 0);
   const idFee = 300;
   const totalFees = tuition + miscFee + idFee;
   const payment = Number(approvedDownpayment?.amount_paid || approvedDownpayment?.amount || 0);
   const balance = Math.max(totalFees - payment, 0);
   const studentName = `${last_name || ""}, ${first_name || ""} ${middle_name || ""}`.trim();
 
-  const courseRows = courses.length
-    ? courses
-        .map((course, index) => {
-          return `
-            <tr>
-              <td>${escapeHtml(course.code || course.id || `C${index + 1}`)}</td>
-              <td>${escapeHtml(course.section || "-")}</td>
-              <td>${escapeHtml(course.name || "-")}</td>
-              <td class="center">${escapeHtml(course.units || 0)}</td>
-              <td class="center">TBA</td>
-              <td class="center">TBA</td>
-              <td class="center">TBA</td>
-            </tr>
-          `;
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      margin: 34,
+      info: {
+        Title: `COR ${student.id || ""}`.trim(),
+        Author: "Regis Marie College",
+      },
+    });
+    const chunks = [];
+
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.font("Helvetica-Bold").fontSize(18).text("REGIS MARIE COLLEGE", {
+      align: "center",
+    });
+    doc.moveDown(0.1);
+    doc.font("Helvetica").fontSize(11).text("Certificate of Registration", {
+      align: "center",
+    });
+    doc.moveDown(0.6);
+
+    const infoLeftX = doc.page.margins.left;
+    const infoRightX = 315;
+    let infoY = doc.y;
+
+    infoY = drawPdfField(doc, infoLeftX, infoY, 250, "Name", studentName || "-");
+    drawPdfField(
+      doc,
+      infoRightX,
+      doc.y - 14.5,
+      220,
+      "Student ID",
+      String(student.id || "-"),
+    );
+
+    infoY = drawPdfField(
+      doc,
+      infoLeftX,
+      infoY,
+      250,
+      "Course/Plan",
+      String(program_name || program_code || "-"),
+    );
+    drawPdfField(doc, infoRightX, doc.y - 14.5, 220, "Year Level", String(year_level || "-"));
+
+    infoY = drawPdfField(
+      doc,
+      infoLeftX,
+      infoY,
+      250,
+      "Semester",
+      String(semester || "-"),
+    );
+    drawPdfField(
+      doc,
+      infoRightX,
+      doc.y - 14.5,
+      220,
+      "Birthdate",
+      formatCorDate(birthday),
+    );
+
+    infoY = drawPdfField(
+      doc,
+      infoLeftX,
+      infoY,
+      250,
+      "Payment",
+      formatMoney(payment),
+    );
+    doc.y = infoY + 8;
+
+    const startX = doc.x;
+    const tableTop = doc.y;
+    const columns = [84, 250, 46, 90];
+    const rowHeight = 18;
+
+    drawPdfRow(doc, startX, tableTop, columns, rowHeight, [
+      "Subject",
+      "Description",
+      "Units",
+      "Amount",
+    ], true);
+
+    let currentY = tableTop + rowHeight;
+    const courseItems = courses.length
+      ? courses.map((course, index) => [
+          String(course.code || `SUBJ ${index + 1}`),
+          String(course.name || "-"),
+          String(course.units || 0),
+          formatMoney(course.amount || 0),
+        ])
+      : [["-", "No course details available.", "-", "-"]];
+
+    courseItems.forEach((row) => {
+      drawPdfRow(doc, startX, currentY, columns, rowHeight, row, false);
+      currentY += rowHeight;
+    });
+
+    drawPdfRow(doc, startX, currentY, columns, rowHeight, [
+      "",
+      "Nothing follows",
+      "",
+      "",
+    ], false);
+    currentY += rowHeight + 14;
+
+    const pageWidth =
+      doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const gap = 14;
+    const noteWidth = 338;
+    const assessmentWidth = pageWidth - noteWidth - gap;
+    const noteX = doc.page.margins.left;
+    const assessmentX = noteX + noteWidth + gap;
+    const panelY = currentY;
+    const panelHeight = 150;
+
+    drawPdfPanel(doc, noteX, panelY, noteWidth, panelHeight, "Note");
+    drawPdfPanel(doc, assessmentX, panelY, assessmentWidth, panelHeight, "Assessment Summary");
+
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor("#111111")
+      .text(
+        "1. Withdrawal of enrollment is allowed only within the first two weeks of classes.\n" +
+          "2. Registration, other fees, miscellaneous fees, and ID fees are non-refundable.\n" +
+          "3. Tuition refund is subject to school review and applicable enrollment policies.\n" +
+          "4. All discrepancies in fees and subjects/courses are subject to review and adjustment before or until classes start.",
+        noteX + 10,
+        panelY + 24,
+        {
+          width: noteWidth - 20,
+          align: "left",
+          lineGap: 2,
+        },
+      );
+
+    const signatureY = panelY + panelHeight - 34;
+    doc
+      .moveTo(noteX + noteWidth - 150, signatureY)
+      .lineTo(noteX + noteWidth - 20, signatureY)
+      .strokeColor("#333333")
+      .stroke();
+    doc
+      .font("Helvetica")
+      .fontSize(8.5)
+      .text(
+        "Registrar / Authorized Representative",
+        noteX + noteWidth - 170,
+        signatureY + 5,
+        {
+          width: 160,
+          align: "center",
+        },
+      );
+
+    const assessmentItems = [
+      ["Total Units", total_units || 0],
+      ["Tuition Fee", formatMoney(tuition)],
+      ["Misc Fee", formatMoney(miscFee)],
+      ["ID Fee", formatMoney(idFee)],
+      ["Discount", formatMoney(0)],
+      ["Total Fees", formatMoney(totalFees)],
+      ["Payment", formatMoney(payment)],
+      ["Balance", formatMoney(balance)],
+    ];
+    let summaryY = panelY + 26;
+
+    assessmentItems.forEach(([label, value], index) => {
+      const isTotal = index === 5 || index === assessmentItems.length - 1;
+      doc
+        .font(isTotal ? "Helvetica-Bold" : "Helvetica")
+        .fontSize(9)
+        .fillColor("#111111")
+        .text(`${label}:`, assessmentX + 10, summaryY, {
+          width: 78,
         })
-        .join("")
-    : `
-      <tr>
-        <td colspan="7" class="center">No course details available.</td>
-      </tr>
-    `;
+        .text(String(value), assessmentX + 92, summaryY, {
+          width: assessmentWidth - 102,
+          align: "right",
+        });
+      summaryY += 14;
+    });
 
-  return `
-    <!doctype html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <style>
-          @page { margin: 0.55in; }
-          body {
-            font-family: Arial, sans-serif;
-            color: #111;
-            font-size: 11px;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 14px;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 18px;
-            letter-spacing: 0.04em;
-          }
-          .header p {
-            margin: 3px 0;
-          }
-          .info-grid {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 12px;
-          }
-          .info-grid td {
-            padding: 3px 6px;
-            vertical-align: top;
-          }
-          table.schedule {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-          }
-          .schedule th,
-          .schedule td {
-            border: 1px solid #333;
-            padding: 5px;
-          }
-          .schedule th {
-            background: #f3f4f6;
-            font-weight: bold;
-            text-align: center;
-          }
-          .center {
-            text-align: center;
-          }
-          .footer-layout {
-            width: 100%;
-            margin-top: 28px;
-          }
-          .note {
-            width: 62%;
-            vertical-align: top;
-            padding-right: 24px;
-          }
-          .fees {
-            width: 38%;
-            vertical-align: top;
-          }
-          .fees table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          .fees td {
-            padding: 3px 6px;
-          }
-          .fees td:last-child {
-            text-align: right;
-          }
-          .total-row td {
-            border-top: 1px solid #333;
-            font-weight: bold;
-          }
-          .signature {
-            margin-top: 42px;
-            width: 210px;
-            border-top: 1px solid #333;
-            text-align: center;
-            padding-top: 6px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>REGIS MARIE COLLEGE</h1>
-          <p>Certificate of Registration</p>
-        </div>
+    doc.end();
+  });
+}
 
-        <table class="info-grid">
-          <tr>
-            <td><strong>Name:</strong> ${escapeHtml(studentName)}</td>
-            <td><strong>Student ID:</strong> ${escapeHtml(student.id || "-")}</td>
-            <td><strong>Year Level:</strong> ${escapeHtml(year_level || "-")}</td>
-          </tr>
-          <tr>
-            <td><strong>Nationality:</strong> Filipino</td>
-            <td><strong>Course/Plan:</strong> ${escapeHtml(program_name || program_code || "-")}</td>
-            <td><strong>Sy/Term:</strong> ${escapeHtml(semester || "-")}</td>
-          </tr>
-          <tr>
-            <td><strong>Birthdate:</strong> ${escapeHtml(birthday || "-")}</td>
-            <td><strong>Campus:</strong> Regis Marie College</td>
-            <td><strong>Payment:</strong> ${escapeHtml(formatMoney(payment))}</td>
-          </tr>
-        </table>
+function drawPdfRow(doc, startX, startY, widths, height, values, isHeader) {
+  let currentX = startX;
 
-        <table class="schedule">
-          <thead>
-            <tr>
-              <th>Subject</th>
-              <th>Section</th>
-              <th>Description</th>
-              <th>Units</th>
-              <th>Days</th>
-              <th>Time</th>
-              <th>Room</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${courseRows}
-            <tr>
-              <td colspan="7" class="center">**Nothing follows**</td>
-            </tr>
-          </tbody>
-        </table>
+  values.forEach((value, index) => {
+    const width = widths[index];
 
-        <table class="footer-layout">
-          <tr>
-            <td class="note">
-              <h3>NOTE:</h3>
-              <p><strong>WITHDRAWAL OF ENROLLMENT AND REFUND OF FEES</strong></p>
-              <p>1. Withdrawal of enrollment is allowed only within the first two weeks of classes.</p>
-              <p>2. Registration, Other Fees, Miscellaneous Fees, and ID Fees are non-refundable.</p>
-              <p>3. Tuition refund is subject to school review and applicable enrollment policies.</p>
-              <p><strong>Reminder:</strong> All discrepancies in fees and subjects/courses are subject to review and adjustment before or until classes start.</p>
-              <div class="signature">Registrar / Authorized Representative</div>
-            </td>
-            <td class="fees">
-              <table>
-                <tr><td><strong>Total Units:</strong></td><td>${escapeHtml(total_units || 0)}</td></tr>
-                <tr><td><strong>Tuition Fee:</strong></td><td>${escapeHtml(formatMoney(tuition))}</td></tr>
-                <tr><td><strong>Misc Fee:</strong></td><td>${escapeHtml(formatMoney(miscFee))}</td></tr>
-                <tr><td><strong>ID Fee:</strong></td><td>${escapeHtml(formatMoney(idFee))}</td></tr>
-                <tr><td><strong>Discount:</strong></td><td>${escapeHtml(formatMoney(0))}</td></tr>
-                <tr class="total-row"><td><strong>Total Fees:</strong></td><td>${escapeHtml(formatMoney(totalFees))}</td></tr>
-                <tr><td><strong>Payment:</strong></td><td>${escapeHtml(formatMoney(payment))}</td></tr>
-                <tr><td><strong>Balance:</strong></td><td>${escapeHtml(formatMoney(balance))}</td></tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-    </html>
-  `;
+    doc
+      .rect(currentX, startY, width, height)
+      .strokeColor("#333333")
+      .lineWidth(1)
+      .stroke();
+
+    doc
+      .font(isHeader ? "Helvetica-Bold" : "Helvetica")
+      .fontSize(8.5)
+      .fillColor("#111111")
+      .text(String(value || ""), currentX + 4, startY + 5, {
+        width: width - 8,
+        align: index >= values.length - 2 ? "center" : "left",
+        ellipsis: true,
+      });
+
+    currentX += width;
+  });
+}
+
+function drawPdfField(doc, x, y, width, label, value) {
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(9.2)
+    .fillColor("#111111")
+    .text(`${label}:`, x, y, { continued: true });
+  doc.font("Helvetica").text(` ${String(value || "-")}`, {
+    width: width,
+  });
+
+  return doc.y + 2;
+}
+
+function drawPdfPanel(doc, x, y, width, height, title) {
+  doc
+    .roundedRect(x, y, width, height, 4)
+    .strokeColor("#333333")
+    .lineWidth(1)
+    .stroke();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .fillColor("#111111")
+    .text(title, x + 10, y + 8, {
+      width: width - 20,
+    });
+}
+
+function formatCorDate(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Manila",
+  });
 }
 
 function escapeHtml(value) {

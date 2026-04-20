@@ -244,6 +244,101 @@
         </section>
 
         <section class="table-section" style="margin-bottom: 24px">
+          <h2>Currently Taking</h2>
+          <table id="table-current-courses">
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Units</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <section class="table-section" style="margin-bottom: 24px">
+          <h2>Completed Courses</h2>
+          <table id="table-completed-courses">
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>School Year</th>
+                <th>Recorded At</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <section
+          class="table-section"
+          id="billing-summary"
+          style="margin-bottom: 24px"
+        >
+          <h2>Billing Summary</h2>
+          <table id="table-billings">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Total</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Method</th>
+                <th>Payment Status</th>
+                <th>Reference</th>
+                <th>Proof</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <section class="table-section">
+          <h2>Document Requests</h2>
+          <table id="table-document-requests">
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th>Payment</th>
+                <th>Request Status</th>
+                <th>Proof</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <section
+          class="table-section"
+          id="transaction-history"
+          style="margin-top: 24px"
+        >
+          <h2>Transaction History</h2>
+          <table id="table-transaction-history">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Reference</th>
+                <th>Method</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Processed By</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <section class="table-section" style="margin-bottom: 24px">
           <div class="billing-payment-layout">
             <div>
               <h2>School Billing Payments</h2>
@@ -400,74 +495,6 @@
             <div class="portal-card-grid" id="payment-options"></div>
           </div>
         </section>
-
-        <section class="table-section" style="margin-bottom: 24px">
-          <h2>Currently Taking</h2>
-          <table id="table-current-courses">
-            <thead>
-              <tr>
-                <th>Course</th>
-                <th>Units</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </section>
-
-        <section class="table-section" style="margin-bottom: 24px">
-          <h2>Completed Courses</h2>
-          <table id="table-completed-courses">
-            <thead>
-              <tr>
-                <th>Course</th>
-                <th>School Year</th>
-                <th>Recorded At</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </section>
-
-        <section class="table-section" style="margin-bottom: 24px">
-          <h2>Billing Summary</h2>
-          <table id="table-billings">
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Total</th>
-                <th>Paid</th>
-                <th>Balance</th>
-                <th>Method</th>
-                <th>Payment Status</th>
-                <th>Reference</th>
-                <th>Proof</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </section>
-
-        <section class="table-section">
-          <h2>Document Requests</h2>
-          <table id="table-document-requests">
-            <thead>
-              <tr>
-                <th>Document</th>
-                <th>Amount</th>
-                <th>Method</th>
-                <th>Reference</th>
-                <th>Payment</th>
-                <th>Request Status</th>
-                <th>Proof</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </section>
       </main>
     </div>
 
@@ -558,6 +585,24 @@
 
       function normalizeValue(value) {
         return String(value || "").trim().toLowerCase();
+      }
+
+      function getTransactionCategory(description) {
+        const text = normalizeValue(description);
+
+        if (
+          text.includes("downpayment") ||
+          text.includes("installment") ||
+          text.includes("tuition")
+        ) {
+          return "Tuition";
+        }
+
+        if (text.includes("document")) {
+          return "Document";
+        }
+
+        return "Other";
       }
 
       function getSelectedDocumentTypes(form) {
@@ -814,6 +859,7 @@
         renderCompletedCourses(data.taken_courses || []);
         renderBillings(billings);
         renderRequests(data.document_requests || []);
+        renderTransactions(data.transactions || []);
         renderDocuments(data.submitted_documents || []);
         renderStudentHeader(data.user, data.enrollment, data.id_picture);
         const billingSummary = summarizeBillings(billings);
@@ -1109,6 +1155,35 @@
         });
 
         bindProofButtons();
+      }
+
+      function renderTransactions(transactions) {
+        const tbody = document.querySelector("#table-transaction-history tbody");
+        tbody.innerHTML = "";
+
+        if (!Array.isArray(transactions) || transactions.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8">No transaction history found.</td>
+            </tr>
+          `;
+          return;
+        }
+
+        transactions.forEach((transaction) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${transaction.created_at ? defaultDate(transaction.created_at) : "-"}</td>
+            <td>${escapeHtml(getTransactionCategory(transaction.description))}</td>
+            <td>${escapeHtml(transaction.description || "-")}</td>
+            <td>${escapeHtml(transaction.reference_no || "-")}</td>
+            <td>${escapeHtml(transaction.payment_method || "-")}</td>
+            <td>${formatCurrency(transaction.amount)}</td>
+            <td>${escapeHtml(transaction.status || "-")}</td>
+            <td>${escapeHtml(transaction.processed_by || "-")}</td>
+          `;
+          tbody.appendChild(row);
+        });
       }
 
       function bindProofButtons() {

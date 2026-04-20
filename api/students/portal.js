@@ -63,6 +63,16 @@ module.exports = async (req, res) => {
       [email],
     );
 
+    const transactionsResult = await db.query(
+      `
+      select *
+      from treasury_transactions
+      where email = $1
+      order by created_at desc
+      `,
+      [email],
+    );
+
     const documentsResult = enrollment
       ? await db.query(
           `
@@ -83,6 +93,10 @@ module.exports = async (req, res) => {
       (sum, item) => sum + Number(item.balance || 0),
       0,
     );
+    const totalTransactionAmount = transactionsResult.rows.reduce(
+      (sum, item) => sum + Number(item.amount || 0),
+      0,
+    );
 
     return okay(res, {
       user,
@@ -94,7 +108,9 @@ module.exports = async (req, res) => {
       billings: billingsResult.rows,
       total_paid: totalPaid,
       total_balance: totalBalance,
+      transaction_total: totalTransactionAmount,
       document_requests: requestsResult.rows,
+      transactions: transactionsResult.rows,
       submitted_documents: documentsResult.rows,
       id_picture:
         (enrollment?.idpic_url

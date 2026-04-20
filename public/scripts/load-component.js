@@ -164,6 +164,8 @@
           { href: "../student/dashboard.html", label: "Dashboard" },
           { href: "../profile/profile.html", label: "Profile" },
           { href: "../courses/list.html", label: "My Courses" },
+          { href: "../student/dashboard.html#billing-summary", label: "Billing Summary" },
+          { href: "../student/dashboard.html#transaction-history", label: "Transaction History" },
         ];
         break;
 
