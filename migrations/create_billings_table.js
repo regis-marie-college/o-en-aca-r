@@ -17,6 +17,7 @@ async function up() {
       balance numeric(12, 2) not null default 0,
       due_date date,
       status text not null default 'Unpaid',
+      notes text,
       created_by text,
       updated_by text,
       created_at timestamp default now(),

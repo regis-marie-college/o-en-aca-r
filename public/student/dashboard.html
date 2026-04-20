@@ -96,9 +96,92 @@
         color: #123055;
       }
 
+      .document-request-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .document-choice-group {
+        grid-column: 1 / -1;
+        display: grid;
+        gap: 10px;
+      }
+
+      .document-choice-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 10px;
+      }
+
+      .document-choice {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 56px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 184, 255, 0.36);
+        background: rgba(248, 251, 255, 0.96);
+        color: #18324d;
+        font-weight: 700;
+        cursor: pointer;
+        touch-action: manipulation;
+        transition: transform 0.18s ease, border-color 0.18s ease,
+          background 0.18s ease, box-shadow 0.18s ease;
+      }
+
+      .document-choice:has(input:checked) {
+        border-color: rgba(37, 99, 235, 0.55);
+        background: linear-gradient(135deg, #eff6ff, #ffffff);
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.1);
+      }
+
+      .document-choice input {
+        width: 18px;
+        height: 18px;
+        accent-color: #2563eb;
+        flex: 0 0 auto;
+      }
+
+      .document-request-form > input,
+      .document-request-form > select,
+      .portal-online-fields input,
+      .portal-online-fields select {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .document-request-form .portal-form-note,
+      .document-request-form .portal-online-fields,
+      .document-request-form button {
+        grid-column: 1 / -1;
+      }
+
       @media (max-width: 960px) {
         .billing-payment-layout {
           grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .document-request-form {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .document-choice-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .document-choice {
+          min-height: 52px;
+          padding: 13px 14px;
+        }
+
+        .document-request-form button {
+          width: 100%;
         }
       }
     </style>
@@ -227,14 +310,47 @@
 
         <section class="table-section" style="margin-bottom: 24px">
           <h2>Request Documents</h2>
-          <form id="document-request-form" class="stats" style="margin-top: 16px">
-            <select name="document_type" required>
-              <option value="">Select Document</option>
-              <option value="Certificate of Enrollment">Certificate of Enrollment</option>
-              <option value="Certificate of Registration">Certificate of Registration</option>
-              <option value="Transcript of Records">Transcript of Records</option>
-              <option value="Good Moral">Good Moral</option>
-            </select>
+          <form id="document-request-form" class="document-request-form">
+            <div class="document-choice-group">
+              <div class="document-choice-grid" aria-label="Select documents to request">
+                <label class="document-choice">
+                  <input
+                    type="checkbox"
+                    name="document_type"
+                    value="Certificate of Enrollment"
+                  />
+                  <span>Certificate of Enrollment</span>
+                </label>
+                <label class="document-choice">
+                  <input
+                    type="checkbox"
+                    name="document_type"
+                    value="Certificate of Registration"
+                  />
+                  <span>Certificate of Registration</span>
+                </label>
+                <label class="document-choice">
+                  <input
+                    type="checkbox"
+                    name="document_type"
+                    value="Transcript of Records"
+                  />
+                  <span>Transcript of Records</span>
+                </label>
+                <label class="document-choice">
+                  <input type="checkbox" name="document_type" value="Good Moral" />
+                  <span>Good Moral</span>
+                </label>
+                <label class="document-choice">
+                  <input type="checkbox" name="document_type" value="Copy of Grades" />
+                  <span>Copy of Grades</span>
+                </label>
+              </div>
+              <div class="portal-form-note">
+                Tap each document you want to request. Each document costs PHP
+                300.00.
+              </div>
+            </div>
             <input name="purpose" placeholder="Purpose of request" required />
             <select name="payment_method" required>
               <option value="">Select Payment Method</option>
@@ -442,6 +558,25 @@
 
       function normalizeValue(value) {
         return String(value || "").trim().toLowerCase();
+      }
+
+      function getSelectedDocumentTypes(form) {
+        return Array.from(form.querySelectorAll('[name="document_type"]:checked'))
+          .map((input) => input.value)
+          .filter(Boolean);
+      }
+
+      function calculateDocumentRequestTotal(form) {
+        return getSelectedDocumentTypes(form).length * DOCUMENT_REQUEST_AMOUNT;
+      }
+
+      function updateDocumentRequestAmount() {
+        const form = document.querySelector("#document-request-form");
+        const amountInput = form?.querySelector('[name="amount"]');
+
+        if (!form || !amountInput) return;
+
+        amountInput.value = formatCurrency(calculateDocumentRequestTotal(form));
       }
 
       function buildInstallmentCards(billings) {
@@ -1066,13 +1201,17 @@
       function initRequestForm() {
         const form = document.querySelector("#document-request-form");
         const amountInput = form.querySelector('[name="amount"]');
+        const documentTypeInputs = form.querySelectorAll('[name="document_type"]');
         const paymentMethodInput = form.querySelector('[name="payment_method"]');
         const paymentChannelInput = form.querySelector('[name="payment_channel"]');
 
         if (amountInput) {
-          amountInput.value = formatCurrency(DOCUMENT_REQUEST_AMOUNT);
+          updateDocumentRequestAmount();
         }
 
+        documentTypeInputs.forEach((input) => {
+          input.addEventListener("change", updateDocumentRequestAmount);
+        });
         paymentMethodInput.addEventListener("change", togglePaymentFields);
         paymentChannelInput.addEventListener("change", () => {
           renderPaymentOptions(availablePaymentOptions, {
@@ -1091,9 +1230,16 @@
 
           const formData = new FormData(form);
           const user = auth();
+          const documentTypes = getSelectedDocumentTypes(form);
           const paymentMethod = formData.get("payment_method");
           const proofInput = form.querySelector('[name="proof_of_payment"]');
           const proofFile = proofInput?.files?.[0] || null;
+          const totalAmount = calculateDocumentRequestTotal(form);
+
+          if (!documentTypes.length) {
+            alert("Please select at least one document.");
+            return;
+          }
 
           if (paymentMethod === "Online" && (!formData.get("reference_no") || !proofFile)) {
             alert("Reference number and proof of payment are required for online payment.");
@@ -1121,12 +1267,13 @@
                 student_id: user.id,
                 student_name: `${user.first_name} ${user.last_name}`,
                 email: user.email,
-                document_type: formData.get("document_type"),
+                document_type: documentTypes.join(", "),
+                document_types: documentTypes,
                 purpose: formData.get("purpose"),
                 payment_method: paymentMethod,
                 reference_no: formData.get("reference_no"),
                 proof_of_payment: proofUrl,
-                amount: DOCUMENT_REQUEST_AMOUNT,
+                amount: totalAmount,
               }),
             },
           );
@@ -1138,7 +1285,7 @@
           }
 
           form.reset();
-          amountInput.value = formatCurrency(DOCUMENT_REQUEST_AMOUNT);
+          updateDocumentRequestAmount();
           togglePaymentFields();
           await loadPortal();
         });

@@ -26,6 +26,7 @@ async function updateBilling(data) {
     reference_no,
     proof_of_payment,
     payment_status,
+    notes,
     processed_by,
     treasury_reviewed_by,
   } = data;
@@ -67,6 +68,7 @@ async function updateBilling(data) {
       billing,
       payment_status:
         normalizedPaymentStatus === "approved" ? "Approved" : "Denied",
+      notes,
       processed_by,
       treasury_reviewed_by,
     });
@@ -156,6 +158,7 @@ async function submitOnlinePayment({
 async function reviewOnlinePayment({
   billing,
   payment_status,
+  notes,
   processed_by,
   treasury_reviewed_by,
 }) {
@@ -168,6 +171,11 @@ async function reviewOnlinePayment({
   }
 
   const reviewer = treasury_reviewed_by || processed_by || null;
+  const reviewNotes = String(notes || "").trim() || null;
+
+  if (payment_status === "Denied" && !reviewNotes) {
+    throw new Error("Treasury note is required when denying a payment");
+  }
 
   if (payment_status === "Denied") {
     const denied = await db.query(
@@ -175,13 +183,16 @@ async function reviewOnlinePayment({
       update billings
       set payment_status = 'Denied',
           treasury_reviewed_by = $2,
-          updated_by = $3,
+          notes = $3,
+          updated_by = $4,
           updated_at = now()
       where id = $1
       returning *
       `,
-      [billing.id, reviewer, processed_by || null],
+      [billing.id, reviewer, reviewNotes, processed_by || null],
     );
+
+    await syncEnrollmentPaymentStatus(denied.rows[0]);
 
     return denied.rows[0];
   }
@@ -204,7 +215,8 @@ async function reviewOnlinePayment({
         payment_status = 'Approved',
         pending_payment_amount = 0,
         treasury_reviewed_by = $5,
-        updated_by = $6,
+        notes = $6,
+        updated_by = $7,
         updated_at = now()
     where id = $1
     returning *
@@ -215,6 +227,7 @@ async function reviewOnlinePayment({
       nextBalance.toFixed(2),
       nextStatus,
       reviewer,
+      reviewNotes,
       processed_by || null,
     ],
   );
@@ -226,6 +239,8 @@ async function reviewOnlinePayment({
     processed_by,
     reference_no: billing.reference_no,
   });
+
+  await syncEnrollmentPaymentStatus(updated.rows[0]);
 
   return updated.rows[0];
 }
@@ -277,7 +292,46 @@ async function applyDirectPayment({
     reference_no: `TXN-${Date.now()}`,
   });
 
+  await syncEnrollmentPaymentStatus(updated.rows[0]);
+
   return updated.rows[0];
+}
+
+async function syncEnrollmentPaymentStatus(billing) {
+  if (!billing?.enrollment_id) {
+    return;
+  }
+
+  const isDownpayment = String(billing.description || "")
+    .toLowerCase()
+    .includes("downpayment");
+
+  if (!isDownpayment) {
+    return;
+  }
+
+  const paymentStatus = String(billing.payment_status || "").toLowerCase();
+  const nextEnrollmentStatus =
+    paymentStatus === "approved"
+      ? "Pending"
+      : paymentStatus === "denied"
+        ? "Payment Rejected"
+        : null;
+
+  if (!nextEnrollmentStatus) {
+    return;
+  }
+
+  await db.query(
+    `
+    update enrollments
+    set status = $2,
+        updated_at = now()
+    where id = $1
+      and lower(coalesce(status, '')) not in ('approved', 'declined', 'denied')
+    `,
+    [billing.enrollment_id, nextEnrollmentStatus],
+  );
 }
 
 async function insertTransaction({

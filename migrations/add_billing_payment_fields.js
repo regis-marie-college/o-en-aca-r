@@ -9,7 +9,8 @@ async function up() {
     add column if not exists proof_of_payment text,
     add column if not exists payment_status text not null default 'Unpaid',
     add column if not exists pending_payment_amount numeric(12, 2) not null default 0,
-    add column if not exists treasury_reviewed_by text;
+    add column if not exists treasury_reviewed_by text,
+    add column if not exists notes text;
 
     update billings
     set
@@ -24,6 +25,7 @@ async function up() {
 async function down() {
   await db.query(`
     alter table billings
+    drop column if exists notes,
     drop column if exists treasury_reviewed_by,
     drop column if exists pending_payment_amount,
     drop column if exists payment_status,

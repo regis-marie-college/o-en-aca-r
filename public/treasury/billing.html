@@ -309,7 +309,7 @@
       }
 
       .billing-page table {
-        min-width: 1480px;
+        min-width: 1580px;
       }
 
       .billing-page thead {
@@ -631,6 +631,7 @@
                     <th>Channel</th>
                     <th>Reference</th>
                     <th>Proof</th>
+                    <th>Treasury Note</th>
                     <th>Payment Status</th>
                     <th>Due Date</th>
                     <th>Status</th>
@@ -773,7 +774,7 @@
         if (!data.length) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="14" class="billing-empty">
+              <td colspan="15" class="billing-empty">
                 No billing records found for the current search.
               </td>
             </tr>
@@ -800,6 +801,7 @@
             <td>${escapeHtml(billing.payment_channel || "-")}</td>
             <td>${escapeHtml(billing.reference_no || "-")}</td>
             <td>${renderProofCell(billing.proof_of_payment)}</td>
+            <td>${escapeHtml(billing.notes || "-")}</td>
             <td class="${canReviewOnlinePayment ? "payment-pending" : ""}">${escapeHtml(billing.payment_status || "-")}</td>
             <td>${billing.due_date ? defaultDate(billing.due_date) : "-"}</td>
             <td><span class="status ${String(billing.status || "").toLowerCase()}">${billing.status}</span></td>
@@ -886,6 +888,18 @@
         document.querySelectorAll(".btn-review-payment").forEach((button) => {
           button.addEventListener("click", async () => {
             const user = JSON.parse(localStorage.getItem("user") || "{}");
+            const nextStatus = button.dataset.status;
+            const note = window.prompt(
+              nextStatus === "Approved"
+                ? "Add treasury note for this approved payment (optional)"
+                : "Add treasury note for this denied payment (required)",
+            );
+
+            if (nextStatus === "Denied" && !String(note || "").trim()) {
+              alert("Treasury note is required when denying a payment.");
+              return;
+            }
+
             const response = await fetch(
               `${window.APP_CONFIG.API_BASE_URL}/billings/update`,
               {
@@ -893,7 +907,8 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   id: button.dataset.id,
-                  payment_status: button.dataset.status,
+                  payment_status: nextStatus,
+                  notes: String(note || "").trim(),
                   processed_by: user.first_name || user.email || "Treasury",
                   treasury_reviewed_by: user.email || user.first_name || "Treasury",
                 }),

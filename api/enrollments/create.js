@@ -4,6 +4,7 @@ const db = require("../../services/supabase");
 const MISC_FEE = 1500;
 const ID_FEE = 300;
 const DOWNPAYMENT_AMOUNT = 2000;
+const PAYMENT_SUBMITTED_STATUS = "Payment Submitted";
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -28,6 +29,10 @@ module.exports = async (req, res) => {
       selected_courses,
       total_units,
       total_amount,
+      downpayment_amount,
+      payment_channel,
+      reference_no,
+      proof_of_payment,
       idpic_url,
       documents,
     } = body;
@@ -55,6 +60,29 @@ module.exports = async (req, res) => {
 
     if (!Array.isArray(selected_courses) || selected_courses.length === 0) {
       return badRequest(res, "Please select at least one course");
+    }
+
+    const courseAmount = Number(total_amount || 0);
+    const totalAssessment = courseAmount + MISC_FEE + ID_FEE;
+    const minimumDownpayment = Math.min(DOWNPAYMENT_AMOUNT, totalAssessment);
+    const submittedDownpayment = Number(downpayment_amount || 0);
+
+    if (submittedDownpayment < minimumDownpayment) {
+      return badRequest(
+        res,
+        `Minimum downpayment is PHP ${minimumDownpayment.toFixed(2)}`,
+      );
+    }
+
+    if (submittedDownpayment > totalAssessment) {
+      return badRequest(res, "Downpayment cannot exceed the total assessment");
+    }
+
+    if (!payment_channel || !reference_no || !proof_of_payment) {
+      return badRequest(
+        res,
+        "Payment channel, reference number, and proof of payment are required",
+      );
     }
 
     const mobileNumberColumn = await db.query(
@@ -110,8 +138,8 @@ module.exports = async (req, res) => {
       semester,
       JSON.stringify(selected_courses),
       Number(total_units || 0),
-      Number(total_amount || 0).toFixed(2),
-      "Pending",
+      courseAmount.toFixed(2),
+      PAYMENT_SUBMITTED_STATUS,
     );
 
     const idPictureColumn = await db.query(
@@ -183,6 +211,10 @@ module.exports = async (req, res) => {
       last_name,
       email,
       courseAmount: Number(total_amount || 0),
+      downpaymentAmount: submittedDownpayment,
+      paymentChannel: payment_channel,
+      referenceNo: reference_no,
+      proofOfPayment: proof_of_payment,
     });
 
     // ✅ Insert documents (category + type)
@@ -225,10 +257,14 @@ async function createInstallmentBillings({
   last_name,
   email,
   courseAmount,
+  downpaymentAmount,
+  paymentChannel,
+  referenceNo,
+  proofOfPayment,
 }) {
   const studentName = `${first_name} ${last_name}`.trim();
   const totalAssessment = Number(courseAmount || 0) + MISC_FEE + ID_FEE;
-  const downpayment = Math.min(DOWNPAYMENT_AMOUNT, totalAssessment);
+  const downpayment = Number(downpaymentAmount || 0);
   const remainingBalance = Math.max(totalAssessment - downpayment, 0);
   const baseInstallment = Number((remainingBalance / 4).toFixed(2));
   const installments = [];
@@ -257,20 +293,33 @@ async function createInstallmentBillings({
   ].filter((item) => Number(item.amount || 0) > 0);
 
   for (const item of billingItems) {
+    const isDownpayment = item.description.toLowerCase().includes("downpayment");
+    const paymentColumns = isDownpayment
+      ? ", payment_method, payment_channel, reference_no, proof_of_payment, payment_status, pending_payment_amount"
+      : "";
+    const paymentValues = isDownpayment
+      ? ", 'Online', $7, $8, $9, 'Submitted', $5"
+      : "";
+    const params = [
+      enrollment.id,
+      studentName,
+      email,
+      item.description,
+      Number(item.amount).toFixed(2),
+      "System Enrollment",
+    ];
+
+    if (isDownpayment) {
+      params.push(paymentChannel, referenceNo, proofOfPayment);
+    }
+
     await db.query(
       `
       insert into billings
-      (enrollment_id, student_name, email, description, amount, amount_paid, balance, due_date, status, created_by, updated_by)
-      values ($1,$2,$3,$4,$5,0,$5,null,'Unpaid',$6,$6)
+      (enrollment_id, student_name, email, description, amount, amount_paid, balance, due_date, status, created_by, updated_by${paymentColumns})
+      values ($1,$2,$3,$4,$5,0,$5,null,'Unpaid',$6,$6${paymentValues})
       `,
-      [
-        enrollment.id,
-        studentName,
-        email,
-        item.description,
-        Number(item.amount).toFixed(2),
-        "System Enrollment",
-      ],
+      params,
     );
   }
 }

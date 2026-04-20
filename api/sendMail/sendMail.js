@@ -1,7 +1,7 @@
 require("dotenv").config();
 const nodemailer = require("nodemailer");
 
-async function sendEmail(to, subject, message) {
+async function sendEmail(to, subject, message, attachments = []) {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
     throw new Error("Missing Gmail SMTP credentials in environment variables");
   }
@@ -25,6 +25,7 @@ async function sendEmail(to, subject, message) {
     subject: subject,
     text: stripHtml(message),
     html: message,
+    attachments,
   });
 
   console.log("Email sent:", info.messageId);

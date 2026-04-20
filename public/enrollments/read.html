@@ -80,6 +80,12 @@
               },
             );
 
+            const data = await response.json();
+
+            if (!response.ok) {
+              alert(data.error || "Failed to update enrollment status");
+            }
+
             readEnrollment();
           });
         } catch (err) {
@@ -132,6 +138,12 @@
           const data = await res.json();
 
           user_data = data;
+          const approval = document.querySelector("#approval");
+          const downpayment = data.downpayment_billing || {};
+          const proofValue = String(downpayment.proof_of_payment || "").trim();
+          const proofLink = proofValue
+            ? `<a href="${proofValue}" target="_blank" rel="noopener noreferrer">View Proof</a>`
+            : "-";
 
           const info = document.querySelector(".info-holder");
 
@@ -144,10 +156,40 @@
             <p><strong>Created:</strong> ${defaultDate(data.created_at)}</p>
             <p><strong>Updated:</strong> ${defaultDate(data.updated_at)}</p>
             <p><strong>Status:</strong> ${data.status || "Pending"}</p>
+            <hr style="margin:16px 0;border:none;border-top:1px solid rgba(255,255,255,.2);" />
+            <p><strong>Downpayment:</strong> ${formatCurrency(downpayment.amount || 0)}</p>
+            <p><strong>Payment Status:</strong> ${escapeHtml(downpayment.payment_status || "No payment submitted")}</p>
+            <p><strong>Payment Channel:</strong> ${escapeHtml(downpayment.payment_channel || "-")}</p>
+            <p><strong>Reference No:</strong> ${escapeHtml(downpayment.reference_no || "-")}</p>
+            <p><strong>Treasury Note:</strong> ${escapeHtml(downpayment.notes || "-")}</p>
+            <p><strong>Proof:</strong> ${proofLink}</p>
           `;
+
+          approval.value = data.status || "Pending";
         } catch (err) {
           console.error("Failed to load enrollments:", err);
         }
+      }
+
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
+      }
+
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
       }
 
       function openPreview(e) {

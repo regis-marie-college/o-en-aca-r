@@ -7,6 +7,17 @@ const {
 } = require("./helpers");
 const DOCUMENT_REQUEST_AMOUNT = 300;
 
+function normalizeDocumentTypes(data) {
+  const rawTypes = Array.isArray(data.document_types)
+    ? data.document_types
+    : [data.document_type];
+
+  return rawTypes
+    .flatMap((value) => String(value || "").split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return notAllowed(res);
@@ -27,19 +38,21 @@ async function createDocumentRequest(data) {
     student_id,
     student_name,
     email,
-    document_type,
     purpose,
     payment_method,
     reference_no,
     proof_of_payment,
   } = data;
+  const documentTypes = normalizeDocumentTypes(data);
+  const documentType = documentTypes.join(", ");
+  const totalAmount = documentTypes.length * DOCUMENT_REQUEST_AMOUNT;
 
   const normalizedMethod =
     String(payment_method || "Online").toLowerCase() === "cash" ? "Cash" : "Online";
   const normalizedReference = String(reference_no || "").trim() || null;
   const normalizedProof = String(proof_of_payment || "").trim() || null;
 
-  if (!student_name || !email || !document_type) {
+  if (!student_name || !email || !documentTypes.length) {
     throw new Error("Missing required document request fields");
   }
 
@@ -74,9 +87,9 @@ async function createDocumentRequest(data) {
       student_id || null,
       student_name,
       email,
-      document_type,
+      documentType,
       purpose || null,
-      DOCUMENT_REQUEST_AMOUNT.toFixed(2),
+      totalAmount.toFixed(2),
       requestStatus,
       paymentStatus,
       normalizedMethod,
