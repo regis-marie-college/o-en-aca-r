@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
   }
 };
 
-async function createUser(data) {
+async function createUser(data, options = {}) {
   const {
     last_name,
     first_name,
@@ -33,13 +33,14 @@ async function createUser(data) {
     type,
     student_number,
   } = data;
+  const executor = options.executor || db;
 
   if (!last_name || !first_name || !email || !password) {
     throw new Error("Missing required fields");
   }
 
   const normalizedEmail = normalizeEmail(email);
-  const existingUser = await db.query(
+  const existingUser = await executor.query(
     `
     select id
     from users
@@ -56,7 +57,7 @@ async function createUser(data) {
 
   const hash_pass = await bcrypt.hash(password, 10);
 
-  const result = await db.query(
+  const result = await executor.query(
     `insert into users
     (last_name, first_name, middle_name, username, email, mobile, password, type, student_number)
     values ($1,$2,$3,$4,$5,$6,$7,$8,$9)

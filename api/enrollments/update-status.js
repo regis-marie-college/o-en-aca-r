@@ -15,9 +15,11 @@ module.exports = async (req, res) => {
     return notAllowed(res);
   }
 
+  let emailJob = null;
+
   try {
     const body = await bodyParser(req);
-    const { id, status, reason, misc_fee } = body;
+    const { id, status, misc_fee } = body;
 
     console.log("Enrollment details:");
     console.log(body);
@@ -26,221 +28,253 @@ module.exports = async (req, res) => {
       return badRequest(res, "Missing required fields");
     }
 
-    const enrollmentResult = await db.query(
-      `SELECT * FROM enrollments WHERE id = $1`,
-      [id],
-    );
-    const enrollment = enrollmentResult.rows[0];
+    const client = await db.connect();
 
-    if (!enrollment) {
-      return badRequest(res, "Enrollment not found");
-    }
+    try {
+      await client.query("BEGIN");
 
-    const normalizedStatus =
-      String(status || "").toLowerCase() === "denied" ? "Declined" : status;
-    const hasMiscFeeValue =
-      misc_fee !== undefined && misc_fee !== null && String(misc_fee).trim() !== "";
-    const parsedMiscFee = hasMiscFeeValue ? Number(misc_fee) : Number(enrollment.misc_fee || 0);
-
-    if (Number.isNaN(parsedMiscFee) || parsedMiscFee < 0) {
-      return badRequest(res, "Misc fee must be a valid non-negative amount");
-    }
-
-    if (normalizedStatus === "Approved") {
-      if (!hasMiscFeeValue && Number(enrollment.misc_fee || 0) <= 0) {
-        return badRequest(
-          res,
-          "Treasury must set the misc fee before enrollment approval",
-        );
-      }
-
-      const downpayment = await getApprovedDownpayment(id);
-
-      if (!downpayment) {
-        return badRequest(
-          res,
-          "Treasury must approve the enrollment downpayment before admin approval",
-        );
-      }
-    }
-
-    const result = await db.query(
-      `UPDATE enrollments
-       SET status = $1,
-           misc_fee = $3,
-           updated_at = now()
-       WHERE id = $2
-       RETURNING *`,
-      [normalizedStatus, id, parsedMiscFee.toFixed(2)],
-    );
-    const updatedEnrollment = result.rows[0];
-
-    await syncEnrollmentBillings(updatedEnrollment);
-
-    const {
-      last_name,
-      first_name,
-      middle_name,
-      birthday,
-      email,
-      program_name,
-      year_level,
-      semester,
-    } = enrollment;
-
-    if (normalizedStatus === "Approved") {
-      const generatedPassword = buildStudentPassword(last_name, birthday);
-      const approvedDownpayment = await getApprovedDownpayment(id);
-      const normalizedEmail = normalizeEmail(email);
-      const existingUserResult = await db.query(
+      const enrollmentResult = await client.query(
         `
         select *
-        from users
-        where lower(email) = $1
-          and deleted_at is null
-        order by updated_at desc, created_at desc
-        limit 1
+        from enrollments
+        where id = $1
+        for update
         `,
-        [normalizedEmail],
+        [id],
       );
+      const enrollment = enrollmentResult.rows[0];
 
-      let student;
-      let studentNumber = existingUserResult.rows[0]?.student_number || null;
-
-      if (!studentNumber) {
-        studentNumber = await generateStudentNumber(db, new Date(updatedEnrollment.created_at || Date.now()));
+      if (!enrollment) {
+        throw new Error("Enrollment not found");
       }
 
-      if (existingUserResult.rows.length) {
-        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
-        const updatedUser = await db.query(
+      const normalizedStatus =
+        String(status || "").toLowerCase() === "denied" ? "Declined" : status;
+      const hasMiscFeeValue =
+        misc_fee !== undefined && misc_fee !== null && String(misc_fee).trim() !== "";
+      const parsedMiscFee = hasMiscFeeValue ? Number(misc_fee) : Number(enrollment.misc_fee || 0);
+
+      if (Number.isNaN(parsedMiscFee) || parsedMiscFee < 0) {
+        throw new Error("Misc fee must be a valid non-negative amount");
+      }
+
+      if (normalizedStatus === "Approved") {
+        if (!hasMiscFeeValue && Number(enrollment.misc_fee || 0) <= 0) {
+          throw new Error("Treasury must set the misc fee before enrollment approval");
+        }
+
+        const downpayment = await getApprovedDownpayment(id, client);
+
+        if (!downpayment) {
+          throw new Error(
+            "Treasury must approve the enrollment downpayment before admin approval",
+          );
+        }
+      }
+
+      const result = await client.query(
+        `UPDATE enrollments
+         SET status = $1,
+             misc_fee = $3,
+             updated_at = now()
+         WHERE id = $2
+         RETURNING *`,
+        [normalizedStatus, id, parsedMiscFee.toFixed(2)],
+      );
+      const updatedEnrollment = result.rows[0];
+
+      await syncEnrollmentBillings(updatedEnrollment, client);
+
+      const {
+        last_name,
+        first_name,
+        middle_name,
+        birthday,
+        email,
+      } = enrollment;
+
+      if (normalizedStatus === "Approved") {
+        const generatedPassword = buildStudentPassword(last_name, birthday);
+        const approvedDownpayment = await getApprovedDownpayment(id, client);
+        const normalizedEmail = normalizeEmail(email);
+        const existingUserResult = await client.query(
           `
-          update users
-          set last_name = $2,
-              first_name = $3,
-              middle_name = $4,
-              username = $5,
-              password = $6,
-              type = 'student',
-              student_number = $7,
-              updated_at = now()
-          where id = $1
-          returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, created_at
+          select *
+          from users
+          where lower(email) = $1
+            and deleted_at is null
+          order by updated_at desc, created_at desc
+          limit 1
+          for update
           `,
-          [
-            existingUserResult.rows[0].id,
-            last_name,
-            first_name,
-            middle_name || null,
-            normalizedEmail,
-            hashedPassword,
-            studentNumber,
-          ],
+          [normalizedEmail],
         );
 
-        student = updatedUser.rows[0];
-      } else {
-        student = await createUser({
-          last_name,
-          first_name,
-          middle_name,
-          username: normalizedEmail,
-          email: normalizedEmail,
-          password: generatedPassword,
-          type: "student",
-          student_number: studentNumber,
+        let student;
+        let studentNumber = existingUserResult.rows[0]?.student_number || null;
+
+        if (!studentNumber) {
+          studentNumber = await generateStudentNumber(
+            client,
+            new Date(updatedEnrollment.created_at || Date.now()),
+          );
+        }
+
+        if (existingUserResult.rows.length) {
+          const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+          const updatedUser = await client.query(
+            `
+            update users
+            set last_name = $2,
+                first_name = $3,
+                middle_name = $4,
+                username = $5,
+                password = $6,
+                type = 'student',
+                student_number = $7,
+                updated_at = now()
+            where id = $1
+            returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, created_at
+            `,
+            [
+              existingUserResult.rows[0].id,
+              last_name,
+              first_name,
+              middle_name || null,
+              normalizedEmail,
+              hashedPassword,
+              studentNumber,
+            ],
+          );
+
+          student = updatedUser.rows[0];
+        } else {
+          student = await createUser(
+            {
+              last_name,
+              first_name,
+              middle_name,
+              username: normalizedEmail,
+              email: normalizedEmail,
+              password: generatedPassword,
+              type: "student",
+              student_number: studentNumber,
+            },
+            { executor: client },
+          );
+        }
+
+        console.log("Student Details:");
+        console.log(student);
+
+        await writeAuditLog(client, {
+          entity_type: "enrollment",
+          entity_id: updatedEnrollment.id,
+          action: "student_number_assigned",
+          actor: "Admin Approval",
+          actor_type: "admin",
+          details: {
+            email: normalizedEmail,
+            student_number: student.student_number || studentNumber,
+            user_id: student.id,
+          },
         });
+
+        const message = buildApprovalEmail({
+          enrollment: updatedEnrollment,
+          student,
+          generatedPassword,
+          approvedDownpayment,
+        });
+        const corDocument = await buildCorPdfBuffer({
+          enrollment: updatedEnrollment,
+          student,
+          approvedDownpayment,
+        });
+
+        emailJob = {
+          email: normalizedEmail,
+          subject: "Enrollment Approved - Student Account Details",
+          message,
+          attachments: [
+            {
+              filename: `COR-${String(id).slice(0, 8)}.pdf`,
+              content: corDocument,
+              contentType: "application/pdf",
+            },
+          ],
+        };
+      } else if (normalizedStatus === "Declined") {
+        emailJob = {
+          email,
+          subject: "Admin Declined Enrollment",
+          message: `
+            <div style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.55;">
+              <h2 style="margin:0 0 12px;color:#991b1b;">Admin Declined</h2>
+              <p>Good day <strong>${first_name} ${last_name}</strong>,</p>
+              <p>
+                Your enrollment application has been declined by the admin.
+              </p>
+              <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+                <tr>
+                  <td style="padding:6px 0;"><strong>Enrollment ID:</strong></td>
+                  <td style="padding:6px 0;">${id}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;"><strong>Name:</strong></td>
+                  <td style="padding:6px 0;">${last_name}, ${first_name} ${middle_name || ""}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 0;"><strong>Birthday:</strong></td>
+                  <td style="padding:6px 0;">${birthday || "N/A"}</td>
+                </tr>
+              </table>
+              <p>
+                Please come to Regis Marie College and present your Enrollment ID to
+                know the reason for the declined application.
+              </p>
+              <p>Thank you.</p>
+              <p>Regis Marie College</p>
+            </div>
+          `,
+        };
       }
 
-      console.log("Student Details:");
-      console.log(student);
+      await client.query("COMMIT");
 
-      const message = buildApprovalEmail({
-        enrollment,
-        student,
-        generatedPassword,
-        approvedDownpayment,
-      });
-      const corDocument = await buildCorPdfBuffer({
-        enrollment,
-        student,
-        approvedDownpayment,
-      });
+      if (emailJob) {
+        try {
+          console.log(`Sending enrollment email to ${emailJob.email}`);
+          await sendEmail(
+            emailJob.email,
+            emailJob.subject,
+            emailJob.message,
+            emailJob.attachments || [],
+          );
+        } catch (emailError) {
+          console.error("[EnrollmentEmail]", emailError.message);
+        }
+      }
 
-      console.log(`Sending approval email to ${email}`);
-      await sendEmail(
-        email,
-        "Enrollment Approved - Student Account Details",
-        message,
-        [
-          {
-            filename: `COR-${String(id).slice(0, 8)}.pdf`,
-            content: corDocument,
-            contentType: "application/pdf",
-          },
-        ],
-      );
-
-      await writeAuditLog(db, {
-        entity_type: "enrollment",
-        entity_id: updatedEnrollment.id,
-        action: "student_number_assigned",
-        actor: "Admin Approval",
-        actor_type: "admin",
-        details: {
-          email,
-          student_number: student.student_number || studentNumber,
-          user_id: student.id,
-        },
-      });
-    } else if (normalizedStatus === "Declined") {
-      const message = `
-        <div style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.55;">
-          <h2 style="margin:0 0 12px;color:#991b1b;">Admin Declined</h2>
-          <p>Good day <strong>${first_name} ${last_name}</strong>,</p>
-          <p>
-            Your enrollment application has been declined by the admin.
-          </p>
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-            <tr>
-              <td style="padding:6px 0;"><strong>Enrollment ID:</strong></td>
-              <td style="padding:6px 0;">${id}</td>
-            </tr>
-            <tr>
-              <td style="padding:6px 0;"><strong>Name:</strong></td>
-              <td style="padding:6px 0;">${last_name}, ${first_name} ${middle_name || ""}</td>
-            </tr>
-            <tr>
-              <td style="padding:6px 0;"><strong>Birthday:</strong></td>
-              <td style="padding:6px 0;">${birthday || "N/A"}</td>
-            </tr>
-          </table>
-          <p>
-            Please come to Regis Marie College and present your Enrollment ID to
-            know the reason for the declined application.
-          </p>
-          <p>Thank you.</p>
-          <p>Regis Marie College</p>
-        </div>
-      `;
-
-      console.log(`Sending declined email to ${email}`);
-      await sendEmail(email, "Admin Declined Enrollment", message);
+      return okay(res, updatedEnrollment);
+    } catch (txError) {
+      await client.query("ROLLBACK");
+      throw txError;
+    } finally {
+      client.release();
     }
-
-    return okay(res, updatedEnrollment);
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);
   }
 };
 
-async function syncEnrollmentBillings(enrollment) {
+async function syncEnrollmentBillings(enrollment, executor = db) {
   if (!enrollment?.id) {
     return;
   }
 
-  const result = await db.query(
+  const result = await executor.query(
     `
     select *
     from billings
@@ -271,7 +305,7 @@ async function syncEnrollmentBillings(enrollment) {
   const remainingBalance = Math.max(totalAssessment - downpaymentAmount, 0);
   const installmentAmounts = splitAmounts(remainingBalance, installmentBillings.length);
 
-  await db.query(
+  await executor.query(
     `
     update billings
     set description = $2,
@@ -295,7 +329,7 @@ async function syncEnrollmentBillings(enrollment) {
   for (const [index, billing] of installmentBillings.entries()) {
     const nextAmount = Number(installmentAmounts[index] || 0);
 
-    await db.query(
+    await executor.query(
       `
       update billings
       set amount = $2,
@@ -349,8 +383,8 @@ function buildStudentPassword(lastName, birthday) {
   return `${trimmedLastName}${birthYear}`;
 }
 
-async function getApprovedDownpayment(enrollmentId) {
-  const result = await db.query(
+async function getApprovedDownpayment(enrollmentId, executor = db) {
+  const result = await executor.query(
     `
     select *
     from billings
