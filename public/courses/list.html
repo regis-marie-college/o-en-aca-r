@@ -4,9 +4,39 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/user.js" defer></script>
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Courses</title>
+    <style>
+      .courses-toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+        margin-bottom: 18px;
+      }
+
+      .courses-toolbar p {
+        margin: 8px 0 0;
+        color: #64748b;
+      }
+
+      .course-filter-note {
+        margin-bottom: 18px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-weight: 600;
+      }
+
+      @media (max-width: 720px) {
+        .courses-toolbar {
+          flex-direction: column;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="courses">
@@ -16,9 +46,16 @@
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
 
-        <a href="../courses/create.html" class="btn btn-primary"
-          >+ Add Course</a
-        >
+        <div class="courses-toolbar">
+          <div>
+            <h2 id="coursesHeading">Courses</h2>
+            <p id="coursesSubcopy">View the available course offerings in the system.</p>
+          </div>
+          <a href="../courses/create.html" class="btn btn-primary" id="addCourseButton"
+            >+ Add Course</a
+          >
+        </div>
+        <div id="courseFilterNote" class="course-filter-note" hidden></div>
         <!-- Table -->
         <section class="table-section">
           <table id="table-courses">
@@ -28,6 +65,7 @@
                 <th>Name</th>
                 <th>Description</th>
                 <th>Program</th>
+                <th>Major</th>
                 <th>Year Level</th>
                 <th>Units</th>
                 <th>Semester</th>
@@ -40,45 +78,125 @@
       </main>
     </div>
     <script>
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
+      }
+
+      function renderCourses(courses) {
+        const tbody = document.querySelector("#table-courses tbody");
+        tbody.innerHTML = "";
+
+        if (!Array.isArray(courses) || !courses.length) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="9">No courses found for the current view.</td>
+            </tr>
+          `;
+          return;
+        }
+
+        courses.forEach((course) => {
+          const row = document.createElement("tr");
+
+          const {
+            id,
+            name,
+            description,
+            program_code,
+            major,
+            year_level,
+            units,
+            semester,
+            status,
+          } = course;
+
+          row.innerHTML = `
+            <td><a href="read.html?id=${id}">${escapeHtml(id.substring(0, 6))}</a></td>
+            <td>${escapeHtml(name)}</td>
+            <td>${escapeHtml(description || "-")}</td>
+            <td>${escapeHtml(program_code || "-")}</td>
+            <td>${escapeHtml(major || "-")}</td>
+            <td>${escapeHtml(year_level || "-")}</td>
+            <td>${escapeHtml(units || "-")}</td>
+            <td>${escapeHtml(semester || "-")}</td>
+            <td>${escapeHtml(status || "-")}</td>
+          `;
+
+          tbody.appendChild(row);
+        });
+      }
+
       async function loadUsers() {
         try {
-          const res = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/courses/list`,
-          );
+          const user = auth() || {};
+          const addButton = document.querySelector("#addCourseButton");
+          const filterNote = document.querySelector("#courseFilterNote");
+          const heading = document.querySelector("#coursesHeading");
+          const subcopy = document.querySelector("#coursesSubcopy");
+
+          let endpoint = `${window.APP_CONFIG.API_BASE_URL}/courses/list`;
+
+          if (user.type === "student") {
+            if (addButton) {
+              addButton.hidden = true;
+            }
+
+            heading.textContent = "My Program Courses";
+            subcopy.textContent = "Courses shown here are filtered based on your enrolled program, year level, and semester.";
+
+            const portalRes = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/students/portal?email=${encodeURIComponent(user.email || "")}`,
+            );
+            const portalData = await portalRes.json();
+
+            if (!portalRes.ok) {
+              throw new Error(portalData.error || "Failed to load your enrollment details");
+            }
+
+            const enrollment = portalData.enrollment || null;
+
+            if (!enrollment?.program_id) {
+              filterNote.hidden = false;
+              filterNote.textContent =
+                "Your student account does not have a linked enrolled program yet, so no filtered courses can be shown.";
+              renderCourses([]);
+              return;
+            }
+
+            const query = new URLSearchParams({
+              program_id: enrollment.program_id,
+              year_level: enrollment.year_level || "",
+              semester: enrollment.semester || "",
+              major: enrollment.major || "",
+            });
+
+            endpoint = `${window.APP_CONFIG.API_BASE_URL}/courses/list?${query.toString()}`;
+
+            filterNote.hidden = false;
+            filterNote.textContent = `Showing courses for ${enrollment.program_name || enrollment.program_code || "your program"}${enrollment.major ? ` | Major in ${enrollment.major}` : ""}${enrollment.year_level ? ` | ${enrollment.year_level}` : ""}${enrollment.semester ? ` | ${enrollment.semester}` : ""}.`;
+          }
+
+          const res = await fetch(endpoint);
           const data = await res.json();
 
-          const tbody = document.querySelector("#table-courses tbody");
-          tbody.innerHTML = "";
+          if (!res.ok) {
+            throw new Error(data.error || "Failed to load courses");
+          }
 
-          data.forEach((course) => {
-            const row = document.createElement("tr");
-
-            const {
-              id,
-              name,
-              description,
-              program_code,
-              year_level,
-              units,
-              semester,
-              status,
-            } = course;
-
-            row.innerHTML = `
-              <td><a href="read.html?id=${id}">${id.substring(0, 6)}</a></td>
-              <td>${name}</td>
-              <td>${description}</td>
-              <td>${program_code}</td>
-              <td>${year_level}</td>
-              <td>${units}</td>
-              <td>${semester}</td>
-              <td>${status}</td>
-            `;
-
-            tbody.appendChild(row);
-          });
+          renderCourses(data);
         } catch (err) {
           console.error("Failed to load courses:", err);
+          renderCourses([]);
         }
       }
 

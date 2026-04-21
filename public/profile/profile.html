@@ -26,7 +26,7 @@
             </div>
 
             <h2 class="profile-name">Student</h2>
-            <p class="role">Student Account</p>
+            <p class="role">User Account</p>
           </div>
 
           <form class="profile-form">
@@ -122,6 +122,22 @@
         diploma: "Diploma",
         others: "Other Documents",
       };
+      const ROLE_LABELS = {
+        admin: "Admin Account",
+        treasury: "Treasury Account",
+        records: "Records Account",
+        student: "Student Account",
+      };
+
+      function normalizeUserType(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase();
+      }
+
+      function getRoleLabel(value) {
+        return ROLE_LABELS[normalizeUserType(value)] || "User Account";
+      }
 
       function formatCurrency(value) {
         return new Intl.NumberFormat("en-PH", {
@@ -221,6 +237,17 @@
         `;
       }
 
+      async function fetchJson(url) {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load profile data");
+        }
+
+        return data;
+      }
+
       async function loadProfile() {
         const currentUser = auth();
 
@@ -229,34 +256,51 @@
           return;
         }
 
-        const response = await fetch(
-          `${window.APP_CONFIG.API_BASE_URL}/students/portal?email=${encodeURIComponent(currentUser.email)}`,
-        );
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to load profile");
-        }
-
-        const {
-          user,
-          enrollment,
-          current_courses,
-          taken_courses,
-          total_paid,
-          total_balance,
-          submitted_documents,
-          id_picture,
-          payment_options,
-        } = data;
-        const form = document.querySelector(".profile-form");
+        const roleLabel = getRoleLabel(currentUser.type);
+        const roleEl = document.querySelector(".role");
         const profileName = document.querySelector(".profile-name");
+        const form = document.querySelector(".profile-form");
+
+        roleEl.textContent = roleLabel;
+
+        let user = null;
+        let enrollment = null;
+        let current_courses = [];
+        let taken_courses = [];
+        let total_paid = 0;
+        let total_balance = 0;
+        let submitted_documents = [];
+        let id_picture = null;
+        let payment_options = [];
+
+        if (normalizeUserType(currentUser.type) === "student") {
+          const data = await fetchJson(
+            `${window.APP_CONFIG.API_BASE_URL}/students/portal?email=${encodeURIComponent(currentUser.email)}`,
+          );
+
+          user = data.user;
+          enrollment = data.enrollment;
+          current_courses = data.current_courses || [];
+          taken_courses = data.taken_courses || [];
+          total_paid = data.total_paid || 0;
+          total_balance = data.total_balance || 0;
+          submitted_documents = data.submitted_documents || [];
+          id_picture = data.id_picture || null;
+          payment_options = data.payment_options || [];
+        } else {
+          user = await fetchJson(
+            `${window.APP_CONFIG.API_BASE_URL}/users/read?id=${encodeURIComponent(currentUser.id)}`,
+          );
+          form.querySelector('[name="birthday"]').value = "";
+        }
 
         const firstName = user?.first_name || "";
         const lastName = user?.last_name || "";
         const fullName = `${firstName} ${lastName}`.trim();
+        const resolvedType = user?.type || currentUser.type;
 
-        profileName.textContent = fullName || "Student";
+        profileName.textContent = fullName || currentUser.first_name || "User";
+        roleEl.textContent = getRoleLabel(resolvedType);
         renderProfilePicture(firstName, id_picture);
 
         form.querySelector('[name="first_name"]').value = firstName;

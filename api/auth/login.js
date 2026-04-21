@@ -7,6 +7,7 @@ const {
 const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
 const bcrypt = require("bcrypt");
+const { normalizeEmail } = require("../../lib/email");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -22,9 +23,18 @@ module.exports = async (req, res) => {
       return badRequest(res, "Email and password are required");
     }
 
-    const result = await db.query(`select * from users where email = $1`, [
-      email,
-    ]);
+    const normalizedEmail = normalizeEmail(email);
+    const result = await db.query(
+      `
+      select *
+      from users
+      where lower(email) = $1
+        and deleted_at is null
+      order by updated_at desc, created_at desc
+      limit 1
+      `,
+      [normalizedEmail],
+    );
 
     if (Array.isArray(result.rows) && !result.rows.length) {
       return notFound(res, "User not found");

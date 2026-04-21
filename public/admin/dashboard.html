@@ -9,6 +9,175 @@
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Dashboard</title>
+    <style>
+      .trend-section {
+        margin: 24px 0;
+        background: #fff;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .trend-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .trend-header p {
+        margin: 8px 0 0;
+        color: #64748b;
+      }
+
+      .trend-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-bottom: 20px;
+      }
+
+      .trend-card {
+        padding: 20px;
+        border-radius: 22px;
+        background: linear-gradient(180deg, #ffffff, #f8fbff);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .trend-card span {
+        display: block;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #64748b;
+      }
+
+      .trend-card strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 2rem;
+        color: #0f172a;
+      }
+
+      .trend-delta {
+        display: inline-flex;
+        align-items: center;
+        margin-top: 10px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-weight: 700;
+      }
+
+      .trend-delta.up {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .trend-delta.down {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .trend-delta.flat {
+        background: #e2e8f0;
+        color: #334155;
+      }
+
+      .trend-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .trend-table th,
+      .trend-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #e2e8f0;
+        text-align: left;
+      }
+
+      .school-year-manager {
+        margin: 24px 0;
+        background: #fff;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .school-year-manager p {
+        margin: 8px 0 0;
+        color: #64748b;
+      }
+
+      .school-year-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 12px;
+        align-items: end;
+        margin: 18px 0;
+      }
+
+      .school-year-form input {
+        width: 100%;
+      }
+
+      .school-year-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .school-year-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+      }
+
+      .school-year-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #166534;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .school-year-message {
+        min-height: 20px;
+        font-weight: 700;
+      }
+
+      .school-year-message.error {
+        color: #b91c1c;
+      }
+
+      .school-year-message.success {
+        color: #15803d;
+      }
+
+      @media (max-width: 720px) {
+        .trend-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .school-year-form {
+          grid-template-columns: 1fr;
+        }
+
+        .school-year-item {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="dashboard">
@@ -60,6 +229,59 @@
             <h3>Total Transactions</h3>
             <p>0</p>
           </div>
+        </section>
+
+        <section class="trend-section" id="schoolYearTrendSection">
+          <div class="trend-header">
+            <div>
+              <h2>School Year Statistics</h2>
+              <p>Makikita rito kung tumaas o bumaba ang enrollees at claimed revenue per school year.</p>
+            </div>
+          </div>
+
+          <div class="trend-grid">
+            <article class="trend-card">
+              <span>Enrollee Growth</span>
+              <strong id="trend-enrollees-value">0</strong>
+              <div id="trend-enrollees-delta" class="trend-delta flat">No comparison yet</div>
+            </article>
+            <article class="trend-card">
+              <span>Claimed Revenue Growth</span>
+              <strong id="trend-revenue-value">PHP 0.00</strong>
+              <div id="trend-revenue-delta" class="trend-delta flat">No comparison yet</div>
+            </article>
+          </div>
+
+          <table class="trend-table">
+            <thead>
+              <tr>
+                <th>School Year</th>
+                <th>Enrollees</th>
+                <th>Claimed Revenue</th>
+              </tr>
+            </thead>
+            <tbody id="table-school-year-trends"></tbody>
+          </table>
+        </section>
+
+        <section class="school-year-manager" id="schoolYearManager">
+          <h2>School Year Management</h2>
+          <p>Mag-add ng bagong school year at puwedeng gawing active para ito ang gamitin ng mga bagong enrollments.</p>
+
+          <form id="schoolYearForm" class="school-year-form">
+            <div>
+              <label for="schoolYearName">New School Year</label>
+              <input id="schoolYearName" name="school_year" placeholder="2027-2028" required />
+            </div>
+            <label style="display:flex;align-items:center;gap:10px;min-height:42px;">
+              <input type="checkbox" id="schoolYearIsActive" checked />
+              Set Active
+            </label>
+            <button type="submit" class="btn btn-primary">Add School Year</button>
+          </form>
+
+          <div id="schoolYearMessage" class="school-year-message"></div>
+          <div id="schoolYearList" class="school-year-list"></div>
         </section>
 
         <!-- Table -->
@@ -140,6 +362,162 @@
         `;
       }
 
+      function renderTrendDelta(selector, currentYear, previousYear, pct, noun) {
+        const element = document.querySelector(selector);
+        if (!element) return;
+
+        if (!currentYear || !previousYear) {
+          element.className = "trend-delta flat";
+          element.textContent = "No comparison yet";
+          return;
+        }
+
+        const numericPct = Number(pct || 0);
+        const direction = numericPct > 0 ? "up" : numericPct < 0 ? "down" : "flat";
+        const verb = numericPct > 0 ? "higher" : numericPct < 0 ? "lower" : "unchanged";
+
+        element.className = `trend-delta ${direction}`;
+        element.textContent = `${Math.abs(numericPct).toFixed(2)}% ${verb} vs ${previousYear} for ${noun}`;
+      }
+
+      function renderSchoolYears(items) {
+        const root = document.querySelector("#schoolYearList");
+        if (!root) return;
+
+        if (!Array.isArray(items) || !items.length) {
+          root.innerHTML = `<div class="school-year-item">No school years configured yet.</div>`;
+          return;
+        }
+
+        root.innerHTML = items
+          .map(
+            (item) => `
+              <div class="school-year-item">
+                <div>
+                  <strong>${item.name}</strong><br />
+                  <small>${item.created_at ? defaultDate(item.created_at) : "-"}</small>
+                </div>
+                <div>
+                  ${item.is_active ? '<span class="school-year-badge">Active</span>' : ""}
+                </div>
+              </div>
+            `,
+          )
+          .join("");
+      }
+
+      async function loadSchoolYears() {
+        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/school_years/list`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load school years");
+        }
+
+        renderSchoolYears(data);
+      }
+
+      function setSchoolYearMessage(type, text) {
+        const message = document.querySelector("#schoolYearMessage");
+        if (!message) return;
+
+        message.className = "school-year-message";
+        if (type) {
+          message.classList.add(type);
+        }
+        message.textContent = text || "";
+      }
+
+      function initSchoolYearForm() {
+        const form = document.querySelector("#schoolYearForm");
+        if (!form) return;
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const button = form.querySelector("button");
+          const schoolYear = form.querySelector("#schoolYearName").value;
+          const isActive = form.querySelector("#schoolYearIsActive").checked;
+
+          button.disabled = true;
+          button.textContent = "Saving...";
+          setSchoolYearMessage("", "Saving school year...");
+
+          try {
+            const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/school_years/create`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                school_year: schoolYear,
+                is_active: isActive,
+              }),
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to save school year");
+            }
+
+            setSchoolYearMessage("success", `School year ${data.name} saved successfully.`);
+            form.reset();
+            form.querySelector("#schoolYearIsActive").checked = true;
+            await loadSchoolYears();
+          } catch (error) {
+            setSchoolYearMessage("error", error.message || "Failed to save school year");
+          } finally {
+            button.disabled = false;
+            button.textContent = "Add School Year";
+          }
+        });
+      }
+
+      function renderSchoolYearTrends(stats) {
+        const tbody = document.querySelector("#table-school-year-trends");
+        const rows = Array.isArray(stats.yearly_comparison) ? stats.yearly_comparison : [];
+
+        document.querySelector("#trend-enrollees-value").textContent =
+          stats.latest_school_year
+            ? `${stats.latest_enrollees} (${stats.latest_school_year})`
+            : "0";
+        document.querySelector("#trend-revenue-value").textContent =
+          stats.latest_school_year
+            ? `${formatCurrency(stats.latest_collected_school_year)} (${stats.latest_school_year})`
+            : "PHP 0.00";
+
+        renderTrendDelta(
+          "#trend-enrollees-delta",
+          stats.latest_school_year,
+          stats.previous_school_year,
+          stats.enrollee_change_pct,
+          "enrollees",
+        );
+        renderTrendDelta(
+          "#trend-revenue-delta",
+          stats.latest_school_year,
+          stats.previous_school_year,
+          stats.collected_change_pct,
+          "claimed revenue",
+        );
+
+        tbody.innerHTML = rows.length
+          ? rows
+              .map(
+                (row) => `
+                  <tr>
+                    <td>${row.school_year}</td>
+                    <td>${row.enrollee_count}</td>
+                    <td>${formatCurrency(row.collected_amount)}</td>
+                  </tr>
+                `,
+              )
+              .join("")
+          : `
+              <tr>
+                <td colspan="3">No school year statistics found yet.</td>
+              </tr>
+            `;
+      }
+
       async function renderStatistics() {
         const stats = await getStatistics();
 
@@ -171,6 +549,7 @@
           "Total Transactions",
           stats.total_transactions || 0,
         );
+        renderSchoolYearTrends(stats);
       }
 
       async function loadEnrollments() {
@@ -267,6 +646,14 @@
         config.stats.forEach(showStat);
 
         await renderStatistics();
+
+        if (user.type !== "admin") {
+          document.querySelector("#schoolYearTrendSection")?.remove();
+          document.querySelector("#schoolYearManager")?.remove();
+        } else {
+          initSchoolYearForm();
+          await loadSchoolYears();
+        }
 
         if (config.showTable) {
           if (config.table === "transactions") {

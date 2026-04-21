@@ -1,5 +1,6 @@
 const db = require("../../services/supabase");
 const sendEmail = require("../sendMail/sendMail");
+const { generateReceiptNo } = require("../../lib/receipt-number");
 
 function buildTransactionReference(request) {
   const rawId = String(request.id || "").replace(/-/g, "").slice(0, 8).toUpperCase();
@@ -27,14 +28,15 @@ async function recordDocumentPaymentTransaction(request, processedBy) {
   const result = await db.query(
     `
     insert into treasury_transactions
-    (student_name, email, reference_no, description, amount, payment_method, status, processed_by)
-    values ($1,$2,$3,$4,$5,$6,'Paid',$7)
+    (student_name, email, reference_no, receipt_no, description, amount, payment_method, status, processed_by)
+    values ($1,$2,$3,$4,$5,$6,$7,'Paid',$8)
     returning *
     `,
     [
       request.student_name,
       request.email,
       referenceNo,
+      await generateReceiptNo(db),
       description,
       Number(request.amount || 0).toFixed(2),
       request.payment_method || "Online",

@@ -16,6 +16,7 @@ module.exports = async (req, res) => {
       program_id,
       program_name,
       program_code,
+      major,
       year_level,
       units,
       semester,
@@ -36,10 +37,14 @@ module.exports = async (req, res) => {
       return badRequest(res, "Missing required fields");
     }
 
+    if (String(program_code || "").trim().toUpperCase() === "BSED" && !major) {
+      return badRequest(res, "Please select a major for BSED courses");
+    }
+
     const result = await db.query(
-      `insert into courses (name, description, program_id, program_name, program_code, year_level, units, semester, status)
-      values ($1,$2,$3,$4,$5,$6,$7,$8,'active')
-      returning id, name, description, program_id, program_name, program_code, year_level, units, semester, status, created_at
+      `insert into courses (name, description, program_id, program_name, program_code, major, year_level, units, semester, status)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'active')
+      returning id, name, description, program_id, program_name, program_code, major, year_level, units, semester, status, created_at
       `,
       [
         name,
@@ -47,6 +52,7 @@ module.exports = async (req, res) => {
         program_id,
         program_name,
         program_code,
+        major || null,
         year_level,
         unitsValue,
         semester,

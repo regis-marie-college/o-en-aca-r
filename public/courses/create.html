@@ -39,6 +39,16 @@
               </select>
             </div>
 
+            <div class="form-group" id="majorGroup" hidden>
+              <label>Major</label>
+              <select name="major" id="major">
+                <option value="">-- Select Major --</option>
+                <option value="Filipino">Major in Filipino</option>
+                <option value="English">Major in English</option>
+                <option value="Mathematics">Major in Mathematics</option>
+              </select>
+            </div>
+
             <div class="form-group">
               <label>Units</label>
               <input type="number" name="units" min="1" required />
@@ -72,6 +82,21 @@
     </div>
 
     <script>
+      function syncMajorVisibility() {
+        const programSelect = document.querySelector("#program");
+        const majorGroup = document.querySelector("#majorGroup");
+        const majorSelect = document.querySelector("#major");
+        const [, , programCode] = (programSelect.value || "").split(":");
+        const isBsed = String(programCode || "").toUpperCase() === "BSED";
+
+        majorGroup.hidden = !isBsed;
+        majorSelect.required = isBsed;
+
+        if (!isBsed) {
+          majorSelect.value = "";
+        }
+      }
+
       function initForm() {
         const form = document.querySelector("#form-create-courses");
         const form_submit = document.querySelector(
@@ -107,6 +132,7 @@
             program_id,
             program_name,
             program_code,
+            major: formData.get("major"),
             year_level: formData.get("year_level"),
             units: formData.get("units"),
             semester: formData.get("semester"),
@@ -133,6 +159,7 @@
             message.innerHTML =
               "<span class='success'>Course created successfully!</span>";
             form.reset();
+            syncMajorVisibility();
           } catch (error) {
             message.innerHTML = `<span class='error'>${error.message}</span>`;
           } finally {
@@ -167,6 +194,8 @@
 
             select_programs.appendChild(option);
           });
+
+          syncMajorVisibility();
         } catch (err) {
           console.error("Failed to load programs:", err);
           document.getElementById("formMessage").innerHTML =
@@ -177,6 +206,7 @@
       document.addEventListener("DOMContentLoaded", function () {
         loadPrograms();
         initForm();
+        document.querySelector("#program").addEventListener("change", syncMajorVisibility);
       });
     </script>
   </body>

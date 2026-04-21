@@ -5,6 +5,9 @@ const { createUser } = require("../users/create");
 const sendEmail = require("../sendMail/sendMail");
 const bcrypt = require("bcrypt");
 const PDFDocument = require("pdfkit");
+const { generateStudentNumber } = require("../../lib/student-number");
+const { writeAuditLog } = require("../../lib/audit-log");
+const { normalizeEmail } = require("../../lib/email");
 const ID_FEE = 300;
 
 module.exports = async (req, res) => {
@@ -88,12 +91,25 @@ module.exports = async (req, res) => {
     if (normalizedStatus === "Approved") {
       const generatedPassword = buildStudentPassword(last_name, birthday);
       const approvedDownpayment = await getApprovedDownpayment(id);
+      const normalizedEmail = normalizeEmail(email);
       const existingUserResult = await db.query(
-        `select * from users where email = $1`,
-        [email],
+        `
+        select *
+        from users
+        where lower(email) = $1
+          and deleted_at is null
+        order by updated_at desc, created_at desc
+        limit 1
+        `,
+        [normalizedEmail],
       );
 
       let student;
+      let studentNumber = existingUserResult.rows[0]?.student_number || null;
+
+      if (!studentNumber) {
+        studentNumber = await generateStudentNumber(db, new Date(updatedEnrollment.created_at || Date.now()));
+      }
 
       if (existingUserResult.rows.length) {
         const hashedPassword = await bcrypt.hash(generatedPassword, 10);
@@ -106,17 +122,19 @@ module.exports = async (req, res) => {
               username = $5,
               password = $6,
               type = 'student',
+              student_number = $7,
               updated_at = now()
-          where email = $1
-          returning id, last_name, first_name, middle_name, username, email, mobile, type, created_at
+          where id = $1
+          returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, created_at
           `,
           [
-            email,
+            existingUserResult.rows[0].id,
             last_name,
             first_name,
             middle_name || null,
-            email,
+            normalizedEmail,
             hashedPassword,
+            studentNumber,
           ],
         );
 
@@ -126,10 +144,11 @@ module.exports = async (req, res) => {
           last_name,
           first_name,
           middle_name,
-          username: email,
-          email,
+          username: normalizedEmail,
+          email: normalizedEmail,
           password: generatedPassword,
           type: "student",
+          student_number: studentNumber,
         });
       }
 
@@ -161,6 +180,19 @@ module.exports = async (req, res) => {
           },
         ],
       );
+
+      await writeAuditLog(db, {
+        entity_type: "enrollment",
+        entity_id: updatedEnrollment.id,
+        action: "student_number_assigned",
+        actor: "Admin Approval",
+        actor_type: "admin",
+        details: {
+          email,
+          student_number: student.student_number || studentNumber,
+          user_id: student.id,
+        },
+      });
     } else if (normalizedStatus === "Declined") {
       const message = `
         <div style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.55;">
@@ -408,7 +440,7 @@ function buildApprovalEmail({ enrollment, student, generatedPassword, approvedDo
       <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
         <tr>
           <td><strong>Name:</strong> ${last_name}, ${first_name} ${middle_name || ""}</td>
-          <td><strong>Student ID:</strong> ${student.id}</td>
+          <td><strong>Student Number:</strong> ${student.student_number || student.id}</td>
         </tr>
         <tr>
           <td><strong>Course/Plan:</strong> ${program_name || "N/A"}</td>
@@ -443,6 +475,7 @@ function buildApprovalEmail({ enrollment, student, generatedPassword, approvedDo
 
       <hr style="margin:20px 0;border:none;border-top:1px solid #d1d5db;" />
       <h3 style="margin-bottom:8px;">Student Portal Login</h3>
+      <p><strong>Official Student Number:</strong> ${student.student_number || student.id}</p>
       <p><strong>Username:</strong> ${email}</p>
       <p><strong>Password:</strong> ${generatedPassword}</p>
       <p>Please keep your login details secure.</p>
@@ -479,7 +512,7 @@ function buildCorPdfBuffer({ enrollment, student, approvedDownpayment }) {
       size: "A4",
       margin: 34,
       info: {
-        Title: `COR ${student.id || ""}`.trim(),
+        Title: `COR ${student.student_number || student.id || ""}`.trim(),
         Author: "Regis Marie College",
       },
     });
@@ -508,8 +541,8 @@ function buildCorPdfBuffer({ enrollment, student, approvedDownpayment }) {
       infoRightX,
       doc.y - 14.5,
       220,
-      "Student ID",
-      String(student.id || "-"),
+      "Student Number",
+      String(student.student_number || student.id || "-"),
     );
 
     infoY = drawPdfField(

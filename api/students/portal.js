@@ -1,6 +1,7 @@
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const db = require("../../services/supabase");
 const config = require("../../lib/config");
+const { normalizeEmail } = require("../../lib/email");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -14,20 +15,29 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const userResult = await db.query(`select * from users where email = $1`, [
-      email,
-    ]);
+    const normalizedEmail = normalizeEmail(email);
+    const userResult = await db.query(
+      `
+      select *
+      from users
+      where lower(email) = $1
+        and deleted_at is null
+      order by updated_at desc, created_at desc
+      limit 1
+      `,
+      [normalizedEmail],
+    );
     const user = userResult.rows[0] || null;
 
     const enrollmentResult = await db.query(
       `
       select *
       from enrollments
-      where email = $1
+      where lower(email) = $1
       order by created_at desc
       limit 1
       `,
-      [email],
+      [normalizedEmail],
     );
     const enrollment = enrollmentResult.rows[0] || null;
 
@@ -50,7 +60,7 @@ module.exports = async (req, res) => {
       where email = $1
       order by created_at desc
       `,
-      [email],
+      [normalizedEmail],
     );
 
     const requestsResult = await db.query(
@@ -60,7 +70,7 @@ module.exports = async (req, res) => {
       where email = $1
       order by created_at desc
       `,
-      [email],
+      [normalizedEmail],
     );
 
     const transactionsResult = await db.query(

@@ -9,89 +9,1092 @@
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Records Dashboard</title>
+    <style>
+      .records-hero {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: center;
+        margin-bottom: 22px;
+      }
+
+      .records-hero p {
+        margin: 8px 0 0;
+        color: #64748b;
+      }
+
+      .records-stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .records-stat-card {
+        background: linear-gradient(180deg, #ffffff, #f8fbff);
+        border-radius: 22px;
+        padding: 20px;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.06);
+      }
+
+      .records-stat-card span {
+        display: block;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 0.78rem;
+      }
+
+      .records-stat-card strong {
+        display: block;
+        margin-top: 12px;
+        font-size: 2rem;
+        color: #0f172a;
+      }
+
+      .records-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.95fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .records-import-card {
+        background: #fff;
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        margin-bottom: 24px;
+      }
+
+      .records-import-card p,
+      .records-import-card li {
+        color: #64748b;
+      }
+
+      .records-import-links {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 12px 0 16px;
+      }
+
+      .records-import-links a {
+        text-decoration: none;
+      }
+
+      .records-import-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: end;
+      }
+
+      .records-import-grid input[type="file"] {
+        width: 100%;
+      }
+
+      .records-import-result {
+        margin-top: 18px;
+        padding: 16px;
+        border-radius: 18px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+      }
+
+      .records-import-result strong {
+        color: #0f172a;
+      }
+
+      .records-import-list {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .records-import-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+      }
+
+      .records-program-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 14px 0 0;
+      }
+
+      .records-program-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 0.85rem;
+        font-weight: 700;
+      }
+
+      .records-import-empty {
+        margin-top: 12px;
+        color: #64748b;
+      }
+
+      .records-filter-bar {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(180px, 0.7fr));
+        gap: 12px;
+        margin: 18px 0;
+      }
+
+      .records-filter-bar input,
+      .records-filter-bar select,
+      .detail-card textarea {
+        width: 100%;
+      }
+
+      .records-table tbody tr {
+        cursor: pointer;
+      }
+
+      .records-table tbody tr.is-selected {
+        background: rgba(219, 234, 254, 0.72);
+      }
+
+      .records-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .records-status.payment-approved,
+      .records-status.ready-for-release,
+      .records-status.completed {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .records-status.payment-submitted,
+      .records-status.processing {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+
+      .records-status.pending-payment,
+      .records-status.submitted {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .records-status.payment-rejected,
+      .records-status.denied {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .detail-card {
+        background: #fff;
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        position: sticky;
+        top: 24px;
+      }
+
+      .detail-card h2,
+      .detail-card h3,
+      .detail-card h4 {
+        margin-bottom: 10px;
+      }
+
+      .detail-card p {
+        color: #64748b;
+      }
+
+      .detail-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin: 18px 0 16px;
+      }
+
+      .detail-meta article {
+        padding: 14px;
+        border-radius: 16px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+      }
+
+      .detail-meta span,
+      .supported-templates span {
+        display: block;
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+
+      .detail-meta strong,
+      .supported-templates strong {
+        display: block;
+        margin-top: 8px;
+        color: #0f172a;
+      }
+
+      .detail-doc-list,
+      .records-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .detail-doc-chip,
+      .records-list article {
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: #eff6ff;
+        color: #1e3a8a;
+        font-weight: 700;
+      }
+
+      .records-list article {
+        background: #f8fafc;
+        color: #0f172a;
+        font-weight: 600;
+        border: 1px solid #e2e8f0;
+      }
+
+      .detail-actions,
+      .template-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .template-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .detail-actions button,
+      .template-actions a {
+        width: 100%;
+        text-align: center;
+      }
+
+      .template-actions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        border-radius: 14px;
+        padding: 10px 12px;
+        text-decoration: none;
+      }
+
+      .detail-section {
+        margin-top: 20px;
+        padding-top: 18px;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .detail-section:first-of-type {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+      }
+
+      .detail-message {
+        margin-top: 12px;
+        min-height: 20px;
+        font-weight: 700;
+      }
+
+      .detail-message.success {
+        color: #15803d;
+      }
+
+      .detail-message.error {
+        color: #b91c1c;
+      }
+
+      .detail-history-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .detail-history-item {
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+      }
+
+      .detail-history-item strong {
+        color: #0f172a;
+      }
+
+      .status-note {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #eff6ff;
+        color: #1d4ed8;
+      }
+
+      .empty-detail {
+        padding: 44px 20px;
+        text-align: center;
+        border-radius: 18px;
+        background: #f8fafc;
+        color: #64748b;
+      }
+
+      @media (max-width: 1180px) {
+        .records-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .detail-card {
+          position: static;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .records-stats {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .records-filter-bar {
+          grid-template-columns: 1fr;
+        }
+
+        .records-import-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .records-stats,
+        .detail-meta,
+        .detail-actions,
+        .template-actions {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="users">
       <div data-component="../../components/sidebar.html"></div>
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
-        <section class="table-section">
-          <h2>Document Requests</h2>
-          <table id="table-records-requests">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Document</th>
-                <th>Purpose</th>
-                <th>Payment</th>
-                <th>Request Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+
+          <section class="records-hero">
+            <div>
+              <h2>Document Request Processing</h2>
+              <p>Approved document requests lang mula sa treasury ang makikita rito, kasama ang request details at printable templates.</p>
+            </div>
+          </section>
+
+        <section class="records-stats">
+          <article class="records-stat-card">
+            <span>Total Requests</span>
+            <strong id="stat-total">0</strong>
+          </article>
+          <article class="records-stat-card">
+            <span>Payment Approved</span>
+            <strong id="stat-approved">0</strong>
+          </article>
+          <article class="records-stat-card">
+            <span>Processing</span>
+            <strong id="stat-processing">0</strong>
+          </article>
+          <article class="records-stat-card">
+            <span>Ready / Completed</span>
+            <strong id="stat-ready">0</strong>
+          </article>
+        </section>
+
+        <section class="records-import-card">
+          <h2>Excel Grade Import</h2>
+          <p>Mag-upload ng Excel file ng grades at automatic na ita-try ng system i-match ang student gamit ang `student number/id` at pangalan bago i-save sa student records.</p>
+          <p>Recommended columns: `Student Number`, `Last Name`, `First Name`, `Middle Name`, `Program`, `Course` o `Subject Name`, `Grade`, at optional na `Course ID`, `School Year`, `Semester`, `Units`, `Remarks`.</p>
+          <p>Example program values: `Bachelor of Science in Computer Science`, `Bachelor of Science in Information Technology`, `Bachelor of Elementary Education`, `Bachelor of Science in Business Administration`.</p>
+          <div id="supportedPrograms" class="records-program-list"></div>
+          <div class="records-import-links">
+            <a class="btn btn-secondary" href="../templates/grade-import-template.xlsx" download>
+              Download Excel Template
+            </a>
+          </div>
+          <form id="gradeImportForm" class="records-import-grid">
+            <div>
+              <label for="gradeImportFile">Excel File</label>
+              <input id="gradeImportFile" name="grade_file" type="file" accept=".xlsx,.xls" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Import Grades</button>
+          </form>
+          <div id="gradeImportResult" class="records-import-result" hidden></div>
+        </section>
+
+        <section class="records-layout">
+          <article class="table-section">
+            <h2>Request Queue</h2>
+            <div class="records-filter-bar">
+              <input
+                id="filterSearch"
+                type="search"
+                placeholder="Search student, email, purpose, or document"
+                autocomplete="off"
+                />
+                <select id="filterPaymentStatus">
+                  <option value="Approved">Approved</option>
+                </select>
+                <select id="filterRequestStatus">
+                  <option value="">All Request Status</option>
+                <option value="Payment Submitted">Payment Submitted</option>
+                <option value="Payment Approved">Payment Approved</option>
+                <option value="Processing">Processing</option>
+                <option value="Ready for Release">Ready for Release</option>
+                <option value="Completed">Completed</option>
+                <option value="Payment Rejected">Payment Rejected</option>
+              </select>
+            </div>
+            <table id="table-records-requests" class="records-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Documents</th>
+                  <th>Amount</th>
+                  <th>Payment</th>
+                  <th>Request</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </article>
+
+          <aside class="detail-card">
+            <div id="requestDetail" class="empty-detail">
+              Pumili ng request sa kaliwa para makita ang student detail, action buttons, at printable templates.
+            </div>
+          </aside>
         </section>
       </main>
     </div>
+
     <script>
-      async function loadRequests() {
-        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/document_requests/list`);
-        const data = await response.json();
-        const tbody = document.querySelector("#table-records-requests tbody");
-        tbody.innerHTML = "";
+      let allRequests = [];
+      let filteredRequests = [];
+      let selectedRequestId = "";
+      let selectedRequestDetail = null;
+      let availablePrograms = [];
 
-        data.forEach((request) => {
-          const canProcess = request.payment_status === "Approved";
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${request.student_name}<br /><small>${request.email}</small></td>
-            <td>${request.document_type}</td>
-            <td>${request.purpose || "-"}</td>
-            <td>${request.payment_status}</td>
-            <td>${request.request_status}</td>
-            <td>
-              ${canProcess ? `
-                <button type="button" class="btn btn-secondary btn-sm btn-records-action" data-id="${request.id}" data-status="Processing">Processing</button>
-                <button type="button" class="btn btn-primary btn-sm btn-records-action" data-id="${request.id}" data-status="Ready for Release">Ready</button>
-                <button type="button" class="btn btn-secondary btn-sm btn-records-action" data-id="${request.id}" data-status="Completed">Complete</button>
-              ` : "-"}
-            </td>
-          `;
-          tbody.appendChild(row);
+      const SUPPORTED_TEMPLATE_MAP = [
+        { key: "coe", label: "Certificate of Enrollment", aliases: ["certificate of enrollment"] },
+        { key: "cor", label: "Certificate of Registration", aliases: ["certificate of registration"] },
+        { key: "tor", label: "Transcript of Records", aliases: ["transcript of records", "tor"] },
+        { key: "cog", label: "Copy of Grades", aliases: ["copy of grades"] },
+      ];
+
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
         });
-
-        bindActions();
       }
 
-      function bindActions() {
-        document.querySelectorAll(".btn-records-action").forEach((button) => {
-          button.addEventListener("click", async () => {
-            const user = auth();
-            const response = await fetch(
-              `${window.APP_CONFIG.API_BASE_URL}/document_requests/update`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  id: button.dataset.id,
-                  request_status: button.dataset.status,
-                  reviewed_by: user.email || user.first_name || "Records",
-                }),
-              },
-            );
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
+      }
 
-            const data = await response.json();
-            if (!response.ok) {
-              alert(data.error || "Failed to update request");
-              return;
-            }
+      function normalizeStatusClass(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-");
+      }
 
-            await loadRequests();
+      function splitDocuments(value) {
+        return String(value || "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+
+      function getSupportedTemplates(documentType) {
+        const requestedDocuments = splitDocuments(documentType).map((item) => item.toLowerCase());
+        return SUPPORTED_TEMPLATE_MAP.filter((template) =>
+          template.aliases.some((alias) => requestedDocuments.includes(alias)),
+        );
+      }
+
+      function updateStats(requests) {
+        const total = requests.length;
+        const approved = requests.filter((request) => request.payment_status === "Approved").length;
+        const processing = requests.filter((request) => request.request_status === "Processing").length;
+        const ready = requests.filter((request) =>
+          ["Ready for Release", "Completed"].includes(request.request_status),
+        ).length;
+
+        document.querySelector("#stat-total").textContent = total;
+        document.querySelector("#stat-approved").textContent = approved;
+        document.querySelector("#stat-processing").textContent = processing;
+        document.querySelector("#stat-ready").textContent = ready;
+      }
+
+      function applyFilters() {
+        const searchValue = document.querySelector("#filterSearch").value.trim().toLowerCase();
+        const paymentStatus = document.querySelector("#filterPaymentStatus").value;
+        const requestStatus = document.querySelector("#filterRequestStatus").value;
+
+        filteredRequests = allRequests.filter((request) => {
+          const haystack = [
+            request.student_name,
+            request.email,
+            request.document_type,
+            request.purpose,
+            request.reference_no,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          const matchesSearch = !searchValue || haystack.includes(searchValue);
+          const matchesPayment = !paymentStatus || request.payment_status === paymentStatus;
+          const matchesRequest = !requestStatus || request.request_status === requestStatus;
+
+          return matchesSearch && matchesPayment && matchesRequest;
+        });
+
+        renderRequests(filteredRequests);
+        updateStats(filteredRequests);
+
+        const selectedStillVisible = filteredRequests.some((request) => request.id === selectedRequestId);
+        if (!selectedStillVisible) {
+          selectedRequestId = "";
+          selectedRequestDetail = null;
+          renderDetail();
+        }
+      }
+
+      function renderRequests(requests) {
+        const tbody = document.querySelector("#table-records-requests tbody");
+
+        if (!requests.length) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6">No document requests found for the current filters.</td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = requests
+          .map((request) => {
+            const selectedClass = request.id === selectedRequestId ? "is-selected" : "";
+            return `
+              <tr data-id="${request.id}" class="${selectedClass}">
+                <td>
+                  ${escapeHtml(request.student_name)}<br />
+                  <small>${escapeHtml(request.email)}</small>
+                </td>
+                <td>${escapeHtml(request.document_type)}</td>
+                <td>${formatCurrency(request.amount)}</td>
+                <td><span class="records-status ${normalizeStatusClass(request.payment_status)}">${escapeHtml(request.payment_status)}</span></td>
+                <td><span class="records-status ${normalizeStatusClass(request.request_status)}">${escapeHtml(request.request_status)}</span></td>
+                <td>${request.updated_at ? defaultDate(request.updated_at) : "-"}</td>
+              </tr>
+            `;
+          })
+          .join("");
+
+        tbody.querySelectorAll("tr[data-id]").forEach((row) => {
+          row.addEventListener("click", async () => {
+            selectedRequestId = row.dataset.id;
+            renderRequests(filteredRequests);
+            await loadRequestDetail(selectedRequestId);
           });
         });
       }
 
-      document.addEventListener("DOMContentLoaded", loadRequests);
+      async function loadRequests() {
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/document_requests/list?payment_status=Approved`,
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load document requests");
+        }
+
+        allRequests = Array.isArray(data) ? data : [];
+        applyFilters();
+
+        if (!selectedRequestId && filteredRequests.length) {
+          selectedRequestId = filteredRequests[0].id;
+          renderRequests(filteredRequests);
+          await loadRequestDetail(selectedRequestId);
+        }
+      }
+
+      async function loadRequestDetail(id) {
+        const detailRoot = document.querySelector("#requestDetail");
+        detailRoot.innerHTML = "Loading request detail...";
+
+        try {
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/document_requests/read?id=${encodeURIComponent(id)}`,
+          );
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to load request detail");
+          }
+
+          selectedRequestDetail = data;
+          renderDetail();
+        } catch (error) {
+          selectedRequestDetail = null;
+          detailRoot.innerHTML = `<div class="empty-detail">${escapeHtml(error.message || "Failed to load request detail.")}</div>`;
+        }
+      }
+
+      function buildTemplateActions(detail) {
+        const templates = getSupportedTemplates(detail.request.document_type);
+
+        if (!templates.length) {
+          return `
+            <div class="status-note">
+              Walang supported print template para sa kasalukuyang document type.
+            </div>
+          `;
+        }
+
+        return `
+          <div class="template-actions">
+            ${templates
+              .map(
+                (template) => `
+                  <a
+                    class="btn btn-secondary"
+                    href="./print.html?request_id=${encodeURIComponent(detail.request.id)}&template=${encodeURIComponent(template.key)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Print ${escapeHtml(template.label)}
+                  </a>
+                `,
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderStudentRecords(records) {
+        if (!Array.isArray(records) || !records.length) {
+          return `<div class="empty-detail">No saved student records found yet.</div>`;
+        }
+
+        return `
+          <div class="records-list">
+            ${records
+              .map(
+                (record) => `
+                  <article>
+                    <strong>${escapeHtml(record.course_name || "Course")}</strong><br />
+                    <small>${escapeHtml(record.course_id || "-")} | ${escapeHtml(record.school_year || "-")}</small>
+                  </article>
+                `,
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderAuditLogs(logs) {
+        if (!Array.isArray(logs) || !logs.length) {
+          return `<div class="empty-detail">No processing history yet.</div>`;
+        }
+
+        return `
+          <div class="detail-history-list">
+            ${logs
+              .map((log) => {
+                const details = log.details || {};
+                return `
+                  <article class="detail-history-item">
+                    <strong>${escapeHtml(String(log.action || "update").replace(/_/g, " "))}</strong><br />
+                    <small>${escapeHtml(log.actor || "System")} | ${escapeHtml(log.actor_type || "-")} | ${escapeHtml(defaultDate(log.created_at))}</small><br />
+                    <small>Status: ${escapeHtml(details.previous_request_status || "-")} -> ${escapeHtml(details.next_request_status || "-")}</small>
+                    ${
+                      details.claimed_by
+                        ? `<br /><small>Claimed By: ${escapeHtml(details.claimed_by)}</small>`
+                        : ""
+                    }
+                  </article>
+                `;
+              })
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderDetailMessage(type, text) {
+        const message = document.querySelector("#detailMessage");
+        if (!message) return;
+
+        message.className = "detail-message";
+        if (type) {
+          message.classList.add(type);
+        }
+        message.textContent = text || "";
+      }
+
+      function renderDetail() {
+        const root = document.querySelector("#requestDetail");
+
+        if (!selectedRequestDetail) {
+          root.innerHTML = `
+            <div class="empty-detail">
+              Pumili ng request sa kaliwa para makita ang student detail, action buttons, at printable templates.
+            </div>
+          `;
+          return;
+        }
+
+        const { request, student, enrollment, student_records, audit_logs } = selectedRequestDetail;
+        const supportedTemplates = getSupportedTemplates(request.document_type);
+        const canProcess = request.payment_status === "Approved";
+        const studentName =
+          [student?.first_name, student?.middle_name, student?.last_name].filter(Boolean).join(" ") ||
+          request.student_name;
+        const requestedDocuments = splitDocuments(request.document_type);
+
+        root.innerHTML = `
+          <section class="detail-section">
+            <h2>${escapeHtml(studentName)}</h2>
+            <p>${escapeHtml(request.email)}</p>
+            <div class="detail-doc-list">
+              ${requestedDocuments
+                .map((documentType) => `<div class="detail-doc-chip">${escapeHtml(documentType)}</div>`)
+                .join("")}
+            </div>
+          </section>
+
+          <section class="detail-section">
+            <h3>Request Summary</h3>
+            <div class="detail-meta">
+              <article>
+                <span>Student ID</span>
+                <strong>${escapeHtml(request.student_id || student?.id || "-")}</strong>
+              </article>
+              <article>
+                <span>Amount</span>
+                <strong>${formatCurrency(request.amount)}</strong>
+              </article>
+              <article>
+                <span>Payment Status</span>
+                <strong>${escapeHtml(request.payment_status)}</strong>
+              </article>
+              <article>
+                <span>Request Status</span>
+                <strong>${escapeHtml(request.request_status)}</strong>
+              </article>
+              <article>
+                <span>Payment Method</span>
+                <strong>${escapeHtml(request.payment_method || "-")}</strong>
+              </article>
+              <article>
+                <span>Reference No.</span>
+                <strong>${escapeHtml(request.reference_no || "-")}</strong>
+              </article>
+              <article>
+                <span>Claimed By</span>
+                <strong>${escapeHtml(request.claimed_by || "-")}</strong>
+              </article>
+              <article>
+                <span>Released</span>
+                <strong>${request.released_at ? escapeHtml(defaultDate(request.released_at)) : "-"}</strong>
+              </article>
+            </div>
+            <div class="supported-templates">
+              <span>Requested Documents</span>
+              <strong>${escapeHtml(requestedDocuments.join(", ") || "-")}</strong>
+            </div>
+            <div class="supported-templates" style="margin-top: 14px;">
+              <span>Purpose</span>
+              <strong>${escapeHtml(request.purpose || "-")}</strong>
+            </div>
+          </section>
+
+          <section class="detail-section">
+            <h3>Processing Actions</h3>
+            <p>${canProcess ? "Pwede nang iproseso ng records office ang request na ito." : "Kailangan munang approved ang payment bago ma-process ng records office."}</p>
+            <textarea id="recordsNotes" rows="3" placeholder="Add notes for this request"></textarea>
+            <input id="claimedBy" type="text" placeholder="Claimed by / Receiver name" value="${escapeHtml(request.claimed_by || "")}" style="margin-top: 10px;" />
+            <div class="detail-actions">
+              <button type="button" class="btn btn-secondary" data-status="Processing" ${canProcess ? "" : "disabled"}>Mark Processing</button>
+              <button type="button" class="btn btn-primary" data-status="Ready for Release" ${canProcess ? "" : "disabled"}>Mark Ready</button>
+              <button type="button" class="btn btn-secondary" data-status="Completed" ${canProcess ? "" : "disabled"}>Mark Completed</button>
+            </div>
+            <div id="detailMessage" class="detail-message"></div>
+          </section>
+
+          <section class="detail-section">
+            <h3>Ready-to-Print Templates</h3>
+            <p>${supportedTemplates.length ? "Available templates are based on the selected requested document types." : "No ready-to-print template available for this request."}</p>
+            ${buildTemplateActions(selectedRequestDetail)}
+          </section>
+
+          <section class="detail-section">
+            <h4>Student Academic Records</h4>
+            <p>Program: ${escapeHtml(
+              enrollment?.program || enrollment?.course || student_records?.[0]?.course_name || "Not indicated",
+            )}</p>
+            ${renderStudentRecords(student_records)}
+          </section>
+
+          <section class="detail-section">
+            <h4>Processing History</h4>
+            ${renderAuditLogs(audit_logs)}
+          </section>
+        `;
+
+        const notesField = root.querySelector("#recordsNotes");
+        if (notesField) {
+          notesField.value = request.notes || "";
+        }
+
+        root.querySelectorAll("[data-status]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            await updateRequestStatus(button.dataset.status);
+          });
+        });
+      }
+
+      async function updateRequestStatus(nextStatus) {
+        if (!selectedRequestDetail?.request?.id) {
+          return;
+        }
+
+        const user = auth() || {};
+        const notes = document.querySelector("#recordsNotes")?.value || "";
+        const claimedBy = document.querySelector("#claimedBy")?.value || "";
+
+        renderDetailMessage("", "Saving update...");
+
+        try {
+          const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/document_requests/update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: selectedRequestDetail.request.id,
+              request_status: nextStatus,
+              notes,
+              claimed_by: nextStatus === "Completed" ? claimedBy : undefined,
+              released_by: user.email || user.first_name || "Records",
+              reviewed_by: user.email || user.first_name || "Records",
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to update request status");
+          }
+
+          renderDetailMessage("success", `Request updated to "${nextStatus}".`);
+          await loadRequests();
+          await loadRequestDetail(selectedRequestDetail.request.id);
+        } catch (error) {
+          renderDetailMessage("error", error.message || "Failed to update request status");
+        }
+      }
+
+      function renderImportResult(result, isError = false) {
+        const root = document.querySelector("#gradeImportResult");
+        if (!root) return;
+
+        if (isError) {
+          root.hidden = false;
+          root.innerHTML = `
+            <strong>Import failed</strong>
+            <div class="records-import-empty">${escapeHtml(result || "Failed to import grade records.")}</div>
+          `;
+          return;
+        }
+
+        const importedPreview = Array.isArray(result.imported) ? result.imported.slice(0, 10) : [];
+        const skippedPreview = Array.isArray(result.skipped) ? result.skipped.slice(0, 10) : [];
+
+        if (Array.isArray(result.supported_programs) && result.supported_programs.length) {
+          availablePrograms = result.supported_programs;
+          renderSupportedPrograms();
+        }
+
+        root.hidden = false;
+        root.innerHTML = `
+          <strong>Import Summary</strong>
+          <div class="records-import-list">
+            <div class="records-import-item">Worksheet: <strong>${escapeHtml(result.worksheet || "-")}</strong></div>
+            <div class="records-import-item">Total Rows: <strong>${escapeHtml(result.total_rows)}</strong></div>
+            <div class="records-import-item">Imported: <strong>${escapeHtml(result.imported_count)}</strong></div>
+            <div class="records-import-item">Skipped: <strong>${escapeHtml(result.skipped_count)}</strong></div>
+          </div>
+          <div class="records-import-list">
+            <div class="records-import-item">
+              <strong>Imported Rows Preview</strong>
+              ${
+                importedPreview.length
+                  ? importedPreview
+                      .map(
+                        (item) =>
+                          `<div>Row ${escapeHtml(item.row)}: ${escapeHtml(item.student_name)} - ${escapeHtml(item.program_name || "No program")} - ${escapeHtml(item.course_name)} (${escapeHtml(item.grade)})</div>`,
+                      )
+                      .join("")
+                  : '<div class="records-import-empty">No imported rows.</div>'
+              }
+            </div>
+            <div class="records-import-item">
+              <strong>Skipped Rows Preview</strong>
+              ${
+                skippedPreview.length
+                  ? skippedPreview
+                      .map(
+                        (item) =>
+                          `<div>Row ${escapeHtml(item.row)}: ${escapeHtml(item.reason || "Skipped")}</div>`,
+                      )
+                      .join("")
+                  : '<div class="records-import-empty">No skipped rows.</div>'
+              }
+            </div>
+          </div>
+        `;
+      }
+
+      function renderSupportedPrograms() {
+        const root = document.querySelector("#supportedPrograms");
+        if (!root) return;
+
+        if (!Array.isArray(availablePrograms) || !availablePrograms.length) {
+          root.innerHTML = '<div class="records-import-empty">No programs configured yet.</div>';
+          return;
+        }
+
+        root.innerHTML = availablePrograms
+          .map((program) => {
+            const label = program.code
+              ? `${program.name} (${program.code})`
+              : program.name;
+
+            return `<span class="records-program-pill">${escapeHtml(label)}</span>`;
+          })
+          .join("");
+      }
+
+      async function loadPrograms() {
+        try {
+          const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/programs/list`);
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to load programs");
+          }
+
+          availablePrograms = Array.isArray(data)
+            ? data.map((program) => ({ name: program.name, code: program.code }))
+            : [];
+          renderSupportedPrograms();
+        } catch (error) {
+          availablePrograms = [];
+          renderSupportedPrograms();
+        }
+      }
+
+      function initGradeImportForm() {
+        const form = document.querySelector("#gradeImportForm");
+        if (!form) return;
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const fileInput = form.querySelector('[name="grade_file"]');
+          const file = fileInput?.files?.[0];
+          const button = form.querySelector("button");
+          const user = auth() || {};
+
+          if (!file) {
+            renderImportResult("Please choose an Excel file first.", true);
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append("grade_file", file);
+          formData.append("encoded_by", user.email || user.first_name || "Records");
+
+          button.disabled = true;
+          button.textContent = "Importing...";
+          renderImportResult("Reading Excel file and matching students...", true);
+
+          try {
+            const response = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/student_records/import-excel`,
+              {
+                method: "POST",
+                body: formData,
+              },
+            );
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to import grades");
+            }
+
+            renderImportResult(data, false);
+          } catch (error) {
+            renderImportResult(error.message || "Failed to import grades", true);
+          } finally {
+            button.disabled = false;
+            button.textContent = "Import Grades";
+          }
+        });
+      }
+
+      function initFilters() {
+        ["#filterSearch", "#filterPaymentStatus", "#filterRequestStatus"].forEach((selector) => {
+          document.querySelector(selector).addEventListener("input", applyFilters);
+          document.querySelector(selector).addEventListener("change", applyFilters);
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        initFilters();
+        initGradeImportForm();
+        await loadPrograms();
+        await loadRequests();
+      });
     </script>
   </body>
 </html>

@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <script src="../scripts/user.js" defer></script>
+    <title>Student Records</title>
+    <style>
+      .student-records-layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.35fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .student-card,
+      .student-records-card {
+        background: #fff;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .student-card h2,
+      .student-records-card h2 {
+        margin-bottom: 10px;
+      }
+
+      .student-subcopy {
+        margin: 0 0 18px;
+        color: #64748b;
+      }
+
+      .student-profile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .student-profile-grid article {
+        padding: 14px;
+        border-radius: 16px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+      }
+
+      .student-profile-grid span {
+        display: block;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+      }
+
+      .student-profile-grid strong {
+        display: block;
+        margin-top: 8px;
+        color: #0f172a;
+      }
+
+      .record-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .record-form-grid .full-width {
+        grid-column: 1 / -1;
+      }
+
+      .record-form-grid input,
+      .record-form-grid select,
+      .record-form-grid textarea {
+        width: 100%;
+      }
+
+      .record-list {
+        margin-top: 18px;
+      }
+
+      .record-list table {
+        width: 100%;
+      }
+
+      .record-form-message {
+        min-height: 22px;
+        margin-top: 12px;
+        font-weight: 700;
+      }
+
+      .record-form-message.success {
+        color: #15803d;
+      }
+
+      .record-form-message.error {
+        color: #b91c1c;
+      }
+
+      .record-toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .record-toolbar input {
+        max-width: 320px;
+        width: 100%;
+      }
+
+      .record-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      @media (max-width: 1100px) {
+        .student-records-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .student-profile-grid,
+        .record-form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .record-toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .record-toolbar input {
+          max-width: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="users">
+      <div data-component="../../components/sidebar.html"></div>
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+
+        <section class="student-records-layout">
+          <article class="student-card">
+            <h2>Student Academic Record Entry</h2>
+            <p class="student-subcopy">Mag-encode ng subjects, semester, units, grades, at remarks para magamit sa TOR, COR, at Copy of Grades.</p>
+
+            <div id="studentProfile" class="student-profile-grid">
+              <article>
+                <span>Status</span>
+                <strong>Loading...</strong>
+              </article>
+            </div>
+
+            <form id="studentRecordForm" class="record-form-grid">
+              <div>
+                <label>Course ID</label>
+                <input type="text" name="course_id" required />
+              </div>
+              <div>
+                <label>Course / Subject Name</label>
+                <input type="text" name="course_name" required />
+              </div>
+              <div>
+                <label>School Year</label>
+                <input type="text" name="school_year" placeholder="2025-2026" required />
+              </div>
+              <div>
+                <label>Academic Year</label>
+                <input type="text" name="academic_year" placeholder="2025-2026" />
+              </div>
+              <div>
+                <label>Semester</label>
+                <select name="semester">
+                  <option value="">Select Semester</option>
+                  <option value="1st Semester">1st Semester</option>
+                  <option value="2nd Semester">2nd Semester</option>
+                  <option value="Summer">Summer</option>
+                </select>
+              </div>
+              <div>
+                <label>Units</label>
+                <input type="number" name="units" min="0" step="1" />
+              </div>
+              <div>
+                <label>Grade</label>
+                <input type="number" name="grade" min="0" step="0.01" placeholder="e.g. 1.50" />
+              </div>
+              <div>
+                <label>Remarks</label>
+                <input type="text" name="remarks" placeholder="Passed / Failed / Incomplete" />
+              </div>
+              <div>
+                <label>Program</label>
+                <input type="text" name="program_name" />
+              </div>
+              <div>
+                <label>Year Level</label>
+                <input type="text" name="year_level" placeholder="1st Year" />
+              </div>
+              <div class="full-width">
+                <label>Academic Status</label>
+                <input type="text" name="academic_status" placeholder="Regular / Irregular / Graduating" />
+              </div>
+              <div class="full-width">
+                <button type="submit" class="btn btn-primary">Save Student Record</button>
+              </div>
+            </form>
+            <div id="recordFormMessage" class="record-form-message"></div>
+          </article>
+
+          <article class="student-records-card">
+            <div class="record-toolbar">
+              <div>
+                <h2>Saved Academic Entries</h2>
+                <p class="student-subcopy">Ito ang magiging base ng printable TOR at Copy of Grades.</p>
+              </div>
+              <input id="recordSearch" type="search" placeholder="Search course ID, subject, or semester" />
+            </div>
+
+            <div class="record-list">
+              <table id="table-student-records">
+                <thead>
+                  <tr>
+                    <th>Course</th>
+                    <th>Academic Term</th>
+                    <th>Units</th>
+                    <th>Grade</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      let currentStudent = null;
+      let currentEnrollment = null;
+      let allRecords = [];
+
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
+      }
+
+      function getStudentId() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("id");
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Request failed");
+        }
+
+        return data;
+      }
+
+      function renderStudentProfile(student, enrollment) {
+        const root = document.querySelector("#studentProfile");
+        const fullName = [student?.first_name, student?.middle_name, student?.last_name]
+          .filter(Boolean)
+          .join(" ");
+
+        root.innerHTML = `
+          <article>
+            <span>Name</span>
+            <strong>${escapeHtml(fullName || "-")}</strong>
+          </article>
+          <article>
+            <span>Student Number</span>
+            <strong>${escapeHtml(student?.student_number || student?.id || "-")}</strong>
+          </article>
+          <article>
+            <span>Email</span>
+            <strong>${escapeHtml(student?.email || "-")}</strong>
+          </article>
+          <article>
+            <span>Program</span>
+            <strong>${escapeHtml(enrollment?.program || enrollment?.course || "-")}</strong>
+          </article>
+          <article>
+            <span>Year Level</span>
+            <strong>${escapeHtml(enrollment?.year_level || "-")}</strong>
+          </article>
+          <article>
+            <span>Semester</span>
+            <strong>${escapeHtml(enrollment?.semester || "-")}</strong>
+          </article>
+        `;
+
+        const form = document.querySelector("#studentRecordForm");
+        if (enrollment?.program || enrollment?.course) {
+          form.querySelector('[name="program_name"]').value = enrollment?.program || enrollment?.course || "";
+        }
+        if (enrollment?.year_level) {
+          form.querySelector('[name="year_level"]').value = enrollment.year_level;
+        }
+        if (enrollment?.school_year) {
+          form.querySelector('[name="school_year"]').value = enrollment.school_year;
+        }
+        if (enrollment?.semester) {
+          form.querySelector('[name="semester"]').value = enrollment.semester;
+        }
+      }
+
+      function renderRecords() {
+        const searchValue = document.querySelector("#recordSearch").value.trim().toLowerCase();
+        const tbody = document.querySelector("#table-student-records tbody");
+        const filtered = allRecords.filter((record) => {
+          const haystack = [
+            record.course_id,
+            record.course_name,
+            record.semester,
+            record.school_year,
+            record.academic_year,
+            record.remarks,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return !searchValue || haystack.includes(searchValue);
+        });
+
+        tbody.innerHTML = filtered.length
+          ? filtered
+              .map(
+                (record) => `
+                  <tr>
+                    <td>
+                      <strong>${escapeHtml(record.course_name || "-")}</strong><br />
+                      <span class="record-chip">${escapeHtml(record.course_id || "-")}</span>
+                    </td>
+                    <td>
+                      ${escapeHtml(record.academic_year || record.school_year || "-")}<br />
+                      <small>${escapeHtml(record.semester || "No semester")}</small>
+                    </td>
+                    <td>${escapeHtml(record.units ?? "-")}</td>
+                    <td>${escapeHtml(record.grade ?? "-")}</td>
+                    <td>${escapeHtml(record.remarks || record.academic_status || "-")}</td>
+                  </tr>
+                `,
+              )
+              .join("")
+          : `
+              <tr>
+                <td colspan="5">No student academic records found.</td>
+              </tr>
+            `;
+      }
+
+      async function loadStudentContext() {
+        const studentId = getStudentId();
+        if (!studentId) {
+          throw new Error("Student ID is missing from the URL");
+        }
+
+        currentStudent = await fetchJson(
+          `${window.APP_CONFIG.API_BASE_URL}/users/read?id=${encodeURIComponent(studentId)}`,
+        );
+
+        currentEnrollment = currentStudent?.email
+          ? await fetchJson(
+              `${window.APP_CONFIG.API_BASE_URL}/students/portal?email=${encodeURIComponent(currentStudent.email)}`,
+            ).then((data) => data.enrollment || null)
+          : null;
+
+        renderStudentProfile(currentStudent, currentEnrollment);
+      }
+
+      async function loadStudentRecords() {
+        const studentId = getStudentId();
+        allRecords = await fetchJson(
+          `${window.APP_CONFIG.API_BASE_URL}/student_records/list?student_id=${encodeURIComponent(studentId)}`,
+        );
+        renderRecords();
+      }
+
+      function initRecordForm() {
+        const form = document.querySelector("#studentRecordForm");
+        const message = document.querySelector("#recordFormMessage");
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const formData = new FormData(form);
+          const user = auth() || {};
+          const button = form.querySelector("button");
+
+          button.disabled = true;
+          button.textContent = "Saving...";
+          message.textContent = "";
+          message.className = "record-form-message";
+
+          try {
+            const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/student_records/create`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                student_id: currentStudent.id,
+                student_name: [
+                  currentStudent.first_name,
+                  currentStudent.middle_name,
+                  currentStudent.last_name,
+                ]
+                  .filter(Boolean)
+                  .join(" "),
+                course_id: formData.get("course_id"),
+                course_name: formData.get("course_name"),
+                school_year: formData.get("school_year"),
+                academic_year: formData.get("academic_year"),
+                semester: formData.get("semester"),
+                units: formData.get("units"),
+                grade: formData.get("grade"),
+                remarks: formData.get("remarks"),
+                academic_status: formData.get("academic_status"),
+                program_name: formData.get("program_name"),
+                year_level: formData.get("year_level"),
+                encoded_by: user.email || user.first_name || "Records",
+              }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.error || "Failed to save student record");
+            }
+
+            message.textContent = "Student academic record saved.";
+            message.classList.add("success");
+            form.reset();
+            renderStudentProfile(currentStudent, currentEnrollment);
+            await loadStudentRecords();
+          } catch (error) {
+            message.textContent = error.message || "Failed to save student record";
+            message.classList.add("error");
+          } finally {
+            button.disabled = false;
+            button.textContent = "Save Student Record";
+          }
+        });
+
+        document.querySelector("#recordSearch").addEventListener("input", renderRecords);
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        initRecordForm();
+
+        try {
+          await loadStudentContext();
+          await loadStudentRecords();
+        } catch (error) {
+          document.querySelector("#studentProfile").innerHTML = `
+            <article>
+              <span>Error</span>
+              <strong>${escapeHtml(error.message || "Failed to load student data")}</strong>
+            </article>
+          `;
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -76,6 +76,7 @@
             <option value="1st Year">1st Year</option>
             <option value="2nd Year">2nd Year</option>
             <option value="3rd Year">3rd Year</option>
+            <option value="4th Year">4th Year</option>
           </select>
         </div>
 
@@ -162,6 +163,24 @@
       const semesterEl = document.querySelector("#semester");
       const paymentChannelEl = document.querySelector("#payment_channel");
       const downpaymentAmountEl = form.querySelector('[name="downpayment_amount"]');
+
+      function getSelectedProgramParts() {
+        const [programId, programName, programCode, programMajor] = (programEl.value || "").split(":");
+        return {
+          programId,
+          programName,
+          programCode,
+          programMajor,
+        };
+      }
+
+      function isBsedSelected() {
+        return String(getSelectedProgramParts().programCode || "").toUpperCase() === "BSED";
+      }
+
+      function getSelectedMajor() {
+        return getSelectedProgramParts().programMajor || "";
+      }
 
       function formatCurrency(value) {
         return new Intl.NumberFormat("en-PH", {
@@ -333,8 +352,25 @@
         programEl.innerHTML = `<option value="">Select Program</option>`;
 
         data.forEach((program) => {
+          const programCode = program.code || "";
+          const upperProgramCode = String(programCode).toUpperCase();
+
+          if (upperProgramCode === "BSED") {
+            [
+              { major: "Filipino", label: "BSED - Major in Filipino" },
+              { major: "English", label: "BSED - Major in English" },
+              { major: "Mathematics", label: "BSED - Major in Mathematics" },
+            ].forEach((majorOption) => {
+              const option = document.createElement("option");
+              option.value = `${program.id}:${program.name}:${programCode}:${majorOption.major}`;
+              option.textContent = majorOption.label;
+              programEl.appendChild(option);
+            });
+            return;
+          }
+
           const option = document.createElement("option");
-          option.value = `${program.id}:${program.name}:${program.code || ""}`;
+          option.value = `${program.id}:${program.name}:${programCode}:`;
           option.textContent = `${program.code || program.name} - ${program.name}`;
           programEl.appendChild(option);
         });
@@ -344,11 +380,13 @@
         selectedCourses.clear();
         renderSelected();
 
-        const [programId] = (programEl.value || "").split(":");
+        const { programId } = getSelectedProgramParts();
         const yearLevel = yearLevelEl.value;
+        const major = getSelectedMajor();
         const semester = semesterEl.value;
+        const needsMajor = isBsedSelected();
 
-        if (!programId || !yearLevel || !semester) {
+        if (!programId || !yearLevel || !semester || (needsMajor && !major)) {
           courses = [];
           renderOptions();
           return;
@@ -359,6 +397,10 @@
           year_level: yearLevel,
           semester: semester,
         });
+
+        if (major) {
+          query.set("major", major);
+        }
 
         const response = await fetch(
           `${window.APP_CONFIG.API_BASE_URL}/courses/list?${query.toString()}`,
@@ -387,9 +429,11 @@
         renderSelected();
       });
 
-      [programEl, yearLevelEl, semesterEl].forEach((element) => {
+      [yearLevelEl, semesterEl].forEach((element) => {
         element.addEventListener("change", loadAvailableCourses);
       });
+
+      programEl.addEventListener("change", loadAvailableCourses);
 
       paymentChannelEl.addEventListener("change", () => {
         renderPaymentOptions(paymentChannelEl.value);
@@ -439,12 +483,20 @@
           const totalAssessment = totalAmount + MISC_FEE + ID_FEE;
           const minimumDownpayment = Math.min(MIN_DOWNPAYMENT, totalAssessment);
           const downpaymentAmount = Number(form.downpayment_amount.value || 0);
-          const [program_id, program_name, program_code] = (
-            form.program.value || ""
-          ).split(":");
+          const { programId: program_id, programName: program_name, programCode: program_code } =
+            getSelectedProgramParts();
+          const major = getSelectedMajor();
 
           if (downpaymentAmount < minimumDownpayment) {
             message.innerHTML = `<span class='error'>Minimum downpayment is ${formatCurrency(minimumDownpayment)}.</span>`;
+            button.disabled = false;
+            button.textContent = "Submit Enrollment";
+            return;
+          }
+
+          if (String(program_code || "").toUpperCase() === "BSED" && !major) {
+            message.innerHTML =
+              "<span class='error'>Please select a BSED major first.</span>";
             button.disabled = false;
             button.textContent = "Submit Enrollment";
             return;
@@ -468,6 +520,7 @@
             program_id,
             program_name,
             program_code,
+            major,
             year_level: form.year_level.value,
             semester: form.semester.value,
             selected_courses: selectedCourseObjects.map((course) => ({

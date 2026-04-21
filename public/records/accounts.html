@@ -6,49 +6,303 @@
     <link href="../styles/index.css" rel="stylesheet" />
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
+    <script src="../scripts/datetime.js" defer></script>
     <title>Records Accounts</title>
+    <style>
+      .records-page-grid {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .records-form-card {
+        background: #fff;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .records-form-card h2,
+      .records-list-card h2 {
+        margin-bottom: 10px;
+      }
+
+      .records-form-card p,
+      .records-list-card p {
+        margin: 0 0 18px;
+        color: #64748b;
+      }
+
+      .records-form-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .records-form-grid input {
+        width: 100%;
+      }
+
+      .records-list-card {
+        background: #fff;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .records-toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .records-toolbar input {
+        max-width: 320px;
+        width: 100%;
+      }
+
+      .records-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #e0f2fe;
+        color: #075985;
+        font-size: 0.85rem;
+        font-weight: 700;
+      }
+
+      .records-form-message {
+        min-height: 22px;
+        margin-top: 12px;
+        font-weight: 600;
+      }
+
+      .records-form-message.success {
+        color: #15803d;
+      }
+
+      .records-form-message.error {
+        color: #b91c1c;
+      }
+
+      @media (max-width: 980px) {
+        .records-page-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .records-toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .records-toolbar input {
+          max-width: none;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="users">
       <div data-component="../../components/sidebar.html"></div>
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
-        <a href="../users/create.html?type=records" class="btn btn-primary">+ Add Records Account</a>
-        <section class="table-section" style="margin-top: 20px">
-          <table id="table-records-users">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Type</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+        <section class="records-page-grid">
+          <article class="records-form-card">
+            <h2>Create Records Account</h2>
+            <p>Magdagdag ng bagong user para sa records office nang hindi na lumilipat ng page.</p>
+            <form id="recordsAccountForm" class="records-form-grid">
+              <div class="form-group">
+                <label>Last Name</label>
+                <input type="text" name="last_name" required />
+              </div>
+              <div class="form-group">
+                <label>First Name</label>
+                <input type="text" name="first_name" required />
+              </div>
+              <div class="form-group">
+                <label>Middle Name</label>
+                <input type="text" name="middle_name" />
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" required />
+              </div>
+              <div class="form-group">
+                <label>Mobile</label>
+                <input type="text" name="mobile" />
+              </div>
+              <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Create Records Account</button>
+            </form>
+            <div id="recordsAccountMessage" class="records-form-message"></div>
+          </article>
+
+          <article class="records-list-card">
+            <div class="records-toolbar">
+              <div>
+                <h2>Records Team</h2>
+                <p>Listahan ng mga may access sa records request processing at document printing.</p>
+              </div>
+              <input
+                id="recordsSearch"
+                type="search"
+                placeholder="Search by name or email"
+                autocomplete="off"
+              />
+            </div>
+            <section class="table-section" style="margin-top: 0">
+              <table id="table-records-users">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Mobile</th>
+                    <th>Role</th>
+                    <th>Created</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </section>
+          </article>
         </section>
       </main>
     </div>
     <script>
-      async function loadUsers() {
-        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/users/list?type=records`);
-        const data = await response.json();
-        const tbody = document.querySelector("#table-records-users tbody");
-        tbody.innerHTML = "";
+      let recordsUsers = [];
 
-        data.forEach((user) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${user.id.substring(0, 6)}</td>
-            <td>${user.last_name} ${user.first_name}</td>
-            <td>${user.email}</td>
-            <td>${user.type}</td>
-          `;
-          tbody.appendChild(row);
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
         });
       }
 
-      document.addEventListener("DOMContentLoaded", loadUsers);
+      function fullName(user) {
+        return [user.last_name, user.first_name, user.middle_name]
+          .filter(Boolean)
+          .join(", ");
+      }
+
+      function renderUsers(users) {
+        const searchValue = document.querySelector("#recordsSearch").value.trim().toLowerCase();
+        const tbody = document.querySelector("#table-records-users tbody");
+        const filteredUsers = users.filter((user) => {
+          const haystack = `${fullName(user)} ${user.email || ""} ${user.mobile || ""}`.toLowerCase();
+          return !searchValue || haystack.includes(searchValue);
+        });
+
+        tbody.innerHTML = filteredUsers.length
+          ? filteredUsers
+              .map(
+                (user) => `
+                  <tr>
+                    <td>${escapeHtml(fullName(user) || "Unnamed")}</td>
+                    <td>${escapeHtml(user.email)}</td>
+                    <td>${escapeHtml(user.mobile || "-")}</td>
+                    <td><span class="records-badge">${escapeHtml(user.type || "records")}</span></td>
+                    <td>${user.created_at ? defaultDate(user.created_at) : "-"}</td>
+                  </tr>
+                `,
+              )
+              .join("")
+          : `
+              <tr>
+                <td colspan="5">No records accounts found.</td>
+              </tr>
+            `;
+      }
+
+      async function loadUsers() {
+        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/users/list?type=records`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load records accounts");
+        }
+
+        recordsUsers = Array.isArray(data) ? data : [];
+        renderUsers(recordsUsers);
+      }
+
+      function initAccountForm() {
+        const form = document.querySelector("#recordsAccountForm");
+        const message = document.querySelector("#recordsAccountMessage");
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const button = form.querySelector("button");
+          const formData = new FormData(form);
+          button.disabled = true;
+          button.textContent = "Creating...";
+          message.textContent = "";
+          message.className = "records-form-message";
+
+          try {
+            const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/users/create`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                last_name: formData.get("last_name"),
+                first_name: formData.get("first_name"),
+                middle_name: formData.get("middle_name"),
+                email: formData.get("email"),
+                mobile: formData.get("mobile"),
+                password: formData.get("password"),
+                type: "records",
+              }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || data.message || "Failed to create account");
+            }
+
+            message.textContent = "Records account created successfully.";
+            message.classList.add("success");
+            form.reset();
+            await loadUsers();
+          } catch (error) {
+            message.textContent = error.message || "Failed to create account";
+            message.classList.add("error");
+          } finally {
+            button.disabled = false;
+            button.textContent = "Create Records Account";
+          }
+        });
+
+        document.querySelector("#recordsSearch").addEventListener("input", () => {
+          renderUsers(recordsUsers);
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        initAccountForm();
+        try {
+          await loadUsers();
+        } catch (error) {
+          const message = document.querySelector("#recordsAccountMessage");
+          message.textContent = error.message || "Failed to load records accounts";
+          message.classList.add("error");
+        }
+      });
     </script>
   </body>
 </html>

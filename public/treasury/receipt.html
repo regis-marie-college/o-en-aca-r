@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="../scripts/config.js" defer></script>
+    <title>Printable Receipt</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #172033;
+        --muted: #52607a;
+        --line: #d7deea;
+        --accent: #0f4c81;
+        --paper: #ffffff;
+        --soft: #eef4fb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #e2e8f0;
+        color: var(--ink);
+        font-family: "Georgia", "Times New Roman", serif;
+      }
+
+      .receipt-shell {
+        max-width: 920px;
+        margin: 32px auto;
+        padding: 0 20px 40px;
+      }
+
+      .receipt-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .receipt-actions button {
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      .btn-close {
+        background: #fff;
+        color: var(--accent);
+      }
+
+      .btn-print {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .receipt-paper {
+        background: var(--paper);
+        min-height: 1122px;
+        padding: 56px 64px;
+        box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16);
+      }
+
+      .receipt-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: flex-start;
+        border-bottom: 2px solid var(--line);
+        padding-bottom: 22px;
+      }
+
+      .school-copy h1 {
+        margin: 0;
+        font-size: 1.6rem;
+        letter-spacing: 0.05em;
+      }
+
+      .school-copy p,
+      .receipt-copy p {
+        margin: 6px 0 0;
+        color: var(--muted);
+      }
+
+      .receipt-copy {
+        text-align: right;
+      }
+
+      .receipt-copy h2 {
+        margin: 0;
+        font-size: 1.4rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .amount-banner {
+        margin: 28px 0;
+        padding: 18px 22px;
+        border-radius: 20px;
+        background: var(--soft);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 16px;
+      }
+
+      .amount-banner span {
+        color: var(--muted);
+        font-size: 0.92rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .amount-banner strong {
+        font-size: 2rem;
+        color: var(--accent);
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px 28px;
+      }
+
+      .meta-item {
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 10px;
+      }
+
+      .meta-item label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .description-box,
+      .note-box {
+        margin-top: 28px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px 20px;
+      }
+
+      .description-box h3,
+      .note-box h3 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .signature-row {
+        margin-top: 56px;
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .signature-card {
+        width: 280px;
+      }
+
+      .signature-line {
+        margin-top: 52px;
+        border-top: 1px solid #0f172a;
+        padding-top: 10px;
+        font-weight: 700;
+      }
+
+      .signature-role {
+        color: var(--muted);
+      }
+
+      .empty-state {
+        padding: 48px 24px;
+        text-align: center;
+        background: #fff;
+        border-radius: 24px;
+        box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16);
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .receipt-shell {
+          max-width: none;
+          margin: 0;
+          padding: 0;
+        }
+
+        .receipt-actions {
+          display: none;
+        }
+
+        .receipt-paper {
+          box-shadow: none;
+          padding: 42px 50px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .receipt-paper {
+          padding: 30px 22px;
+        }
+
+        .receipt-header,
+        .amount-banner,
+        .signature-row {
+          flex-direction: column;
+        }
+
+        .receipt-copy {
+          text-align: left;
+        }
+
+        .meta-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="receipt-shell">
+      <div class="receipt-actions">
+        <button type="button" class="btn-close" onclick="window.close()">Close</button>
+        <button type="button" class="btn-print" onclick="window.print()">Print</button>
+      </div>
+      <div id="receiptRoot" class="empty-state">Loading printable receipt...</div>
+    </div>
+
+    <script>
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
+      }
+
+      function formatDate(value) {
+        if (!value) return "-";
+
+        return new Intl.DateTimeFormat("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(new Date(value));
+      }
+
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("en-PH", {
+          style: "currency",
+          currency: "PHP",
+        }).format(Number(value || 0));
+      }
+
+      function renderReceipt(transaction) {
+        const receiptRoot = document.querySelector("#receiptRoot");
+
+        if (!transaction) {
+          receiptRoot.className = "empty-state";
+          receiptRoot.innerHTML = "Receipt data was not found.";
+          return;
+        }
+
+        receiptRoot.className = "receipt-paper";
+        receiptRoot.innerHTML = `
+          <section class="receipt-header">
+            <div class="school-copy">
+              <h1>REGIS MARIE COLLEGE</h1>
+              <p>Official payment acknowledgement</p>
+              <p>Treasury Office</p>
+            </div>
+            <div class="receipt-copy">
+              <h2>Receipt</h2>
+              <p>Official Receipt No.: <strong>${escapeHtml(transaction.receipt_no || "-")}</strong></p>
+              <p>Reference No.: <strong>${escapeHtml(transaction.reference_no || "-")}</strong></p>
+              <p>Date Issued: ${escapeHtml(formatDate(transaction.created_at))}</p>
+            </div>
+          </section>
+
+          <section class="amount-banner">
+            <span>Amount Received</span>
+            <strong>${escapeHtml(formatCurrency(transaction.amount))}</strong>
+          </section>
+
+          <section class="meta-grid">
+            <div class="meta-item">
+              <label>Student Name</label>
+              <div>${escapeHtml(transaction.student_name || "-")}</div>
+            </div>
+            <div class="meta-item">
+              <label>Email Address</label>
+              <div>${escapeHtml(transaction.email || "-")}</div>
+            </div>
+            <div class="meta-item">
+              <label>Payment Method</label>
+              <div>${escapeHtml(transaction.payment_method || "-")}</div>
+            </div>
+            <div class="meta-item">
+              <label>Status</label>
+              <div>${escapeHtml(transaction.status || "-")}</div>
+            </div>
+            <div class="meta-item">
+              <label>Processed By</label>
+              <div>${escapeHtml(transaction.processed_by || "Treasury")}</div>
+            </div>
+            <div class="meta-item">
+              <label>Transaction ID</label>
+              <div>${escapeHtml(transaction.id || "-")}</div>
+            </div>
+          </section>
+
+          <section class="description-box">
+            <h3>Payment Description</h3>
+            <p>${escapeHtml(transaction.description || "-")}</p>
+          </section>
+
+          <section class="note-box">
+            <h3>Note</h3>
+            <p>This receipt certifies that the payment listed above has been recorded by the Treasury Office of Regis Marie College.</p>
+          </section>
+
+          <section class="signature-row">
+            <div class="signature-card">
+              <div class="signature-line">${escapeHtml(transaction.student_name || "Student")}</div>
+              <div class="signature-role">Payor / Student</div>
+            </div>
+            <div class="signature-card">
+              <div class="signature-line">${escapeHtml(transaction.processed_by || "Treasury Officer")}</div>
+              <div class="signature-role">Processed By</div>
+            </div>
+          </section>
+        `;
+      }
+
+      async function loadReceipt() {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("id");
+        const receiptRoot = document.querySelector("#receiptRoot");
+
+        if (!id) {
+          receiptRoot.innerHTML = "Transaction id is required.";
+          return;
+        }
+
+        try {
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/treasury/transactions/read?id=${encodeURIComponent(id)}`,
+          );
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Failed to load receipt details");
+          }
+
+          renderReceipt(data);
+        } catch (error) {
+          receiptRoot.className = "empty-state";
+          receiptRoot.innerHTML = escapeHtml(error.message || "Failed to load receipt");
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", loadReceipt);
+    </script>
+  </body>
+</html>

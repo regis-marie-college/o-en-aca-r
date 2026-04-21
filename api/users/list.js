@@ -6,11 +6,43 @@ module.exports = async (req, res) => {
     return notAllowed(res);
   }
 
-  const { type } = req.query;
+  const { type, school_year } = req.query;
   let result = { rows: [] };
 
   try {
-    if (type) {
+    if (type === "student") {
+      result = await db.query(
+        `
+        select
+          u.*,
+          enrollment.school_year,
+          enrollment.program_name,
+          enrollment.program_code,
+          enrollment.year_level,
+          enrollment.semester,
+          enrollment.status as enrollment_status
+        from users u
+        left join lateral (
+          select
+            e.school_year,
+            e.program_name,
+            e.program_code,
+            e.year_level,
+            e.semester,
+            e.status
+          from enrollments e
+          where e.email = u.email
+            and ($2::text is null or e.school_year = $2)
+          order by e.created_at desc
+          limit 1
+        ) as enrollment on true
+        where u.type = $1
+          and ($2::text is null or enrollment.school_year = $2)
+        order by u.created_at desc
+        `,
+        [type, school_year || null],
+      );
+    } else if (type) {
       result = await db.query(
         `SELECT * FROM users where type = $1 ORDER BY created_at DESC`,
         [type],

@@ -7,7 +7,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { program_id, year_level, semester } = req.query;
+    const { program_id, year_level, semester, major } = req.query;
     const result = await db.query(
       `
       SELECT *
@@ -15,10 +15,15 @@ module.exports = async (req, res) => {
       WHERE
         ($1::text is null or program_id = $1) and
         ($2::text is null or year_level = $2) and
-        ($3::text is null or semester = $3)
-      ORDER BY program_code asc, year_level asc, semester asc, name asc
+        ($3::text is null or semester = $3) and
+        (
+          $4::text is null or
+          coalesce(major, '') = '' or
+          major = $4
+        )
+      ORDER BY program_code asc, year_level asc, semester asc, major asc nulls first, name asc
       `,
-      [program_id || null, year_level || null, semester || null],
+      [program_id || null, year_level || null, semester || null, major || null],
     );
 
     return okay(res, result.rows);

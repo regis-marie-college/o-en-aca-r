@@ -13,6 +13,7 @@ module.exports = async (req, res) => {
 
   try {
     const body = await bodyParser(req);
+    const defaultSchoolYear = await getDefaultSchoolYear();
 
     const {
       last_name,
@@ -24,6 +25,8 @@ module.exports = async (req, res) => {
       program_id,
       program_name,
       program_code,
+      major,
+      school_year,
       year_level,
       semester,
       selected_courses,
@@ -56,6 +59,10 @@ module.exports = async (req, res) => {
       !semester
     ) {
       return badRequest(res, "Missing required fields");
+    }
+
+    if (String(program_code || "").trim().toUpperCase() === "BSED" && !major) {
+      return badRequest(res, "Please select a major for BSED");
     }
 
     if (!Array.isArray(selected_courses) || selected_courses.length === 0) {
@@ -123,6 +130,8 @@ module.exports = async (req, res) => {
       "program_id",
       "program_name",
       "program_code",
+      "major",
+      "school_year",
       "year_level",
       "semester",
       "selected_courses",
@@ -134,6 +143,8 @@ module.exports = async (req, res) => {
       program_id,
       program_name || null,
       program_code || null,
+      major || null,
+      school_year || defaultSchoolYear,
       year_level,
       semester,
       JSON.stringify(selected_courses),
@@ -179,6 +190,8 @@ module.exports = async (req, res) => {
       "mobile",
       "program_name",
       "program_code",
+      "major",
+      "school_year",
       "year_level",
       "semester",
       "selected_courses",
@@ -337,4 +350,21 @@ function ordinalLabel(value) {
     default:
       return `${value}th`;
   }
+}
+
+function getCurrentSchoolYear(date = new Date()) {
+  const year = date.getFullYear();
+  return `${year}-${year + 1}`;
+}
+
+async function getDefaultSchoolYear() {
+  const result = await db.query(`
+    select name
+    from school_years
+    where is_active = true
+    order by updated_at desc, created_at desc
+    limit 1
+  `);
+
+  return result.rows[0]?.name || getCurrentSchoolYear();
 }

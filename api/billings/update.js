@@ -1,6 +1,8 @@
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
+const { writeAuditLog } = require("../../lib/audit-log");
+const { generateReceiptNo } = require("../../lib/receipt-number");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -152,6 +154,20 @@ async function submitOnlinePayment({
     ],
   );
 
+  await writeAuditLog(db, {
+    entity_type: "billing",
+    entity_id: billing.id,
+    action: "payment_submitted",
+    actor: processed_by || billing.email || null,
+    actor_type: "treasury",
+    details: {
+      payment_channel,
+      reference_no,
+      pending_payment_amount: amountToPay.toFixed(2),
+      enrollment_id: billing.enrollment_id || null,
+    },
+  });
+
   return updated.rows[0];
 }
 
@@ -193,6 +209,17 @@ async function reviewOnlinePayment({
     );
 
     await syncEnrollmentPaymentStatus(denied.rows[0]);
+    await writeAuditLog(db, {
+      entity_type: "billing",
+      entity_id: billing.id,
+      action: "payment_denied",
+      actor: reviewer || processed_by || null,
+      actor_type: "treasury",
+      details: {
+        notes: reviewNotes,
+        enrollment_id: billing.enrollment_id || null,
+      },
+    });
 
     return denied.rows[0];
   }
@@ -241,6 +268,19 @@ async function reviewOnlinePayment({
   });
 
   await syncEnrollmentPaymentStatus(updated.rows[0]);
+  await writeAuditLog(db, {
+    entity_type: "billing",
+    entity_id: billing.id,
+    action: "payment_approved",
+    actor: reviewer || processed_by || null,
+    actor_type: "treasury",
+    details: {
+      amount_paid: amountToPay.toFixed(2),
+      status: nextStatus,
+      enrollment_id: billing.enrollment_id || null,
+      notes: reviewNotes,
+    },
+  });
 
   return updated.rows[0];
 }
@@ -293,6 +333,19 @@ async function applyDirectPayment({
   });
 
   await syncEnrollmentPaymentStatus(updated.rows[0]);
+  await writeAuditLog(db, {
+    entity_type: "billing",
+    entity_id: billing.id,
+    action: "direct_payment_recorded",
+    actor: processed_by || null,
+    actor_type: "treasury",
+    details: {
+      amount_paid: amountToPay.toFixed(2),
+      payment_method: payment_method || "Cash",
+      status: nextStatus,
+      enrollment_id: billing.enrollment_id || null,
+    },
+  });
 
   return updated.rows[0];
 }
@@ -341,11 +394,12 @@ async function insertTransaction({
   processed_by,
   reference_no,
 }) {
+  const receiptNo = await generateReceiptNo(db);
   await db.query(
     `
     insert into treasury_transactions
-    (billing_id, enrollment_id, student_name, email, reference_no, description, amount, payment_method, status, processed_by)
-    values ($1,$2,$3,$4,$5,$6,$7,$8,'Paid',$9)
+    (billing_id, enrollment_id, student_name, email, reference_no, receipt_no, description, amount, payment_method, status, processed_by)
+    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'Paid',$10)
     `,
     [
       billing.id,
@@ -353,6 +407,7 @@ async function insertTransaction({
       billing.student_name,
       billing.email,
       reference_no || `TXN-${Date.now()}`,
+      receiptNo,
       billing.description,
       Number(amount || 0).toFixed(2),
       payment_method || "Cash",

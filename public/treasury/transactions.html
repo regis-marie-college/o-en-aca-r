@@ -8,6 +8,45 @@
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Transaction History</title>
+    <style>
+      .transactions-toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .transactions-toolbar .search-box {
+        flex: 1 1 auto;
+      }
+
+      .transactions-toolbar .btn {
+        padding: 8px 14px;
+        min-height: 36px;
+        font-size: 0.9rem;
+      }
+
+      .receipt-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 720px) {
+        .transactions-toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="users">
@@ -15,7 +54,15 @@
 
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
-        <input class="search-box" value="" placeholder="Search transaction history" />
+        <div class="transactions-toolbar">
+          <input
+            class="search-box"
+            value=""
+            placeholder="Search by student name, Gmail/email, or reference no."
+          />
+          <button type="button" class="btn btn-primary" id="btn-search-transactions">Search</button>
+          <button type="button" class="btn btn-secondary" id="btn-clear-transactions">Clear</button>
+        </div>
 
         <section class="table-section">
           <table id="table-transactions">
@@ -28,6 +75,7 @@
                 <th>Payment Method</th>
                 <th>Processed By</th>
                 <th>Date</th>
+                <th>Receipt</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -54,6 +102,15 @@
 
         tbody.innerHTML = "";
 
+        if (!Array.isArray(data) || !data.length) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8">No transaction history found for the current search.</td>
+            </tr>
+          `;
+          return;
+        }
+
         data.forEach((transaction) => {
           const row = document.createElement("tr");
 
@@ -65,6 +122,16 @@
             <td>${transaction.payment_method}</td>
             <td>${transaction.processed_by || "-"}</td>
             <td>${defaultDate(transaction.created_at)}</td>
+            <td>
+              <a
+                class="receipt-link"
+                href="./receipt.html?id=${encodeURIComponent(transaction.id)}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Print Receipt
+              </a>
+            </td>
           `;
 
           tbody.appendChild(row);
@@ -73,10 +140,23 @@
 
       function initSearch() {
         const searchBox = document.querySelector(".search-box");
+        const searchButton = document.querySelector("#btn-search-transactions");
+        const clearButton = document.querySelector("#btn-clear-transactions");
+
+        function runSearch() {
+          loadTransactions(searchBox.value.trim());
+        }
+
         searchBox.addEventListener("keyup", (event) => {
           if (event.code === "Enter") {
-            loadTransactions(searchBox.value);
+            runSearch();
           }
+        });
+
+        searchButton.addEventListener("click", runSearch);
+        clearButton.addEventListener("click", () => {
+          searchBox.value = "";
+          loadTransactions();
         });
       }
 

@@ -5,9 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/index.css" rel="stylesheet" />
     <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/user.js" defer></script>
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Students</title>
+    <style>
+      .students-toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-end;
+        margin-bottom: 18px;
+      }
+
+      .students-toolbar p {
+        margin: 8px 0 0;
+        color: #64748b;
+      }
+
+      .students-filter {
+        min-width: 220px;
+      }
+
+      .students-filter select {
+        width: 100%;
+      }
+
+      @media (max-width: 720px) {
+        .students-toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .students-filter {
+          min-width: 0;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="users">
@@ -17,6 +51,19 @@
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
 
+        <div class="students-toolbar">
+          <div>
+            <h2>Students</h2>
+            <p>Makikita rito ang current at previous year students base sa enrollment school year.</p>
+          </div>
+          <div class="students-filter">
+            <label for="schoolYearFilter">School Year</label>
+            <select id="schoolYearFilter">
+              <option value="">All School Years</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Table -->
         <section class="table-section">
           <table id="table-users">
@@ -25,7 +72,8 @@
                 <th>ID</th>
                 <th>Name</th>
                 <th>Email</th>
-                <th>Type</th>
+                <th>Program</th>
+                <th>School Year</th>
                 <th>Approved At</th>
               </tr>
             </thead>
@@ -35,26 +83,94 @@
       </main>
     </div>
     <script>
-      async function loadUsers() {
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
+      }
+
+      async function loadSchoolYears() {
+        const select = document.querySelector("#schoolYearFilter");
+
         try {
           const res = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/users/list?type=student`,
+            `${window.APP_CONFIG.API_BASE_URL}/treasury/statistics`,
+          );
+          const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.error || "Failed to load school years");
+          }
+
+          const years = Array.isArray(data.yearly_comparison)
+            ? data.yearly_comparison.map((item) => item.school_year).filter(Boolean)
+            : [];
+
+          select.innerHTML = `
+            <option value="">All School Years</option>
+            ${years
+              .map((year) => `<option value="${escapeHtml(year)}">${escapeHtml(year)}</option>`)
+              .join("")}
+          `;
+        } catch (error) {
+          select.innerHTML = `<option value="">All School Years</option>`;
+        }
+      }
+
+      async function loadUsers() {
+        try {
+          const schoolYear = document.querySelector("#schoolYearFilter")?.value || "";
+          const query = new URLSearchParams({ type: "student" });
+          if (schoolYear) {
+            query.set("school_year", schoolYear);
+          }
+
+          const res = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/users/list?${query.toString()}`,
           );
           const data = await res.json();
 
           const tbody = document.querySelector("#table-users tbody");
           tbody.innerHTML = "";
 
+          if (!Array.isArray(data) || !data.length) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="6">No students found for the selected school year.</td>
+              </tr>
+            `;
+            return;
+          }
+
           data.forEach((user) => {
             const row = document.createElement("tr");
 
-            const { id, last_name, first_name, type, email, created_at } = user;
+            const {
+              id,
+              last_name,
+              first_name,
+              type,
+              email,
+              created_at,
+              program_name,
+              program_code,
+              school_year,
+            } = user;
 
             row.innerHTML = `
-              <td><a href="read.html?id=${id}">${id.substring(0, 6)}</a></td>
-              <td>${last_name} ${first_name}</td>
-              <td>${email}</td>
-              <td>${type}</td>
+              <td><a href="read.html?id=${id}">${escapeHtml(id.substring(0, 6))}</a></td>
+              <td>${escapeHtml(last_name)} ${escapeHtml(first_name)}</td>
+              <td>${escapeHtml(email)}</td>
+              <td>${escapeHtml(program_name || program_code || type || "-")}</td>
+              <td>${escapeHtml(school_year || "-")}</td>
               <td>${defaultDate(created_at)}</td>
             `;
 
@@ -65,7 +181,11 @@
         }
       }
 
-      document.addEventListener("DOMContentLoaded", function () {
+      document.addEventListener("DOMContentLoaded", async function () {
+        await loadSchoolYears();
+        document
+          .querySelector("#schoolYearFilter")
+          .addEventListener("change", loadUsers);
         loadUsers();
       });
     </script>

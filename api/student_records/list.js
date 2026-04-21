@@ -22,7 +22,10 @@ module.exports = async (req, res) => {
       SELECT *
       FROM student_records
       WHERE student_id = $1
-      ORDER BY created_at DESC
+      ORDER BY
+        coalesce(academic_year, school_year) desc,
+        semester asc nulls last,
+        created_at desc
       `,
       [student_id]
     );

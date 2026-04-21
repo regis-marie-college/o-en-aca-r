@@ -1,5 +1,5 @@
-const { okay, notAllowed, badRequest } = require("../../lib/response");
-const db = require("../../services/supabase");
+const { okay, notAllowed, badRequest } = require("../../../lib/response");
+const db = require("../../../services/supabase");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -15,8 +15,8 @@ module.exports = async (req, res) => {
   try {
     const result = await db.query(
       `
-      select id, student_number, last_name, first_name, middle_name, username, email, mobile, type, verified_at, created_at, updated_at
-      from users
+      select *
+      from treasury_transactions
       where id = $1
       limit 1
       `,
