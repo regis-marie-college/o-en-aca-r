@@ -8,98 +8,444 @@
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Enrollments</title>
+    <style>
+      .enrollment-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .status-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+
+      .status-summary-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(248, 251, 255, 0.96);
+        border: 1px solid rgba(148, 184, 255, 0.24);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .status-summary-card span,
+      .status-summary-card strong,
+      .status-summary-card small {
+        display: block;
+      }
+
+      .status-summary-card span {
+        color: #64748b;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .status-summary-card strong {
+        margin: 10px 0 6px;
+        color: #18324d;
+        font-size: 2rem;
+      }
+
+      .status-summary-card small {
+        color: #64748b;
+      }
+
+      .status-board {
+        display: grid;
+        gap: 18px;
+      }
+
+      .status-section {
+        padding: 18px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(148, 184, 255, 0.24);
+        box-shadow: var(--shadow-md);
+      }
+
+      .status-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .status-section-header h2 {
+        margin: 0;
+        color: #18324d;
+      }
+
+      .status-section-header p {
+        margin: 6px 0 0;
+        color: #64748b;
+      }
+
+      .status-count-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.1);
+        color: #1d4ed8;
+        font-weight: 700;
+      }
+
+      .status-section.is-pending {
+        border-color: rgba(245, 158, 11, 0.28);
+        background: linear-gradient(180deg, rgba(255, 252, 245, 0.98), rgba(255, 255, 255, 0.98));
+      }
+
+      .status-section.is-approved {
+        border-color: rgba(16, 185, 129, 0.24);
+      }
+
+      .status-section.is-declined {
+        border-color: rgba(239, 68, 68, 0.22);
+      }
+
+      .status-table-wrap {
+        overflow-x: auto;
+      }
+
+      .status-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .status-table th,
+      .status-table td {
+        padding: 12px 10px;
+        text-align: left;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+        vertical-align: top;
+      }
+
+      .status-table th {
+        color: #64748b;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .status-table td a {
+        color: #1d4ed8;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .student-name strong,
+      .student-name small {
+        display: block;
+      }
+
+      .student-name small,
+      .cell-muted {
+        color: #64748b;
+      }
+
+      .request-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.08);
+        color: #1d4ed8;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .empty-state-inline {
+        padding: 18px;
+        border-radius: 16px;
+        background: rgba(248, 250, 252, 0.96);
+        border: 1px dashed rgba(148, 163, 184, 0.34);
+        color: #64748b;
+      }
+
+      @media (max-width: 1024px) {
+        .status-summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .enrollment-toolbar {
+          grid-template-columns: 1fr;
+        }
+
+        .link-enrollment-form {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .status-summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .status-section {
+          padding: 14px;
+          border-radius: 18px;
+        }
+
+        .status-section-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .status-table th,
+        .status-table td {
+          padding: 10px 8px;
+          font-size: 0.92rem;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="enrollments">
       <div data-component="../../components/sidebar.html"></div>
 
-      <!-- Main Content -->
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
-        <input class="search-box" value="" placeholder="Search" />
-        <a href="form.html" class="link-enrollment-form" target="_blank"
-          >Link to enrollment form</a
-        >
-        <!-- Table -->
-        <section class="table-section">
-          <table id="table-enrollments">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Full Name</th>
-                <th>Email</th>
-                <th>Mobile number</th>
-                <th>Birthday</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </section>
+
+        <div class="enrollment-toolbar">
+          <input class="search-box" value="" placeholder="Search by name, email, status, or ID" />
+          <a href="form.html" class="link-enrollment-form" target="_blank">
+            Link to enrollment form
+          </a>
+        </div>
+
+        <section class="status-summary-grid" id="status-summary"></section>
+        <section class="status-board" id="status-board"></section>
       </main>
     </div>
+
     <script>
+      const STATUS_GROUPS = [
+        {
+          key: "pending",
+          title: "Pending",
+          description: "For review, payment checking, and admin evaluation.",
+          matcher: (status) =>
+            ["pending", "payment submitted", "pending evaluation"].includes(status),
+          sectionClass: "is-pending",
+        },
+        {
+          key: "approved",
+          title: "Approved",
+          description: "Enrollment requests already accepted.",
+          matcher: (status) => status === "approved",
+          sectionClass: "is-approved",
+        },
+        {
+          key: "declined",
+          title: "Declined",
+          description: "Enrollment requests that were not approved.",
+          matcher: (status) => status === "declined",
+          sectionClass: "is-declined",
+        },
+        {
+          key: "other",
+          title: "Other Statuses",
+          description: "Records with uncategorized or custom statuses.",
+          matcher: () => true,
+          sectionClass: "",
+        },
+      ];
+
+      function normalizeStatus(value) {
+        return String(value || "Pending").trim().toLowerCase();
+      }
+
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
+      }
+
+      function groupEnrollments(items) {
+        const grouped = {
+          pending: [],
+          approved: [],
+          declined: [],
+          other: [],
+        };
+
+        items.forEach((enrollment) => {
+          const normalized = normalizeStatus(enrollment.status);
+          const group = STATUS_GROUPS.find((item) => item.matcher(normalized));
+          grouped[group ? group.key : "other"].push(enrollment);
+        });
+
+        return grouped;
+      }
+
+      function renderSummary(grouped) {
+        const summary = document.querySelector("#status-summary");
+        const cards = [
+          {
+            label: "Pending Queue",
+            value: grouped.pending.length,
+            detail: "Top priority for admin review",
+          },
+          {
+            label: "Approved",
+            value: grouped.approved.length,
+            detail: "Accepted enrollment requests",
+          },
+          {
+            label: "Declined",
+            value: grouped.declined.length,
+            detail: "Requests needing follow-up if appealed",
+          },
+          {
+            label: "Total",
+            value:
+              grouped.pending.length +
+              grouped.approved.length +
+              grouped.declined.length +
+              grouped.other.length,
+            detail: "All enrollment records in this view",
+          },
+        ];
+
+        summary.innerHTML = cards
+          .map(
+            (card) => `
+              <article class="status-summary-card">
+                <span>${escapeHtml(card.label)}</span>
+                <strong>${escapeHtml(card.value)}</strong>
+                <small>${escapeHtml(card.detail)}</small>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      function renderRows(items) {
+        if (!items.length) {
+          return '<div class="empty-state-inline">No enrollments in this section.</div>';
+        }
+
+        return `
+          <div class="status-table-wrap">
+            <table class="status-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Student</th>
+                  <th>Request Type</th>
+                  <th>Contact</th>
+                  <th>Birthday</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${items
+                  .map((enrollment) => {
+                    const studentName = `${enrollment.last_name || ""} ${enrollment.first_name || ""} ${
+                      enrollment.middle_name || ""
+                    }`.trim();
+
+                    return `
+                      <tr>
+                        <td>
+                          <a href="read.html?id=${encodeURIComponent(enrollment.id)}">
+                            ${escapeHtml(String(enrollment.id || "").slice(0, 8))}
+                          </a>
+                        </td>
+                        <td class="student-name">
+                          <strong>${escapeHtml(studentName || "-")}</strong>
+                          <small>${escapeHtml(enrollment.program_name || enrollment.program_code || "-")}</small>
+                        </td>
+                        <td>
+                          <span class="request-pill">${escapeHtml(
+                            enrollment.request_type || "New Student",
+                          )}</span>
+                        </td>
+                        <td>
+                          <div>${escapeHtml(enrollment.email || "-")}</div>
+                          <div class="cell-muted">${escapeHtml(enrollment.mobile || "-")}</div>
+                        </td>
+                        <td>${enrollment.birthday ? defaultDate(enrollment.birthday) : "-"}</td>
+                        <td>
+                          <span class="status ${escapeHtml(enrollment.status || "Pending")}">
+                            ${escapeHtml(enrollment.status || "Pending")}
+                          </span>
+                        </td>
+                      </tr>
+                    `;
+                  })
+                  .join("")}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      function renderBoard(grouped) {
+        const board = document.querySelector("#status-board");
+
+        board.innerHTML = STATUS_GROUPS.filter((group) => grouped[group.key].length > 0 || group.key !== "other")
+          .map(
+            (group) => `
+              <section class="status-section ${group.sectionClass}">
+                <div class="status-section-header">
+                  <div>
+                    <h2>${escapeHtml(group.title)}</h2>
+                    <p>${escapeHtml(group.description)}</p>
+                  </div>
+                  <span class="status-count-badge">${grouped[group.key].length}</span>
+                </div>
+                ${renderRows(grouped[group.key])}
+              </section>
+            `,
+          )
+          .join("");
+      }
+
       async function initSearch() {
-        const search_box = document.querySelector(".search-box");
-    
-        search_box.addEventListener("keyup", (e) => {
-          if (e.code === "Enter") {
-            loadEnrollments(search_box.value);
+        const searchBox = document.querySelector(".search-box");
+
+        searchBox.addEventListener("keyup", (event) => {
+          if (event.code === "Enter") {
+            loadEnrollments(searchBox.value);
           }
         });
       }
-    
+
       async function loadEnrollments(search = null) {
         try {
           const res = await fetch(
             `${window.APP_CONFIG.API_BASE_URL}/enrollments/list${
-              search ? "?search=" + search : ""
-            }`
+              search ? "?search=" + encodeURIComponent(search) : ""
+            }`,
           );
-    
           const data = await res.json();
-    
-          const tbody = document.querySelector("#table-enrollments tbody");
-          tbody.innerHTML = "";
-    
-          data.forEach((enrollment) => {
-            const row = document.createElement("tr");
-    
-            const {
-              id,
-              last_name,
-              first_name,
-              middle_name,
-              email,
-              mobile,
-              birthday,
-              status
-            } = enrollment;
-    
-            row.innerHTML = `
-              <td>
-                <a href="read.html?id=${id}">
-                  ${id.substring(0, 6)}
-                </a>
-              </td>
-              <td>${last_name} ${first_name} ${middle_name || ""}</td>
-              <td>${email}</td>
-              <td>${mobile || "-"}</td>
-              <td>${defaultDate(birthday)}</td>
-              <td>
-                <span class="status ${status}">
-                  ${status}
-                </span>
-              </td>
-            `;
-    
-            tbody.appendChild(row);
-          });
+          const grouped = groupEnrollments(Array.isArray(data) ? data : []);
+
+          renderSummary(grouped);
+          renderBoard(grouped);
         } catch (err) {
           console.error("Failed to load enrollments:", err);
         }
       }
-    
+
       document.addEventListener("DOMContentLoaded", function () {
         loadEnrollments();
         initSearch();

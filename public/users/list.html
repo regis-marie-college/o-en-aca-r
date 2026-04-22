@@ -6,66 +6,340 @@
     <link href="../styles/index.css" rel="stylesheet" />
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
-    <title>Users</title>
+    <script src="../scripts/datetime.js" defer></script>
+    <title>User Access</title>
+    <style>
+      .access-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .access-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+
+      .access-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(248, 251, 255, 0.96);
+        border: 1px solid rgba(148, 184, 255, 0.24);
+      }
+
+      .access-card span,
+      .access-card strong,
+      .access-card small {
+        display: block;
+      }
+
+      .access-card span {
+        color: #64748b;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .access-card strong {
+        margin: 10px 0 6px;
+        font-size: 2rem;
+        color: #18324d;
+      }
+
+      .access-card small {
+        color: #64748b;
+      }
+
+      .access-table-wrap {
+        overflow-x: auto;
+      }
+
+      .access-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .access-table th,
+      .access-table td {
+        padding: 12px 10px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+      }
+
+      .access-table th {
+        color: #64748b;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .role-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.08);
+        color: #1d4ed8;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: capitalize;
+      }
+
+      .access-table select {
+        min-width: 140px;
+      }
+
+      .name-cell strong,
+      .name-cell small {
+        display: block;
+      }
+
+      .name-cell small {
+        color: #64748b;
+      }
+
+      .access-note {
+        margin-bottom: 16px;
+        color: #64748b;
+      }
+
+      @media (max-width: 1024px) {
+        .access-summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .access-toolbar {
+          grid-template-columns: 1fr;
+        }
+
+        .access-summary {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="users">
       <div data-component="../../components/sidebar.html"></div>
 
-      <!-- Main Content -->
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
 
-        <a href="../users/create.html" class="btn btn-primary">+ Add Student</a>
-        <!-- Table -->
+        <div class="access-toolbar">
+          <input
+            id="accessSearch"
+            class="search-box"
+            type="search"
+            placeholder="Search by name, email, or role"
+          />
+          <a href="../users/create.html" class="btn btn-primary">+ Create User Account</a>
+        </div>
+
+        <section class="access-summary" id="accessSummary"></section>
+
         <section class="table-section">
-          <h2>Recent Enrollments</h2>
-          <table id="table-users">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Type</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+          <h2>User Access Management</h2>
+          <p class="access-note">
+            Student accounts may register through the public portal. Staff roles such as admin, treasury, and records should be assigned here by an existing admin.
+          </p>
+          <div class="access-table-wrap">
+            <table class="access-table" id="table-users">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Current Role</th>
+                  <th>Change Role</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </section>
       </main>
     </div>
+
     <script>
-      async function loadUsers() {
-        try {
-          const res = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/users/list`,
-          );
-          const data = await res.json();
-          console.log(data);
+      const ALLOWED_ROLES = ["student", "admin", "treasury", "records"];
+      let allUsers = [];
 
-          const tbody = document.querySelector("#table-users tbody");
-          tbody.innerHTML = "";
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
 
-          data.forEach((user) => {
-            const row = document.createElement("tr");
+          return map[char] || char;
+        });
+      }
 
-            const { id, last_name, first_name, type, email } = user;
+      function formatRole(value) {
+        const text = String(value || "student");
+        return text.charAt(0).toUpperCase() + text.slice(1);
+      }
 
-            row.innerHTML = `
-              <td><a href="read.html?id=${id}">${id.substring(0, 6)}</a></td>
-              <td>${last_name} ${first_name}</td>
-              <td>${email}</td>
-              <td>${type}</td>
+      function renderSummary(users) {
+        const summary = document.querySelector("#accessSummary");
+        const counts = ALLOWED_ROLES.reduce((result, role) => {
+          result[role] = users.filter((user) => String(user.type || "student") === role).length;
+          return result;
+        }, {});
+
+        const cards = [
+          { label: "Students", value: counts.student, detail: "Portal users and enrolled students" },
+          { label: "Admins", value: counts.admin, detail: "Full-access system administrators" },
+          { label: "Treasury", value: counts.treasury, detail: "Billing and payment processing staff" },
+          { label: "Records", value: counts.records, detail: "Records office and document staff" },
+        ];
+
+        summary.innerHTML = cards
+          .map(
+            (card) => `
+              <article class="access-card">
+                <span>${escapeHtml(card.label)}</span>
+                <strong>${escapeHtml(card.value)}</strong>
+                <small>${escapeHtml(card.detail)}</small>
+              </article>
+            `,
+          )
+          .join("");
+      }
+
+      function getFilteredUsers() {
+        const searchValue = document.querySelector("#accessSearch").value.trim().toLowerCase();
+
+        return allUsers.filter((user) => {
+          const haystack = [
+            user.id,
+            user.last_name,
+            user.first_name,
+            user.middle_name,
+            user.email,
+            user.type,
+            user.student_number,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return !searchValue || haystack.includes(searchValue);
+        });
+      }
+
+      function renderUsers() {
+        const tbody = document.querySelector("#table-users tbody");
+        const users = getFilteredUsers();
+
+        tbody.innerHTML = users.length
+          ? users
+              .map((user) => {
+                const fullName = [user.last_name, user.first_name, user.middle_name]
+                  .filter(Boolean)
+                  .join(" ");
+
+                return `
+                  <tr>
+                    <td>${escapeHtml(String(user.id || "").slice(0, 8))}</td>
+                    <td class="name-cell">
+                      <strong>${escapeHtml(fullName || "Unnamed User")}</strong>
+                      <small>${escapeHtml(user.student_number || "-")}</small>
+                    </td>
+                    <td>${escapeHtml(user.email || "-")}</td>
+                    <td><span class="role-pill">${escapeHtml(formatRole(user.type || "student"))}</span></td>
+                    <td>
+                      <select class="role-select" data-id="${escapeHtml(user.id)}">
+                        ${ALLOWED_ROLES.map(
+                          (role) => `
+                            <option value="${role}" ${
+                              String(user.type || "student") === role ? "selected" : ""
+                            }>${formatRole(role)}</option>
+                          `,
+                        ).join("")}
+                      </select>
+                    </td>
+                    <td>${user.created_at ? defaultDate(user.created_at) : "-"}</td>
+                  </tr>
+                `;
+              })
+              .join("")
+          : `
+              <tr>
+                <td colspan="6">No users found for the current search.</td>
+              </tr>
             `;
 
-            tbody.appendChild(row);
+        bindRoleSelectors();
+      }
+
+      function bindRoleSelectors() {
+        document.querySelectorAll(".role-select").forEach((select) => {
+          select.addEventListener("change", async () => {
+            const nextRole = select.value;
+            const userId = select.dataset.id;
+
+            try {
+              const response = await fetch(
+                `${window.APP_CONFIG.API_BASE_URL}/users/update-role`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    id: userId,
+                    type: nextRole,
+                  }),
+                },
+              );
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(data.error || "Failed to update role");
+              }
+
+              const index = allUsers.findIndex((user) => user.id === userId);
+              if (index >= 0) {
+                allUsers[index] = { ...allUsers[index], ...data };
+              }
+
+              renderSummary(allUsers);
+              renderUsers();
+            } catch (error) {
+              alert(error.message || "Failed to update user role");
+              await loadUsers();
+            }
           });
+        });
+      }
+
+      async function loadUsers() {
+        try {
+          const res = await fetch(`${window.APP_CONFIG.API_BASE_URL}/users/list`);
+          const data = await res.json();
+
+          allUsers = Array.isArray(data) ? data : [];
+          renderSummary(allUsers);
+          renderUsers();
         } catch (err) {
           console.error("Failed to load users:", err);
         }
       }
 
       document.addEventListener("DOMContentLoaded", function () {
+        document.querySelector("#accessSearch").addEventListener("input", renderUsers);
         loadUsers();
       });
     </script>

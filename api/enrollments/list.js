@@ -22,7 +22,15 @@ module.exports = async (req, res) => {
         email ILIKE '%' || $1 || '%' OR
         mobile ILIKE '%' || $1 || '%' OR
         status ILIKE '%' || $1 || '%'
-      ORDER BY id DESC
+      ORDER BY
+        case
+          when lower(coalesce(status, 'pending')) in ('pending', 'payment submitted', 'pending evaluation') then 1
+          when lower(coalesce(status, '')) = 'approved' then 2
+          when lower(coalesce(status, '')) = 'declined' then 3
+          else 4
+        end asc,
+        created_at desc,
+        id desc
       `,
       [search || null],
     );

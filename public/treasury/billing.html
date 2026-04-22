@@ -540,9 +540,8 @@
               <span class="billing-eyebrow">Treasury Billing</span>
               <h2>Simple billing workspace for quick student payment tracking.</h2>
               <p>
-                Gumawa ng billing, i-monitor ang balances, at mag-record ng
-                payments sa isang malinis na white-and-blue layout na madaling
-                basahin.
+                Create billing records, monitor balances, and record payments
+                in a clean white-and-blue workspace that is easy to review.
               </p>
             </div>
 
@@ -803,7 +802,7 @@
           return "-";
         }
 
-        if (proofValue.startsWith("/uploads/")) {
+        if (proofValue.startsWith("/uploads/") || /^https?:\/\//i.test(proofValue)) {
           const label = escapeHtml(proofValue.split("/").pop() || "View Proof");
           const href = escapeHtml(proofValue);
           return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;

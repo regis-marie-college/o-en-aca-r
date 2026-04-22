@@ -1,10 +1,19 @@
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
+const {
+  assertNoActiveEnrollmentRequest,
+  calculateCourseTotals,
+  isAllowedRequestType,
+  normalizeRequestType,
+  validateFinancialTotals,
+} = require("../../lib/enrollment-rules");
+
 const MISC_FEE = 0;
 const ID_FEE = 300;
 const DOWNPAYMENT_AMOUNT = 2000;
 const PAYMENT_SUBMITTED_STATUS = "Payment Submitted";
+const PENDING_EVALUATION_STATUS = "Pending Evaluation";
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -32,6 +41,8 @@ module.exports = async (req, res) => {
       selected_courses,
       total_units,
       total_amount,
+      student_id,
+      request_type,
       downpayment_amount,
       payment_channel,
       reference_no,
@@ -40,7 +51,6 @@ module.exports = async (req, res) => {
       documents,
     } = body;
 
-    // ✅ Debug log (formatted)
     if (documents) {
       console.log("Documents {");
       Object.entries(documents).forEach(([category, file]) => {
@@ -49,7 +59,6 @@ module.exports = async (req, res) => {
       console.log("}");
     }
 
-    // ✅ Validation
     if (
       !last_name ||
       !first_name ||
@@ -65,32 +74,66 @@ module.exports = async (req, res) => {
       return badRequest(res, "Please select a major for BSED");
     }
 
-    if (!Array.isArray(selected_courses) || selected_courses.length === 0) {
+    const normalizedRequestType = normalizeRequestType(request_type);
+    const isReturningStudent = normalizedRequestType === "Returning Student";
+    const normalizedSelectedCourses = Array.isArray(selected_courses)
+      ? selected_courses
+      : [];
+    const computedTotals = calculateCourseTotals(normalizedSelectedCourses);
+
+    if (!isAllowedRequestType(normalizedRequestType)) {
+      return badRequest(res, "Invalid request type");
+    }
+
+    if (!isReturningStudent && normalizedSelectedCourses.length === 0) {
       return badRequest(res, "Please select at least one course");
     }
 
-    const courseAmount = Number(total_amount || 0);
+    const courseAmount =
+      normalizedSelectedCourses.length > 0
+        ? computedTotals.totalAmount
+        : Number(total_amount || 0);
     const totalAssessment = courseAmount + MISC_FEE + ID_FEE;
-    const minimumDownpayment = Math.min(DOWNPAYMENT_AMOUNT, totalAssessment);
     const submittedDownpayment = Number(downpayment_amount || 0);
+    const nextTotalUnits =
+      normalizedSelectedCourses.length > 0
+        ? computedTotals.totalUnits
+        : Number(total_units || 0);
 
-    if (submittedDownpayment < minimumDownpayment) {
-      return badRequest(
-        res,
-        `Minimum downpayment is PHP ${minimumDownpayment.toFixed(2)}`,
-      );
+    validateFinancialTotals({
+      miscFee: 0,
+      totalUnits: nextTotalUnits,
+      totalAmount: courseAmount,
+    });
+
+    if (!isReturningStudent) {
+      const minimumDownpayment = Math.min(DOWNPAYMENT_AMOUNT, totalAssessment);
+
+      if (submittedDownpayment < minimumDownpayment) {
+        return badRequest(
+          res,
+          `Minimum downpayment is PHP ${minimumDownpayment.toFixed(2)}`,
+        );
+      }
+
+      if (submittedDownpayment > totalAssessment) {
+        return badRequest(res, "Downpayment cannot exceed the total assessment");
+      }
+
+      if (!payment_channel || !reference_no || !proof_of_payment) {
+        return badRequest(
+          res,
+          "Payment channel, reference number, and proof of payment are required",
+        );
+      }
     }
 
-    if (submittedDownpayment > totalAssessment) {
-      return badRequest(res, "Downpayment cannot exceed the total assessment");
-    }
-
-    if (!payment_channel || !reference_no || !proof_of_payment) {
-      return badRequest(
-        res,
-        "Payment channel, reference number, and proof of payment are required",
-      );
-    }
+    await assertNoActiveEnrollmentRequest({
+      executor: db,
+      email,
+      studentId: student_id || null,
+      schoolYear: school_year || defaultSchoolYear,
+    });
 
     const mobileNumberColumn = await db.query(
       `
@@ -101,8 +144,33 @@ module.exports = async (req, res) => {
       limit 1
       `,
     );
-
-    const hasMobileNumberColumn = mobileNumberColumn.rows.length > 0;
+    const studentIdColumn = await db.query(
+      `
+      select 1
+      from information_schema.columns
+      where table_name = 'enrollments'
+        and column_name = 'student_id'
+      limit 1
+      `,
+    );
+    const requestTypeColumn = await db.query(
+      `
+      select 1
+      from information_schema.columns
+      where table_name = 'enrollments'
+        and column_name = 'request_type'
+      limit 1
+      `,
+    );
+    const idPictureColumn = await db.query(
+      `
+      select 1
+      from information_schema.columns
+      where table_name = 'enrollments'
+        and column_name = 'idpic_url'
+      limit 1
+      `,
+    );
 
     const columns = [
       "last_name",
@@ -121,9 +189,19 @@ module.exports = async (req, res) => {
       birthday,
     ];
 
-    if (hasMobileNumberColumn) {
+    if (mobileNumberColumn.rows.length > 0) {
       columns.push("mobile_number");
       values.push(mobile);
+    }
+
+    if (studentIdColumn.rows.length > 0) {
+      columns.push("student_id");
+      values.push(student_id || null);
+    }
+
+    if (requestTypeColumn.rows.length > 0) {
+      columns.push("request_type");
+      values.push(normalizedRequestType);
     }
 
     columns.push(
@@ -147,20 +225,10 @@ module.exports = async (req, res) => {
       school_year || defaultSchoolYear,
       year_level,
       semester,
-      JSON.stringify(selected_courses),
-      Number(total_units || 0),
+      JSON.stringify(normalizedSelectedCourses),
+      nextTotalUnits,
       courseAmount.toFixed(2),
-      PAYMENT_SUBMITTED_STATUS,
-    );
-
-    const idPictureColumn = await db.query(
-      `
-      select 1
-      from information_schema.columns
-      where table_name = 'enrollments'
-        and column_name = 'idpic_url'
-      limit 1
-      `,
+      isReturningStudent ? PENDING_EVALUATION_STATUS : PAYMENT_SUBMITTED_STATUS,
     );
 
     if (idPictureColumn.rows.length > 0) {
@@ -175,12 +243,11 @@ module.exports = async (req, res) => {
         : `$${index + 1}`;
     });
 
-    if (columns.includes("selected_courses")) {
-      const selectedCourseIndex = columns.indexOf("selected_courses");
+    const selectedCourseIndex = columns.indexOf("selected_courses");
+    if (selectedCourseIndex >= 0) {
       placeholders[selectedCourseIndex] = `$${selectedCourseIndex + 1}::jsonb`;
     }
 
-    // ✅ Insert enrollment
     const returningColumns = [
       "id",
       "last_name",
@@ -197,15 +264,24 @@ module.exports = async (req, res) => {
       "selected_courses",
       "total_units",
       "total_amount",
+      "status",
       "created_at",
     ];
+
+    if (studentIdColumn.rows.length > 0) {
+      returningColumns.splice(returningColumns.length - 2, 0, "student_id");
+    }
+
+    if (requestTypeColumn.rows.length > 0) {
+      returningColumns.splice(returningColumns.length - 2, 0, "request_type");
+    }
 
     if (idPictureColumn.rows.length > 0) {
       returningColumns.splice(returningColumns.length - 1, 0, "idpic_url");
     }
 
     const result = await db.query(
-      `insert into enrollments 
+      `insert into enrollments
       (${columns.join(", ")})
       values (${placeholders.join(", ")})
       returning ${returningColumns.join(", ")}`,
@@ -218,19 +294,22 @@ module.exports = async (req, res) => {
         idPictureColumn.rows.length > 0 ? result.rows[0]?.idpic_url || null : null,
     };
 
-    await createInstallmentBillings({
-      enrollment,
-      first_name,
-      last_name,
-      email,
-      courseAmount: Number(total_amount || 0),
-      downpaymentAmount: submittedDownpayment,
-      paymentChannel: payment_channel,
-      referenceNo: reference_no,
-      proofOfPayment: proof_of_payment,
-    });
+    if (!isReturningStudent) {
+      await createInstallmentBillings({
+        enrollment,
+        first_name,
+        last_name,
+        email,
+        courseAmount,
+        downpaymentAmount: submittedDownpayment,
+        initialPayment: {
+          paymentChannel: payment_channel,
+          referenceNo: reference_no,
+          proofOfPayment: proof_of_payment,
+        },
+      });
+    }
 
-    // ✅ Insert documents (category + type)
     if (documents && Object.keys(documents).length > 0) {
       for (const [type, documentValue] of Object.entries(documents)) {
         const fileName =
@@ -250,9 +329,9 @@ module.exports = async (req, res) => {
             `${last_name} ${first_name}`,
             fileName,
             fileUrl,
-            "Requirements",  // default type
-            type,        // form137, idpic, psa, etc.
-          ]
+            "Requirements",
+            type,
+          ],
         );
       }
     }
@@ -271,9 +350,7 @@ async function createInstallmentBillings({
   email,
   courseAmount,
   downpaymentAmount,
-  paymentChannel,
-  referenceNo,
-  proofOfPayment,
+  initialPayment = null,
 }) {
   const studentName = `${first_name} ${last_name}`.trim();
   const totalAssessment = Number(courseAmount || 0) + MISC_FEE + ID_FEE;
@@ -294,9 +371,9 @@ async function createInstallmentBillings({
 
   const billingItems = [
     {
-      description: `Downpayment - Tuition and Fees (Course Fee: PHP ${courseAmount.toFixed(
-        2,
-      )}, Misc Fee: PHP ${MISC_FEE.toFixed(2)}, ID Fee: PHP ${ID_FEE.toFixed(2)})`,
+      description: `Downpayment - Tuition and Fees (Course Fee: PHP ${Number(
+        courseAmount || 0,
+      ).toFixed(2)}, Misc Fee: PHP ${MISC_FEE.toFixed(2)}, ID Fee: PHP ${ID_FEE.toFixed(2)})`,
       amount: downpayment,
     },
     ...installments.map((amount, index) => ({
@@ -311,7 +388,9 @@ async function createInstallmentBillings({
       ? ", payment_method, payment_channel, reference_no, proof_of_payment, payment_status, pending_payment_amount"
       : "";
     const paymentValues = isDownpayment
-      ? ", 'Online', $7, $8, $9, 'Submitted', $5"
+      ? initialPayment
+        ? ", 'Online', $7, $8, $9, 'Submitted', $5"
+        : ", null, null, null, null, null"
       : "";
     const params = [
       enrollment.id,
@@ -323,7 +402,11 @@ async function createInstallmentBillings({
     ];
 
     if (isDownpayment) {
-      params.push(paymentChannel, referenceNo, proofOfPayment);
+      params.push(
+        initialPayment?.paymentChannel || null,
+        initialPayment?.referenceNo || null,
+        initialPayment?.proofOfPayment || null,
+      );
     }
 
     await db.query(

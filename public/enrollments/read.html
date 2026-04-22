@@ -8,25 +8,257 @@
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Enrollments</title>
+    <style>
+      .evaluation-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin: 20px 0;
+      }
+
+      .evaluation-panel {
+        padding: 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .evaluation-panel h3 {
+        margin-bottom: 10px;
+      }
+
+      .course-picker-list {
+        display: grid;
+        gap: 10px;
+        max-height: 360px;
+        overflow: auto;
+      }
+
+      .course-filter-note {
+        margin: 4px 0 14px;
+        color: #94a3b8;
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }
+
+      .course-chip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .course-chip.is-assigned {
+        background: rgba(59, 130, 246, 0.08);
+        border-color: rgba(59, 130, 246, 0.28);
+      }
+
+      .course-chip.is-taken {
+        background: rgba(16, 185, 129, 0.08);
+        border-color: rgba(16, 185, 129, 0.26);
+      }
+
+      .course-chip-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 6px;
+      }
+
+      .course-tag {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        background: rgba(148, 163, 184, 0.15);
+        color: #475569;
+      }
+
+      .course-tag.is-active {
+        background: rgba(37, 99, 235, 0.14);
+        color: #1d4ed8;
+      }
+
+      .course-tag.is-taken {
+        background: rgba(16, 185, 129, 0.16);
+        color: #047857;
+      }
+
+      .course-group-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .course-group {
+        display: grid;
+        gap: 10px;
+      }
+
+      .course-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .course-group-header strong {
+        font-size: 0.98rem;
+      }
+
+      .course-group-header span {
+        color: #94a3b8;
+        font-size: 0.82rem;
+      }
+
+      .course-chip strong,
+      .course-chip small,
+      .course-summary-card span,
+      .course-summary-card strong,
+      .course-summary-card small {
+        display: block;
+      }
+
+      .course-summary-card {
+        margin-top: 12px;
+        padding: 16px;
+        border-radius: 16px;
+        background: rgba(29, 78, 216, 0.12);
+        border: 1px solid rgba(96, 165, 250, 0.28);
+      }
+
+      .action-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 12px 0 20px;
+      }
+
+      .status-help {
+        margin-top: 8px;
+        color: #64748b;
+        font-size: 0.92rem;
+      }
+
+      .notes-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin: 18px 0;
+      }
+
+      .request-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.12);
+        color: #1d4ed8;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+
+      .history-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .history-item {
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .history-item strong,
+      .history-item span,
+      .history-item small {
+        display: block;
+      }
+
+      .history-item span {
+        color: #94a3b8;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .history-item strong {
+        margin: 6px 0;
+      }
+
+      @media (max-width: 900px) {
+        .evaluation-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .notes-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .evaluation-grid {
+          gap: 14px;
+          margin: 16px 0;
+        }
+
+        .evaluation-panel {
+          padding: 14px;
+          border-radius: 16px;
+        }
+
+        .course-chip {
+          flex-direction: column;
+          align-items: flex-start;
+          padding: 12px;
+        }
+
+        .course-chip button {
+          width: 100%;
+        }
+
+        .action-row {
+          gap: 10px;
+          margin: 10px 0 16px;
+        }
+
+        .course-summary-card {
+          padding: 14px;
+          border-radius: 14px;
+        }
+      }
+    </style>
   </head>
   <body>
     <div class="enrollments">
       <div data-component="../../components/sidebar.html"></div>
 
-      <!-- Main Content -->
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
 
         <div class="info-holder"></div>
+
         <div class="form-group">
           <label for="approval">Admin approval</label>
           <select id="approval" name="approval" required>
-            <option value="Pending">-- Select Decision --</option>
-            <option value="Approved">Approved</option>
-            <option value="Pending">Pending</option>
-            <option value="Declined">Declined</option>
+            <option value="">Loading status options...</option>
           </select>
+          <div class="status-help" id="status-help">
+            Status options will be adjusted based on the current enrollment stage.
+          </div>
         </div>
+
         <div class="form-group">
           <label for="misc-fee">Misc Fee</label>
           <input
@@ -40,10 +272,57 @@
           <small>
             Treasury can set the miscellaneous fee here before enrollment approval.
           </small>
-          <div style="margin-top: 10px">
-            <button type="button" id="save-misc-fee">Save Misc Fee</button>
+        </div>
+
+        <div class="notes-grid">
+          <div class="form-group">
+            <label for="admin-notes">Admin Notes</label>
+            <textarea
+              id="admin-notes"
+              name="admin_notes"
+              rows="4"
+              placeholder="Add internal evaluation notes"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label for="decline-reason">Decline Reason</label>
+            <textarea
+              id="decline-reason"
+              name="decline_reason"
+              rows="4"
+              placeholder="Required if declining this enrollment"
+            ></textarea>
           </div>
         </div>
+
+        <section class="table-section">
+          <h2>Admin Course Evaluation</h2>
+          <p class="portal-form-note">
+            For returning students, select the subjects the student should take before approval.
+          </p>
+          <div class="action-row">
+            <button type="button" id="save-evaluation">Save Evaluation</button>
+          </div>
+          <div class="evaluation-grid">
+            <article class="evaluation-panel">
+              <h3>Available Courses</h3>
+              <p class="course-filter-note" id="available-courses-note">
+                Loading courses for this student's program...
+              </p>
+              <div class="course-picker-list" id="available-courses"></div>
+            </article>
+            <article class="evaluation-panel">
+              <h3>Assigned Courses</h3>
+              <div class="course-picker-list" id="selected-courses"></div>
+              <div class="course-summary-card" id="course-summary-card">
+                <span>Assessment Summary</span>
+                <strong>Total Units: 0</strong>
+                <small>Total Amount: PHP 0.00</small>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <section class="table-section">
           <h2>Submitted Documents</h2>
           <table id="table-documents">
@@ -53,181 +332,103 @@
                 <th>Full Name</th>
                 <th>File</th>
                 <th>Type</th>
+                <th>Link</th>
                 <th>Submitted At</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </section>
+
+        <section class="table-section">
+          <h2>Enrollment History</h2>
+          <div id="audit-history" class="history-list"></div>
+        </section>
       </main>
-      <div id="preview">
-        <div class="preview-box">
-          <button onclick="closePreview()">✕</button>
-          <iframe id="frame"></iframe>
-        </div>
-      </div>
     </div>
+
     <script>
-      let user_data = {};
+      let enrollmentData = null;
+      let availableCourses = [];
+      const selectedCourses = new Map();
+      const takenCourseKeys = new Set();
 
-      async function initApproval() {
-        try {
-          const approval = document.querySelector("#approval");
-          const miscFeeInput = document.querySelector("#misc-fee");
-
-          const params = new URLSearchParams(window.location.search);
-          const id = params.get("id");
-
-          approval.addEventListener("change", async () => {
-            delete user_data.status;
-
-            const payload = {
-              ...user_data,
-              id,
-              status: approval.value,
-              misc_fee: miscFeeInput.value,
-            };
-
-            const response = await fetch(
-              `${window.APP_CONFIG.API_BASE_URL}/enrollments/update-status`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
-              },
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-              alert(data.error || "Failed to update enrollment status");
-            }
-
-            readEnrollment();
-          });
-        } catch (err) {
-          console.error("Failed to load enrollments:", err);
-        }
-      }
-
-      async function loadDocuments() {
+      function getEnrollmentId() {
         const params = new URLSearchParams(window.location.search);
-        const id = params.get("id");
+        return params.get("id");
+      }
 
-        try {
-          const res = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/documents/list?enrollment_id=${id}`,
-          );
-          const data = await res.json();
+      function normalizeRequestType(value) {
+        const text = String(value || "").trim().toLowerCase();
 
-          const tbody = document.querySelector("#table-documents tbody");
-          tbody.innerHTML = "";
+        if (text === "returning student" || text === "returning_student") {
+          return "Returning Student";
+        }
 
-          data.forEach((doc) => {
-            const row = document.createElement("tr");
+        return "New Student";
+      }
 
-            const { id, user_full_name, name, type, created_at } = doc;
+      function normalizeStatus(value) {
+        const text = String(value || "").trim().toLowerCase();
 
-            row.innerHTML = `
-              <td><a href="#" onclick="openPreview(event)">${id.substring(0, 6)}</a></td>
-              <td>${user_full_name}</td>
-              <td>${name}</td>
-              <td>${type}</td>
-              <td>${defaultDate(created_at)}</td>
-            `;
-
-            tbody.appendChild(row);
-          });
-        } catch (err) {
-          console.error("Failed to load enrollments:", err);
+        switch (text) {
+          case "approved":
+            return "Approved";
+          case "declined":
+          case "denied":
+            return "Declined";
+          case "payment submitted":
+            return "Payment Submitted";
+          case "pending evaluation":
+            return "Pending Evaluation";
+          case "pending":
+          default:
+            return "Pending";
         }
       }
 
-      async function saveMiscFee() {
-        try {
-          const approval = document.querySelector("#approval");
-          const miscFeeInput = document.querySelector("#misc-fee");
-          const params = new URLSearchParams(window.location.search);
-          const id = params.get("id");
+      function getAllowedStatuses(requestType, currentStatus) {
+        const normalizedRequestType = normalizeRequestType(requestType);
+        const normalizedCurrent = normalizeStatus(currentStatus);
 
-          const response = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/enrollments/update-status`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                id,
-                status: approval.value || user_data.status || "Pending",
-                misc_fee: miscFeeInput.value,
-              }),
-            },
-          );
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            alert(data.error || "Failed to save misc fee");
-            return;
-          }
-
-          alert("Misc fee saved.");
-          await readEnrollment();
-        } catch (err) {
-          console.error("Failed to save misc fee:", err);
-          alert("Failed to save misc fee");
+        if (normalizedCurrent === "Approved" || normalizedCurrent === "Declined") {
+          return [normalizedCurrent];
         }
+
+        if (normalizedRequestType === "Returning Student") {
+          return ["Pending Evaluation", "Approved", "Declined"];
+        }
+
+        if (normalizedCurrent === "Pending") {
+          return ["Pending", "Payment Submitted", "Approved", "Declined"];
+        }
+
+        return ["Payment Submitted", "Approved", "Declined"];
       }
 
-      async function readEnrollment() {
-        try {
-          const params = new URLSearchParams(window.location.search);
-          const id = params.get("id");
+      function renderStatusOptions(requestType, currentStatus) {
+        const approval = document.querySelector("#approval");
+        const help = document.querySelector("#status-help");
+        const allowedStatuses = getAllowedStatuses(requestType, currentStatus);
+        const normalizedCurrent = normalizeStatus(currentStatus);
+        const normalizedRequestType = normalizeRequestType(requestType);
 
-          const res = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/enrollments/read?id=${id}`,
-          );
+        approval.innerHTML = allowedStatuses
+          .map(
+            (status) => `
+              <option value="${escapeHtml(status)}">${escapeHtml(status)}</option>
+            `,
+          )
+          .join("");
 
-          const data = await res.json();
+        approval.value = allowedStatuses.includes(normalizedCurrent)
+          ? normalizedCurrent
+          : allowedStatuses[0] || normalizedCurrent;
 
-          user_data = data;
-          const approval = document.querySelector("#approval");
-          const miscFeeInput = document.querySelector("#misc-fee");
-          const downpayment = data.downpayment_billing || {};
-          const proofValue = String(downpayment.proof_of_payment || "").trim();
-          const proofLink = proofValue
-            ? `<a href="${proofValue}" target="_blank" rel="noopener noreferrer">View Proof</a>`
-            : "-";
-
-          const info = document.querySelector(".info-holder");
-
-          info.innerHTML = `
-            <p><strong>ID:</strong> <span style="color: #1d4ed8; font-weight: 700;">${data.id}</span></p>
-            <p><strong>Name:</strong> ${data.first_name} ${data.middle_name} ${data.last_name}</p>
-            <p><strong>Email:</strong> ${data.email}</p>
-            <p><strong>Mobile:</strong> ${data.mobile || "-"}</p>
-            <p><strong>Birthday:</strong> ${defaultDate(data.birthday)}</p>
-            <p><strong>Created:</strong> ${defaultDate(data.created_at)}</p>
-            <p><strong>Updated:</strong> ${defaultDate(data.updated_at)}</p>
-            <p><strong>Status:</strong> ${data.status || "Pending"}</p>
-            <p><strong>Misc Fee:</strong> ${formatCurrency(data.misc_fee || 0)}</p>
-            <hr style="margin:16px 0;border:none;border-top:1px solid rgba(255,255,255,.2);" />
-            <p><strong>Downpayment:</strong> ${formatCurrency(downpayment.amount || 0)}</p>
-            <p><strong>Payment Status:</strong> ${escapeHtml(downpayment.payment_status || "No payment submitted")}</p>
-            <p><strong>Payment Channel:</strong> ${escapeHtml(downpayment.payment_channel || "-")}</p>
-            <p><strong>Reference No:</strong> ${escapeHtml(downpayment.reference_no || "-")}</p>
-            <p><strong>Treasury Note:</strong> ${escapeHtml(downpayment.notes || "-")}</p>
-            <p><strong>Proof:</strong> ${proofLink}</p>
-          `;
-
-          approval.value = data.status || "Pending";
-          miscFeeInput.value = Number(data.misc_fee || 0);
-        } catch (err) {
-          console.error("Failed to load enrollments:", err);
-        }
+        help.textContent =
+          normalizedRequestType === "Returning Student"
+            ? "Returning student requests move through admin evaluation before approval."
+            : "New student requests usually move from payment submission to approval or decline.";
       }
 
       function formatCurrency(value) {
@@ -251,35 +452,473 @@
         });
       }
 
-      function openPreview(e) {
-        e.preventDefault();
+      function parseSelectedCourses(value) {
+        if (Array.isArray(value)) {
+          return value;
+        }
 
-        const preview = document.getElementById("preview");
-        const frame = document.getElementById("frame");
+        if (!value) {
+          return [];
+        }
 
-        frame.srcdoc = `
-          <html>
-            <body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;flex-direction:column;">
-              <img src="https://images.immediate.co.uk/production/volatile/sites/3/2018/04/avengers-infinity-war-character-posters-55c281a.jpg" width="480" height="480"/>
-              <p>Preview not available yet</p>
-            </body>
-          </html>
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function formatAuditAction(action) {
+        return String(action || "")
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (char) => char.toUpperCase()) || "Update";
+      }
+
+      function renderAuditLogs(items) {
+        const container = document.querySelector("#audit-history");
+        if (!container) return;
+
+        if (!Array.isArray(items) || !items.length) {
+          container.innerHTML =
+            '<div class="empty-state">No enrollment history recorded yet.</div>';
+          return;
+        }
+
+        container.innerHTML = items
+          .map((item) => {
+            const details = item.details && typeof item.details === "object"
+              ? item.details
+              : {};
+            const detailLines = Object.entries(details)
+              .slice(0, 4)
+              .map(
+                ([key, value]) =>
+                  `<small><strong>${escapeHtml(
+                    key.replace(/_/g, " "),
+                  )}:</strong> ${escapeHtml(
+                    Array.isArray(value) ? JSON.stringify(value) : value,
+                  )}</small>`,
+              )
+              .join("");
+
+            return `
+              <article class="history-item">
+                <span>${escapeHtml(item.created_at ? defaultDate(item.created_at) : "-")}</span>
+                <strong>${escapeHtml(formatAuditAction(item.action))}</strong>
+                <small>Actor: ${escapeHtml(item.actor || item.actor_type || "System")}</small>
+                ${detailLines || '<small>No additional details.</small>'}
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function getSelectedCourseArray() {
+        return Array.from(selectedCourses.values());
+      }
+
+      function normalizeCourseKey(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ");
+      }
+
+      function isCourseTaken(course) {
+        return (
+          takenCourseKeys.has(normalizeCourseKey(course.id)) ||
+          takenCourseKeys.has(normalizeCourseKey(course.code)) ||
+          takenCourseKeys.has(normalizeCourseKey(course.name))
+        );
+      }
+
+      function groupCoursesByAcademicSlot(courses) {
+        const groups = new Map();
+
+        courses.forEach((course) => {
+          const yearLevel = String(course.year_level || "Other Year Level");
+          const semester = String(course.semester || "Other Semester");
+          const groupKey = `${yearLevel}__${semester}`;
+
+          if (!groups.has(groupKey)) {
+            groups.set(groupKey, {
+              yearLevel,
+              semester,
+              items: [],
+            });
+          }
+
+          groups.get(groupKey).items.push(course);
+        });
+
+        return Array.from(groups.values()).sort((left, right) => {
+          return `${left.yearLevel} ${left.semester}`.localeCompare(
+            `${right.yearLevel} ${right.semester}`,
+          );
+        });
+      }
+
+      function updateCourseSummary() {
+        const courses = getSelectedCourseArray();
+        const totalUnits = courses.reduce(
+          (sum, course) => sum + Number(course.units || 0),
+          0,
+        );
+        const totalAmount = courses.reduce(
+          (sum, course) => sum + Number(course.amount || 0),
+          0,
+        );
+        const summary = document.querySelector("#course-summary-card");
+
+        summary.innerHTML = `
+          <span>Assessment Summary</span>
+          <strong>Total Units: ${totalUnits}</strong>
+          <small>Total Amount: ${formatCurrency(totalAmount)}</small>
+        `;
+      }
+
+      function renderCourseLists() {
+        const availableContainer = document.querySelector("#available-courses");
+        const selectedContainer = document.querySelector("#selected-courses");
+        const selectedIds = new Set(getSelectedCourseArray().map((course) => course.id));
+        const groupedCourses = groupCoursesByAcademicSlot(availableCourses);
+
+        availableContainer.innerHTML = groupedCourses.length
+          ? `<div class="course-group-list">${groupedCourses
+              .map((group) => {
+                const courseCards = group.items
+                  .map((course) => {
+                    const isAssigned = selectedIds.has(course.id);
+                    const taken = isCourseTaken(course);
+
+                    return `
+                      <div class="course-chip ${isAssigned ? "is-assigned" : ""} ${taken ? "is-taken" : ""}">
+                        <div>
+                          <strong>${escapeHtml(course.name || "-")}</strong>
+                          <small>${escapeHtml(course.code || "No code")} | ${escapeHtml(course.units || 0)} units | ${formatCurrency(
+                            course.amount || Number(course.units || 0) * 300,
+                          )}</small>
+                          <div class="course-chip-meta">
+                            <span class="course-tag">${escapeHtml(group.yearLevel)}</span>
+                            <span class="course-tag">${escapeHtml(group.semester)}</span>
+                            ${
+                              course.major
+                                ? `<span class="course-tag">${escapeHtml(course.major)}</span>`
+                                : ""
+                            }
+                            ${
+                              isAssigned
+                                ? '<span class="course-tag is-active">Assigned</span>'
+                                : ""
+                            }
+                            ${
+                              taken
+                                ? '<span class="course-tag is-taken">Already Taken</span>'
+                                : ""
+                            }
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          class="btn btn-secondary btn-assign-course"
+                          data-id="${escapeHtml(course.id)}"
+                          ${isAssigned ? "disabled" : ""}
+                        >
+                          ${isAssigned ? "Assigned" : "Assign"}
+                        </button>
+                      </div>
+                    `;
+                  })
+                  .join("");
+
+                return `
+                  <section class="course-group">
+                    <div class="course-group-header">
+                      <strong>${escapeHtml(group.yearLevel)} • ${escapeHtml(group.semester)}</strong>
+                      <span>${group.items.length} course(s)</span>
+                    </div>
+                    ${courseCards}
+                  </section>
+                `;
+              })
+              .join("")}</div>`
+          : `<div class="empty-state">No matching courses available for this enrollment.</div>`;
+
+        selectedContainer.innerHTML = selectedIds.size
+          ? getSelectedCourseArray()
+              .map(
+                (course) => `
+                  <div class="course-chip">
+                    <div>
+                      <strong>${escapeHtml(course.name || "-")}</strong>
+                      <small>${escapeHtml(course.code || "No code")} | ${escapeHtml(course.units || 0)} units | ${formatCurrency(
+                        course.amount || Number(course.units || 0) * 300,
+                      )}</small>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-remove-course" data-id="${escapeHtml(course.id)}">Remove</button>
+                  </div>
+                `,
+              )
+              .join("")
+          : `<div class="empty-state">No courses assigned yet.</div>`;
+
+        updateCourseSummary();
+        bindCourseButtons();
+      }
+
+      function updateAvailableCoursesNote(message) {
+        const note = document.querySelector("#available-courses-note");
+        if (note) {
+          note.textContent = message;
+        }
+      }
+
+      function bindCourseButtons() {
+        document.querySelectorAll(".btn-assign-course").forEach((button) => {
+          button.addEventListener("click", () => {
+            const course = availableCourses.find((item) => item.id === button.dataset.id);
+            if (!course) return;
+
+            selectedCourses.set(course.id, {
+              id: course.id,
+              code: course.code || "",
+              name: course.name || "",
+              units: Number(course.units || 0),
+              amount: Number(course.amount || Number(course.units || 0) * 300),
+            });
+            renderCourseLists();
+          });
+        });
+
+        document.querySelectorAll(".btn-remove-course").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectedCourses.delete(button.dataset.id);
+            renderCourseLists();
+          });
+        });
+      }
+
+      async function loadAvailableCourses() {
+        if (!enrollmentData?.program_id) {
+          availableCourses = [];
+          updateAvailableCoursesNote("No program is assigned to this enrollment yet.");
+          renderCourseLists();
+          return;
+        }
+
+        const query = new URLSearchParams({
+          program_id: enrollmentData.program_id,
+        });
+
+        if (enrollmentData.major) {
+          query.set("major", enrollmentData.major);
+        }
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/courses/list?${query.toString()}`,
+        );
+        const data = await response.json();
+        availableCourses = Array.isArray(data) ? data : [];
+
+        const currentSlotCount = availableCourses.filter((course) => {
+          const sameYearLevel = String(course.year_level || "") === String(enrollmentData.year_level || "");
+          const sameSemester = String(course.semester || "") === String(enrollmentData.semester || "");
+          return sameYearLevel && sameSemester;
+        }).length;
+
+        updateAvailableCoursesNote(
+          availableCourses.length
+            ? `Showing all ${availableCourses.length} course(s) for ${
+                enrollmentData.program_name || enrollmentData.program_code || "this program"
+              }${enrollmentData.major ? `, ${enrollmentData.major}` : ""}. ${
+                currentSlotCount
+                  ? `${currentSlotCount} course(s) match the student's current ${enrollmentData.year_level || "year level"} / ${enrollmentData.semester || "semester"}.`
+                  : "No exact courses match the student's current year level and semester."
+              }`
+            : `No available courses found for ${
+                enrollmentData.program_name || enrollmentData.program_code || "this program"
+              }${enrollmentData.major ? `, ${enrollmentData.major}` : ""}.`,
+        );
+
+        renderCourseLists();
+      }
+
+      async function loadDocuments() {
+        const id = getEnrollmentId();
+        const res = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/documents/list?enrollment_id=${id}`,
+        );
+        const data = await res.json();
+        const tbody = document.querySelector("#table-documents tbody");
+        tbody.innerHTML = "";
+
+        data.forEach((doc) => {
+          const row = document.createElement("tr");
+          const link = String(doc.description || "").trim();
+          row.innerHTML = `
+            <td>${escapeHtml(String(doc.id || "").slice(0, 8))}</td>
+            <td>${escapeHtml(doc.user_full_name || "-")}</td>
+            <td>${escapeHtml(doc.name || "-")}</td>
+            <td>${escapeHtml(doc.type || "-")}</td>
+            <td>${
+              link
+                ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Open</a>`
+                : "-"
+            }</td>
+            <td>${doc.created_at ? defaultDate(doc.created_at) : "-"}</td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      async function submitEvaluation(statusValue) {
+        const miscFeeInput = document.querySelector("#misc-fee");
+        const adminNotesInput = document.querySelector("#admin-notes");
+        const declineReasonInput = document.querySelector("#decline-reason");
+        const courses = getSelectedCourseArray();
+        const totalUnits = courses.reduce(
+          (sum, course) => sum + Number(course.units || 0),
+          0,
+        );
+        const totalAmount = courses.reduce(
+          (sum, course) => sum + Number(course.amount || 0),
+          0,
+        );
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/enrollments/update-status`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: getEnrollmentId(),
+              status: statusValue,
+              misc_fee: miscFeeInput.value,
+              admin_notes: adminNotesInput.value,
+              decline_reason: declineReasonInput.value,
+              processed_by: "Admin",
+              selected_courses: courses,
+              total_units: totalUnits,
+              total_amount: totalAmount,
+              program_id: enrollmentData?.program_id,
+              program_name: enrollmentData?.program_name,
+              program_code: enrollmentData?.program_code,
+              major: enrollmentData?.major,
+              year_level: enrollmentData?.year_level,
+              semester: enrollmentData?.semester,
+              school_year: enrollmentData?.school_year,
+            }),
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.error || "Failed to update enrollment");
+          return false;
+        }
+
+        return true;
+      }
+
+      async function readEnrollment() {
+        const id = getEnrollmentId();
+        const res = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/enrollments/read?id=${id}`,
+        );
+        const data = await res.json();
+
+        enrollmentData = data;
+        selectedCourses.clear();
+        takenCourseKeys.clear();
+        parseSelectedCourses(data?.selected_courses).forEach((course) => {
+          selectedCourses.set(course.id, {
+            id: course.id,
+            code: course.code || "",
+            name: course.name || "",
+            units: Number(course.units || 0),
+            amount: Number(course.amount || Number(course.units || 0) * 300),
+          });
+        });
+        (Array.isArray(data?.taken_courses) ? data.taken_courses : []).forEach((course) => {
+          takenCourseKeys.add(normalizeCourseKey(course.course_id));
+          takenCourseKeys.add(normalizeCourseKey(course.course_name));
+        });
+
+        const approval = document.querySelector("#approval");
+        const miscFeeInput = document.querySelector("#misc-fee");
+        const adminNotesInput = document.querySelector("#admin-notes");
+        const declineReasonInput = document.querySelector("#decline-reason");
+        const downpayment = data.downpayment_billing || {};
+        const proofValue = String(downpayment.proof_of_payment || "").trim();
+        const proofLink = proofValue
+          ? `<a href="${escapeHtml(proofValue)}" target="_blank" rel="noopener noreferrer">View Proof</a>`
+          : "-";
+
+        document.querySelector(".info-holder").innerHTML = `
+          <p><strong>ID:</strong> <span style="color: #1d4ed8; font-weight: 700;">${escapeHtml(data.id)}</span></p>
+          <p><strong>Request Type:</strong> <span class="request-badge">${escapeHtml(data.request_type || "New Student")}</span></p>
+          <p><strong>Student ID:</strong> ${escapeHtml(data.student_id || "-")}</p>
+          <p><strong>Name:</strong> ${escapeHtml(data.first_name)} ${escapeHtml(data.middle_name || "")} ${escapeHtml(data.last_name)}</p>
+          <p><strong>Email:</strong> ${escapeHtml(data.email || "-")}</p>
+          <p><strong>Mobile:</strong> ${escapeHtml(data.mobile || "-")}</p>
+          <p><strong>Birthday:</strong> ${data.birthday ? defaultDate(data.birthday) : "-"}</p>
+          <p><strong>Program:</strong> ${escapeHtml(data.program_name || data.program_code || "-")}</p>
+          <p><strong>Major:</strong> ${escapeHtml(data.major || "-")}</p>
+          <p><strong>Year / Semester:</strong> ${escapeHtml(data.year_level || "-")} / ${escapeHtml(data.semester || "-")}</p>
+          <p><strong>School Year:</strong> ${escapeHtml(data.school_year || "-")}</p>
+          <p><strong>Status:</strong> ${escapeHtml(data.status || "Pending")}</p>
+          <p><strong>Evaluated By:</strong> ${escapeHtml(data.evaluated_by || "-")}</p>
+          <p><strong>Evaluated At:</strong> ${data.evaluated_at ? defaultDate(data.evaluated_at) : "-"}</p>
+          <p><strong>Misc Fee:</strong> ${formatCurrency(data.misc_fee || 0)}</p>
+          <hr style="margin:16px 0;border:none;border-top:1px solid rgba(255,255,255,.2);" />
+          <p><strong>Downpayment:</strong> ${formatCurrency(downpayment.amount || 0)}</p>
+          <p><strong>Payment Status:</strong> ${escapeHtml(downpayment.payment_status || "No payment submitted")}</p>
+          <p><strong>Payment Channel:</strong> ${escapeHtml(downpayment.payment_channel || "-")}</p>
+          <p><strong>Reference No:</strong> ${escapeHtml(downpayment.reference_no || "-")}</p>
+          <p><strong>Treasury Note:</strong> ${escapeHtml(downpayment.notes || "-")}</p>
+          <p><strong>Proof:</strong> ${proofLink}</p>
         `;
 
-        preview.style.display = "flex";
+        renderStatusOptions(data.request_type || "New Student", data.status || "Pending");
+        miscFeeInput.value = Number(data.misc_fee || 0);
+        adminNotesInput.value = data.admin_notes || "";
+        declineReasonInput.value = data.decline_reason || "";
+        renderAuditLogs(data.audit_logs || []);
+
+        await loadAvailableCourses();
       }
 
-      function closePreview() {
-        document.getElementById("preview").style.display = "none";
-      }
+      function initApproval() {
+        const approval = document.querySelector("#approval");
 
-      document.addEventListener("DOMContentLoaded", function () {
-        initApproval();
+        approval.addEventListener("change", async () => {
+          const saved = await submitEvaluation(approval.value);
+          if (saved) {
+            await readEnrollment();
+          }
+        });
+
         document
-          .querySelector("#save-misc-fee")
-          .addEventListener("click", saveMiscFee);
-        loadDocuments();
-        readEnrollment();
+          .querySelector("#save-evaluation")
+          .addEventListener("click", async () => {
+            const saved = await submitEvaluation(
+              approval.value || enrollmentData?.status || "Pending",
+            );
+
+            if (saved) {
+              alert("Evaluation saved.");
+              await readEnrollment();
+            }
+          });
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        initApproval();
+        await Promise.all([readEnrollment(), loadDocuments()]);
       });
     </script>
   </body>

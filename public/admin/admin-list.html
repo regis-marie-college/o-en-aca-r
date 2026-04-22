@@ -7,6 +7,14 @@
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <title>Admins</title>
+    <style>
+      .staff-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+    </style>
   </head>
   <body>
     <div class="users">
@@ -16,9 +24,14 @@
       <main class="main">
         <div data-component="../../components/topbar.html"></div>
 
-        <a href="../users/create.html?type=admin" class="btn btn-primary">+ Add Admin</a>
+        <div class="staff-actions">
+          <a href="../users/create.html?type=admin" class="btn btn-primary">+ Add Admin</a>
+          <a href="../users/create.html?type=treasury" class="btn btn-secondary">+ Add Treasury</a>
+          <a href="../users/create.html?type=records" class="btn btn-secondary">+ Add Records</a>
+        </div>
         <!-- Table -->
         <section class="table-section">
+          <h2>Admin Accounts</h2>
           <table id="table-users">
             <thead>
               <tr>

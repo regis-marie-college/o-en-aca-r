@@ -57,7 +57,7 @@
           return "-";
         }
 
-        if (proofValue.startsWith("/uploads/")) {
+        if (proofValue.startsWith("/uploads/") || /^https?:\/\//i.test(proofValue)) {
           const label = escapeHtml(proofValue.split("/").pop() || "View Proof");
           const href = escapeHtml(proofValue);
           return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;

@@ -159,6 +159,44 @@
         grid-column: 1 / -1;
       }
 
+      .reenrollment-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .reenrollment-form .portal-form-note,
+      .reenrollment-form button,
+      .reenrollment-status-card {
+        grid-column: 1 / -1;
+      }
+
+      .reenrollment-status-card {
+        padding: 16px 18px;
+        border-radius: 16px;
+        border: 1px solid rgba(59, 130, 246, 0.18);
+        background: linear-gradient(180deg, #f8fbff, #ffffff);
+      }
+
+      .reenrollment-status-card strong,
+      .reenrollment-status-card span,
+      .reenrollment-status-card small {
+        display: block;
+      }
+
+      .reenrollment-status-card span {
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #5f7590;
+      }
+
+      .reenrollment-status-card strong {
+        margin: 8px 0 4px;
+        color: #123055;
+      }
+
       @media (max-width: 960px) {
         .billing-payment-layout {
           grid-template-columns: 1fr;
@@ -166,6 +204,26 @@
       }
 
       @media (max-width: 640px) {
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .table-section[style*="display: flex"] {
+          flex-direction: column;
+          align-items: flex-start !important;
+        }
+
+        #student-portal-photo {
+          width: 64px !important;
+          height: 64px !important;
+          border-radius: 18px !important;
+        }
+
+        .reenrollment-form {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
         .document-request-form {
           grid-template-columns: 1fr;
           gap: 12px;
@@ -180,8 +238,28 @@
           padding: 13px 14px;
         }
 
+        .document-choice span {
+          font-size: 0.95rem;
+        }
+
         .document-request-form button {
           width: 100%;
+        }
+
+        .billing-payment-layout {
+          gap: 16px;
+        }
+
+        .installment-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .installment-card,
+        .portal-billing-highlight,
+        .reenrollment-status-card {
+          padding: 14px;
+          border-radius: 16px;
         }
       }
     </style>
@@ -271,6 +349,43 @@
           </table>
         </section>
 
+        <section class="table-section" style="margin-bottom: 24px">
+          <h2>Re-Enrollment Request</h2>
+          <form id="reenrollment-form" class="reenrollment-form">
+            <div class="reenrollment-status-card" id="reenrollment-status-card">
+              <span>Request Status</span>
+              <strong>No request submitted yet.</strong>
+              <small>Returning students can request enrollment here. Admin will evaluate and assign your subjects.</small>
+            </div>
+            <select name="program" id="reenrollment-program" required>
+              <option value="">Select Program</option>
+            </select>
+            <select name="year_level" id="reenrollment-year-level" required>
+              <option value="">Select Year Level</option>
+              <option value="1st Year">1st Year</option>
+              <option value="2nd Year">2nd Year</option>
+              <option value="3rd Year">3rd Year</option>
+              <option value="4th Year">4th Year</option>
+            </select>
+            <select name="semester" id="reenrollment-semester" required>
+              <option value="">Select Semester</option>
+              <option value="1st Sem">1st Sem</option>
+              <option value="2nd Sem">2nd Sem</option>
+              <option value="3rd Sem">3rd Sem</option>
+            </select>
+            <input
+              name="notes"
+              id="reenrollment-notes"
+              placeholder="Optional note for admin evaluation"
+              autocomplete="off"
+            />
+            <div class="portal-form-note">
+              Submit a returning student enrollment request. Admin will review your status and select the courses you need to take.
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Re-Enrollment Request</button>
+          </form>
+        </section>
+
         <section
           class="table-section"
           id="billing-summary"
@@ -343,8 +458,8 @@
             <div>
               <h2>School Billing Payments</h2>
               <p class="portal-form-note">
-                Piliin ang billing item na may balance para mabayaran ang
-                downpayment o anumang 1st to 4th payment installment.
+                Select the billing item with an outstanding balance to pay the
+                downpayment or any 1st to 4th payment installment.
               </p>
               <div class="installment-grid" id="installment-cards"></div>
             </div>
@@ -442,7 +557,7 @@
                 </label>
               </div>
               <div class="portal-form-note">
-                Tap each document you want to request. Each document costs PHP
+                Select each document you want to request. Each document costs PHP
                 300.00.
               </div>
             </div>
@@ -502,6 +617,8 @@
       const DOCUMENT_REQUEST_AMOUNT = 300;
       let availablePaymentOptions = [];
       let outstandingBillings = [];
+      let reenrollmentPrograms = [];
+      let latestEnrollmentRequest = null;
       const INSTALLMENT_ORDER = [
         "Downpayment",
         "1st Payment",
@@ -585,6 +702,137 @@
 
       function normalizeValue(value) {
         return String(value || "").trim().toLowerCase();
+      }
+
+      function getReenrollmentProgramParts() {
+        const value =
+          document.querySelector("#reenrollment-program")?.value || "";
+        const [programId, programName, programCode, programMajor] = value.split(":");
+        return {
+          programId,
+          programName,
+          programCode,
+          programMajor,
+        };
+      }
+
+      function setReenrollmentDefaults(source) {
+        const programSelect = document.querySelector("#reenrollment-program");
+        const yearLevelSelect = document.querySelector("#reenrollment-year-level");
+        const semesterSelect = document.querySelector("#reenrollment-semester");
+
+        if (!source || !programSelect) {
+          return;
+        }
+
+        const matchedValue = Array.from(programSelect.options)
+          .map((option) => option.value)
+          .find((value) => {
+            const [programId, , programCode, programMajor] = value.split(":");
+            const sameProgram =
+              String(programId || "") === String(source.program_id || "");
+            const sameCode =
+              String(programCode || "").toUpperCase() ===
+              String(source.program_code || "").toUpperCase();
+            const sameMajor =
+              String(programMajor || "") === String(source.major || "");
+            return sameProgram && sameCode && sameMajor;
+          });
+
+        if (matchedValue) {
+          programSelect.value = matchedValue;
+        }
+
+        if (yearLevelSelect && source.year_level) {
+          yearLevelSelect.value = source.year_level;
+        }
+
+        if (semesterSelect && source.semester) {
+          semesterSelect.value = source.semester;
+        }
+      }
+
+      async function loadReenrollmentPrograms() {
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/programs/list`,
+        );
+        const data = await response.json();
+
+        reenrollmentPrograms = Array.isArray(data) ? data : [];
+
+        const programSelect = document.querySelector("#reenrollment-program");
+        if (!programSelect) return;
+
+        programSelect.innerHTML = `<option value="">Select Program</option>`;
+
+        reenrollmentPrograms.forEach((program) => {
+          const programCode = program.code || "";
+          const upperProgramCode = String(programCode).toUpperCase();
+
+          if (upperProgramCode === "BSED") {
+            [
+              { major: "Filipino", label: "BSED - Major in Filipino" },
+              { major: "English", label: "BSED - Major in English" },
+              { major: "Mathematics", label: "BSED - Major in Mathematics" },
+            ].forEach((majorOption) => {
+              const option = document.createElement("option");
+              option.value = `${program.id}:${program.name}:${programCode}:${majorOption.major}`;
+              option.textContent = majorOption.label;
+              programSelect.appendChild(option);
+            });
+            return;
+          }
+
+          const option = document.createElement("option");
+          option.value = `${program.id}:${program.name}:${programCode}:`;
+          option.textContent = `${program.code || program.name} - ${program.name}`;
+          programSelect.appendChild(option);
+        });
+      }
+
+      function renderReenrollmentStatus(data) {
+        const statusCard = document.querySelector("#reenrollment-status-card");
+        const form = document.querySelector("#reenrollment-form");
+
+        if (!statusCard || !form) return;
+
+        latestEnrollmentRequest = data?.latest_request || null;
+        const requestType = String(latestEnrollmentRequest?.request_type || "").trim();
+        const isReturningRequest = requestType === "Returning Student";
+        const requestStatus = latestEnrollmentRequest?.status || "No request submitted yet";
+        const shouldDisableForm =
+          isReturningRequest &&
+          requestStatus !== "Declined";
+
+        statusCard.innerHTML = `
+          <span>Request Status</span>
+          <strong>${escapeHtml(requestStatus)}</strong>
+          <small>${
+            isReturningRequest
+              ? `School Year: ${escapeHtml(latestEnrollmentRequest?.school_year || "-")} | Program: ${escapeHtml(
+                  latestEnrollmentRequest?.program_name ||
+                    latestEnrollmentRequest?.program_code ||
+                    "-",
+                )}`
+              : "Returning students can request enrollment here. Admin will evaluate and assign your subjects."
+          }</small>
+        `;
+
+        Array.from(form.elements).forEach((element) => {
+          if (element.tagName === "BUTTON") {
+            element.disabled = shouldDisableForm;
+            element.textContent = shouldDisableForm
+              ? "Request Submitted"
+              : "Submit Re-Enrollment Request";
+            return;
+          }
+
+          element.disabled = shouldDisableForm;
+        });
+
+        if (!shouldDisableForm) {
+          setReenrollmentDefaults(data?.enrollment || latestEnrollmentRequest || null);
+        }
       }
 
       function getTransactionCategory(description) {
@@ -737,7 +985,7 @@
           return "-";
         }
 
-        if (proofValue.startsWith("/uploads/")) {
+        if (proofValue.startsWith("/uploads/") || /^https?:\/\//i.test(proofValue)) {
           const label = escapeHtml(proofValue.split("/").pop() || "View Proof");
           const href = escapeHtml(proofValue);
           return `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
@@ -862,6 +1110,7 @@
         renderTransactions(data.transactions || []);
         renderDocuments(data.submitted_documents || []);
         renderStudentHeader(data.user, data.enrollment, data.id_picture);
+        renderReenrollmentStatus(data);
         const billingSummary = summarizeBillings(billings);
         outstandingBillings = billings.filter(
           (billing) =>
@@ -1465,7 +1714,71 @@
         });
       }
 
+      function initReenrollmentForm() {
+        const form = document.querySelector("#reenrollment-form");
+
+        if (!form) return;
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          if (!form.reportValidity()) {
+            return;
+          }
+
+          const user = auth();
+          const { programId, programName, programCode, programMajor } =
+            getReenrollmentProgramParts();
+
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/enrollments/create`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                student_id: user.id,
+                request_type: "Returning Student",
+                last_name: user.last_name || "",
+                first_name: user.first_name || "",
+                middle_name: user.middle_name || "",
+                email: user.email || "",
+                mobile:
+                  user.mobile ||
+                  latestEnrollmentRequest?.mobile ||
+                  "",
+                birthday:
+                  latestEnrollmentRequest?.birthday ||
+                  "",
+                program_id: programId,
+                program_name: programName,
+                program_code: programCode,
+                major: programMajor || "",
+                year_level: form.querySelector('[name="year_level"]').value,
+                semester: form.querySelector('[name="semester"]').value,
+                selected_courses: [],
+                total_units: 0,
+                total_amount: 0,
+              }),
+            },
+          );
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.error || "Failed to submit re-enrollment request.");
+            return;
+          }
+
+          form.reset();
+          await loadPortal();
+        });
+      }
+
       document.addEventListener("DOMContentLoaded", async () => {
+        await loadReenrollmentPrograms();
+        initReenrollmentForm();
         initRequestForm();
         initBillingPaymentForm();
         await loadPortal();

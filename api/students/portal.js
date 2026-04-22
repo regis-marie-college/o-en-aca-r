@@ -29,7 +29,7 @@ module.exports = async (req, res) => {
     );
     const user = userResult.rows[0] || null;
 
-    const enrollmentResult = await db.query(
+    const latestRequestResult = await db.query(
       `
       select *
       from enrollments
@@ -39,7 +39,21 @@ module.exports = async (req, res) => {
       `,
       [normalizedEmail],
     );
-    const enrollment = enrollmentResult.rows[0] || null;
+    const latestRequest = latestRequestResult.rows[0] || null;
+
+    const approvedEnrollmentResult = await db.query(
+      `
+      select *
+      from enrollments
+      where lower(email) = $1
+        and lower(coalesce(status, '')) = 'approved'
+      order by created_at desc
+      limit 1
+      `,
+      [normalizedEmail],
+    );
+    const approvedEnrollment = approvedEnrollmentResult.rows[0] || null;
+    const enrollment = approvedEnrollment || latestRequest || null;
 
     const takenCoursesResult = user
       ? await db.query(
@@ -83,7 +97,7 @@ module.exports = async (req, res) => {
       [email],
     );
 
-    const documentsResult = enrollment
+    const documentsResult = latestRequest
       ? await db.query(
           `
           select *
@@ -91,7 +105,7 @@ module.exports = async (req, res) => {
           where enrollment_id = $1
           order by created_at asc, id asc
           `,
-          [enrollment.id],
+          [latestRequest.id],
         )
       : { rows: [] };
 
@@ -111,8 +125,11 @@ module.exports = async (req, res) => {
     return okay(res, {
       user,
       enrollment,
-      current_courses: Array.isArray(enrollment?.selected_courses)
-        ? enrollment.selected_courses
+      latest_request: latestRequest,
+      current_courses: Array.isArray(approvedEnrollment?.selected_courses)
+        ? approvedEnrollment.selected_courses
+        : Array.isArray(enrollment?.selected_courses)
+          ? enrollment.selected_courses
         : [],
       taken_courses: takenCoursesResult.rows,
       billings: billingsResult.rows,

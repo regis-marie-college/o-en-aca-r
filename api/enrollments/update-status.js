@@ -8,7 +8,16 @@ const PDFDocument = require("pdfkit");
 const { generateStudentNumber } = require("../../lib/student-number");
 const { writeAuditLog } = require("../../lib/audit-log");
 const { normalizeEmail } = require("../../lib/email");
+const {
+  assertValidStatusTransition,
+  calculateCourseTotals,
+  normalizeEnrollmentStatus,
+  normalizeRequestType,
+  validateFinancialTotals,
+} = require("../../lib/enrollment-rules");
+
 const ID_FEE = 300;
+const DEFAULT_DOWNPAYMENT_AMOUNT = 2000;
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -19,7 +28,24 @@ module.exports = async (req, res) => {
 
   try {
     const body = await bodyParser(req);
-    const { id, status, misc_fee } = body;
+    const {
+      id,
+      status,
+      misc_fee,
+      admin_notes,
+      decline_reason,
+      processed_by,
+      selected_courses,
+      total_units,
+      total_amount,
+      program_id,
+      program_name,
+      program_code,
+      major,
+      year_level,
+      semester,
+      school_year,
+    } = body;
 
     console.log("Enrollment details:");
     console.log(body);
@@ -48,41 +74,135 @@ module.exports = async (req, res) => {
         throw new Error("Enrollment not found");
       }
 
-      const normalizedStatus =
-        String(status || "").toLowerCase() === "denied" ? "Declined" : status;
+      const normalizedStatus = normalizeEnrollmentStatus(status);
+      const normalizedRequestType = normalizeRequestType(enrollment.request_type);
+      const isReturningStudent = normalizedRequestType === "Returning Student";
+      const actorName = String(processed_by || "Admin").trim() || "Admin";
       const hasMiscFeeValue =
         misc_fee !== undefined && misc_fee !== null && String(misc_fee).trim() !== "";
-      const parsedMiscFee = hasMiscFeeValue ? Number(misc_fee) : Number(enrollment.misc_fee || 0);
+      const parsedMiscFee = hasMiscFeeValue
+        ? Number(misc_fee)
+        : Number(enrollment.misc_fee || 0);
+      const nextAdminNotes =
+        admin_notes !== undefined ? String(admin_notes || "").trim() : enrollment.admin_notes || null;
+      const nextDeclineReason =
+        decline_reason !== undefined
+          ? String(decline_reason || "").trim()
+          : enrollment.decline_reason || null;
 
       if (Number.isNaN(parsedMiscFee) || parsedMiscFee < 0) {
         throw new Error("Misc fee must be a valid non-negative amount");
       }
+
+      const nextCourses =
+        selected_courses !== undefined
+          ? parseSelectedCourses(selected_courses)
+          : parseSelectedCourses(enrollment.selected_courses);
+      const computedTotals = calculateCourseTotals(nextCourses);
+      const nextTotalUnits =
+        selected_courses !== undefined
+          ? computedTotals.totalUnits
+          : Number(total_units ?? enrollment.total_units ?? 0);
+      const nextTotalAmount =
+        selected_courses !== undefined
+          ? computedTotals.totalAmount
+          : Number(total_amount ?? enrollment.total_amount ?? 0);
+
+      validateFinancialTotals({
+        miscFee: parsedMiscFee,
+        totalUnits: nextTotalUnits,
+        totalAmount: nextTotalAmount,
+      });
+
+      assertValidStatusTransition(
+        enrollment.status || (isReturningStudent ? "Pending Evaluation" : "Pending"),
+        normalizedStatus,
+        normalizedRequestType,
+      );
 
       if (normalizedStatus === "Approved") {
         if (!hasMiscFeeValue && Number(enrollment.misc_fee || 0) <= 0) {
           throw new Error("Treasury must set the misc fee before enrollment approval");
         }
 
-        const downpayment = await getApprovedDownpayment(id, client);
+        if (!nextCourses.length) {
+          throw new Error("Admin must assign at least one course before approval");
+        }
 
-        if (!downpayment) {
-          throw new Error(
-            "Treasury must approve the enrollment downpayment before admin approval",
-          );
+        if (!isReturningStudent) {
+          const downpayment = await getApprovedDownpayment(id, client);
+
+          if (!downpayment) {
+            throw new Error(
+              "Treasury must approve the enrollment downpayment before admin approval",
+            );
+          }
         }
       }
 
+      if (normalizedStatus === "Declined" && !nextDeclineReason) {
+        throw new Error("Decline reason is required when declining an enrollment");
+      }
+
       const result = await client.query(
-        `UPDATE enrollments
-         SET status = $1,
-             misc_fee = $3,
-             updated_at = now()
-         WHERE id = $2
-         RETURNING *`,
-        [normalizedStatus, id, parsedMiscFee.toFixed(2)],
+        `
+        update enrollments
+        set status = $1,
+            misc_fee = $3,
+            admin_notes = $4,
+            decline_reason = $5,
+            evaluated_by = $6,
+            evaluated_at = now(),
+            selected_courses = $7::jsonb,
+            total_units = $8,
+            total_amount = $9,
+            program_id = $10,
+            program_name = $11,
+            program_code = $12,
+            major = $13,
+            year_level = $14,
+            semester = $15,
+            school_year = $16,
+            updated_at = now()
+        where id = $2
+        returning *
+        `,
+        [
+          normalizedStatus,
+          id,
+          parsedMiscFee.toFixed(2),
+          nextAdminNotes,
+          normalizedStatus === "Declined" ? nextDeclineReason : null,
+          actorName,
+          JSON.stringify(nextCourses),
+          nextTotalUnits,
+          nextTotalAmount.toFixed(2),
+          program_id || enrollment.program_id || null,
+          program_name || enrollment.program_name || null,
+          program_code || enrollment.program_code || null,
+          major !== undefined ? major || null : enrollment.major || null,
+          year_level || enrollment.year_level || null,
+          semester || enrollment.semester || null,
+          school_year || enrollment.school_year || null,
+        ],
       );
       const updatedEnrollment = result.rows[0];
 
+      await logEnrollmentFieldChanges({
+        client,
+        enrollmentBefore: enrollment,
+        enrollmentAfter: updatedEnrollment,
+        actorName,
+        nextCourses,
+        nextTotalUnits,
+        nextTotalAmount,
+        parsedMiscFee,
+        nextAdminNotes,
+        nextDeclineReason:
+          normalizedStatus === "Declined" ? nextDeclineReason : null,
+      });
+
+      await ensureEnrollmentBillings(updatedEnrollment, client);
       await syncEnrollmentBillings(updatedEnrollment, client);
 
       const {
@@ -91,10 +211,12 @@ module.exports = async (req, res) => {
         middle_name,
         birthday,
         email,
-      } = enrollment;
+      } = updatedEnrollment;
 
       if (normalizedStatus === "Approved") {
-        const generatedPassword = buildStudentPassword(last_name, birthday);
+        const generatedPassword = isReturningStudent
+          ? null
+          : buildStudentPassword(last_name, birthday);
         const approvedDownpayment = await getApprovedDownpayment(id, client);
         const normalizedEmail = normalizeEmail(email);
         const existingUserResult = await client.query(
@@ -111,7 +233,8 @@ module.exports = async (req, res) => {
         );
 
         let student;
-        let studentNumber = existingUserResult.rows[0]?.student_number || null;
+        let studentNumber =
+          existingUserResult.rows[0]?.student_number || updatedEnrollment.student_id || null;
 
         if (!studentNumber) {
           studentNumber = await generateStudentNumber(
@@ -121,33 +244,60 @@ module.exports = async (req, res) => {
         }
 
         if (existingUserResult.rows.length) {
-          const hashedPassword = await bcrypt.hash(generatedPassword, 10);
-          const updatedUser = await client.query(
-            `
-            update users
-            set last_name = $2,
-                first_name = $3,
-                middle_name = $4,
-                username = $5,
-                password = $6,
-                type = 'student',
-                student_number = $7,
-                updated_at = now()
-            where id = $1
-            returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, created_at
-            `,
-            [
-              existingUserResult.rows[0].id,
-              last_name,
-              first_name,
-              middle_name || null,
-              normalizedEmail,
-              hashedPassword,
-              studentNumber,
-            ],
-          );
+          if (isReturningStudent) {
+            const updatedUser = await client.query(
+              `
+              update users
+              set last_name = $2,
+                  first_name = $3,
+                  middle_name = $4,
+                  username = $5,
+                  type = 'student',
+                  student_number = $6,
+                  updated_at = now()
+              where id = $1
+              returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, created_at
+              `,
+              [
+                existingUserResult.rows[0].id,
+                last_name,
+                first_name,
+                middle_name || null,
+                normalizedEmail,
+                studentNumber,
+              ],
+            );
 
-          student = updatedUser.rows[0];
+            student = updatedUser.rows[0];
+          } else {
+            const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+            const updatedUser = await client.query(
+              `
+              update users
+              set last_name = $2,
+                  first_name = $3,
+                  middle_name = $4,
+                  username = $5,
+                  password = $6,
+                  type = 'student',
+                  student_number = $7,
+                  updated_at = now()
+              where id = $1
+              returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, created_at
+              `,
+              [
+                existingUserResult.rows[0].id,
+                last_name,
+                first_name,
+                middle_name || null,
+                normalizedEmail,
+                hashedPassword,
+                studentNumber,
+              ],
+            );
+
+            student = updatedUser.rows[0];
+          }
         } else {
           student = await createUser(
             {
@@ -156,7 +306,7 @@ module.exports = async (req, res) => {
               middle_name,
               username: normalizedEmail,
               email: normalizedEmail,
-              password: generatedPassword,
+              password: generatedPassword || buildStudentPassword(last_name, birthday),
               type: "student",
               student_number: studentNumber,
             },
@@ -164,19 +314,17 @@ module.exports = async (req, res) => {
           );
         }
 
-        console.log("Student Details:");
-        console.log(student);
-
         await writeAuditLog(client, {
           entity_type: "enrollment",
           entity_id: updatedEnrollment.id,
           action: "student_number_assigned",
-          actor: "Admin Approval",
+          actor: actorName,
           actor_type: "admin",
           details: {
             email: normalizedEmail,
             student_number: student.student_number || studentNumber,
             user_id: student.id,
+            request_type: normalizedRequestType,
           },
         });
 
@@ -185,6 +333,7 @@ module.exports = async (req, res) => {
           student,
           generatedPassword,
           approvedDownpayment,
+          isReturningStudent,
         });
         const corDocument = await buildCorPdfBuffer({
           enrollment: updatedEnrollment,
@@ -194,7 +343,9 @@ module.exports = async (req, res) => {
 
         emailJob = {
           email: normalizedEmail,
-          subject: "Enrollment Approved - Student Account Details",
+          subject: isReturningStudent
+            ? "Enrollment Approved - Returning Student"
+            : "Enrollment Approved - Student Account Details",
           message,
           attachments: [
             {
@@ -212,9 +363,7 @@ module.exports = async (req, res) => {
             <div style="font-family:Arial,sans-serif;color:#1f2937;line-height:1.55;">
               <h2 style="margin:0 0 12px;color:#991b1b;">Admin Declined</h2>
               <p>Good day <strong>${first_name} ${last_name}</strong>,</p>
-              <p>
-                Your enrollment application has been declined by the admin.
-              </p>
+              <p>Your enrollment application has been declined by the admin.</p>
               <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
                 <tr>
                   <td style="padding:6px 0;"><strong>Enrollment ID:</strong></td>
@@ -229,10 +378,12 @@ module.exports = async (req, res) => {
                   <td style="padding:6px 0;">${birthday || "N/A"}</td>
                 </tr>
               </table>
-              <p>
-                Please come to Regis Marie College and present your Enrollment ID to
-                know the reason for the declined application.
-              </p>
+              ${
+                nextDeclineReason
+                  ? `<p><strong>Reason:</strong> ${escapeHtml(nextDeclineReason)}</p>`
+                  : ""
+              }
+              <p>Please come to Regis Marie College and present your Enrollment ID to know the reason for the declined application.</p>
               <p>Thank you.</p>
               <p>Regis Marie College</p>
             </div>
@@ -268,6 +419,88 @@ module.exports = async (req, res) => {
     return badRequest(res, err.message);
   }
 };
+
+async function ensureEnrollmentBillings(enrollment, executor = db) {
+  if (!enrollment?.id || String(enrollment.status || "") !== "Approved") {
+    return;
+  }
+
+  const billingsResult = await executor.query(
+    `
+    select id
+    from billings
+    where enrollment_id = $1
+    limit 1
+    `,
+    [enrollment.id],
+  );
+
+  if (billingsResult.rows.length) {
+    return;
+  }
+
+  const courseAmount = Number(enrollment.total_amount || 0);
+  const totalAssessment = courseAmount + Number(enrollment.misc_fee || 0) + ID_FEE;
+  const downpaymentAmount = Math.min(DEFAULT_DOWNPAYMENT_AMOUNT, totalAssessment);
+
+  await createInstallmentBillings({
+    enrollment,
+    first_name: enrollment.first_name,
+    last_name: enrollment.last_name,
+    email: enrollment.email,
+    courseAmount,
+    downpaymentAmount,
+    executor,
+  });
+}
+
+async function createInstallmentBillings({
+  enrollment,
+  first_name,
+  last_name,
+  email,
+  courseAmount,
+  downpaymentAmount,
+  executor = db,
+}) {
+  const studentName = `${first_name} ${last_name}`.trim();
+  const miscFee = Number(enrollment.misc_fee || 0);
+  const totalAssessment = Number(courseAmount || 0) + miscFee + ID_FEE;
+  const downpayment = Number(downpaymentAmount || 0);
+  const remainingBalance = Math.max(totalAssessment - downpayment, 0);
+  const installments = splitAmounts(remainingBalance, 4);
+
+  const billingItems = [
+    {
+      description: `Downpayment - Tuition and Fees (Course Fee: PHP ${Number(
+        courseAmount || 0,
+      ).toFixed(2)}, Misc Fee: PHP ${miscFee.toFixed(2)}, ID Fee: PHP ${ID_FEE.toFixed(2)})`,
+      amount: downpayment,
+    },
+    ...installments.map((amount, index) => ({
+      description: `${ordinalLabel(index + 1)} Payment Installment`,
+      amount,
+    })),
+  ].filter((item) => Number(item.amount || 0) > 0);
+
+  for (const item of billingItems) {
+    await executor.query(
+      `
+      insert into billings
+      (enrollment_id, student_name, email, description, amount, amount_paid, balance, due_date, status, created_by, updated_by)
+      values ($1,$2,$3,$4,$5,0,$5,null,'Unpaid',$6,$6)
+      `,
+      [
+        enrollment.id,
+        studentName,
+        email,
+        item.description,
+        Number(item.amount).toFixed(2),
+        "System Enrollment",
+      ],
+    );
+  }
+}
 
 async function syncEnrollmentBillings(enrollment, executor = db) {
   if (!enrollment?.id) {
@@ -418,6 +651,109 @@ function parseSelectedCourses(value) {
   }
 }
 
+async function logEnrollmentFieldChanges({
+  client,
+  enrollmentBefore,
+  enrollmentAfter,
+  actorName,
+  nextCourses,
+  nextTotalUnits,
+  nextTotalAmount,
+  parsedMiscFee,
+  nextAdminNotes,
+  nextDeclineReason,
+}) {
+  const beforeCourses = JSON.stringify(parseSelectedCourses(enrollmentBefore.selected_courses));
+  const afterCourses = JSON.stringify(nextCourses);
+
+  if (beforeCourses !== afterCourses) {
+    await writeAuditLog(client, {
+      entity_type: "enrollment",
+      entity_id: enrollmentAfter.id,
+      action: "enrollment_courses_updated",
+      actor: actorName,
+      actor_type: "admin",
+      details: {
+        previous_selected_courses: parseSelectedCourses(enrollmentBefore.selected_courses),
+        selected_courses: nextCourses,
+        total_units: nextTotalUnits,
+        total_amount: Number(nextTotalAmount || 0),
+      },
+    });
+  }
+
+  if (Number(enrollmentBefore.misc_fee || 0) !== Number(parsedMiscFee || 0)) {
+    await writeAuditLog(client, {
+      entity_type: "enrollment",
+      entity_id: enrollmentAfter.id,
+      action: "enrollment_misc_fee_updated",
+      actor: actorName,
+      actor_type: "admin",
+      details: {
+        previous_misc_fee: Number(enrollmentBefore.misc_fee || 0),
+        misc_fee: Number(parsedMiscFee || 0),
+      },
+    });
+  }
+
+  if (String(enrollmentBefore.status || "") !== String(enrollmentAfter.status || "")) {
+    await writeAuditLog(client, {
+      entity_type: "enrollment",
+      entity_id: enrollmentAfter.id,
+      action: "enrollment_status_updated",
+      actor: actorName,
+      actor_type: "admin",
+      details: {
+        previous_status: enrollmentBefore.status || null,
+        status: enrollmentAfter.status || null,
+      },
+    });
+  }
+
+  if (String(enrollmentBefore.admin_notes || "") !== String(nextAdminNotes || "")) {
+    await writeAuditLog(client, {
+      entity_type: "enrollment",
+      entity_id: enrollmentAfter.id,
+      action: "enrollment_admin_notes_updated",
+      actor: actorName,
+      actor_type: "admin",
+      details: {
+        previous_admin_notes: enrollmentBefore.admin_notes || null,
+        admin_notes: nextAdminNotes || null,
+      },
+    });
+  }
+
+  if (String(enrollmentBefore.decline_reason || "") !== String(nextDeclineReason || "")) {
+    await writeAuditLog(client, {
+      entity_type: "enrollment",
+      entity_id: enrollmentAfter.id,
+      action: "enrollment_decline_reason_updated",
+      actor: actorName,
+      actor_type: "admin",
+      details: {
+        previous_decline_reason: enrollmentBefore.decline_reason || null,
+        decline_reason: nextDeclineReason || null,
+      },
+    });
+  }
+}
+
+function ordinalLabel(value) {
+  switch (value) {
+    case 1:
+      return "1st";
+    case 2:
+      return "2nd";
+    case 3:
+      return "3rd";
+    case 4:
+      return "4th";
+    default:
+      return `${value}th`;
+  }
+}
+
 function formatMoney(value) {
   return `PHP ${Number(value || 0).toLocaleString("en-PH", {
     minimumFractionDigits: 2,
@@ -425,7 +761,13 @@ function formatMoney(value) {
   })}`;
 }
 
-function buildApprovalEmail({ enrollment, student, generatedPassword, approvedDownpayment }) {
+function buildApprovalEmail({
+  enrollment,
+  student,
+  generatedPassword,
+  approvedDownpayment,
+  isReturningStudent,
+}) {
   const {
     last_name,
     first_name,
@@ -444,7 +786,9 @@ function buildApprovalEmail({ enrollment, student, generatedPassword, approvedDo
   const miscFee = Number(enrollment.misc_fee || 0);
   const idFee = 300;
   const totalFees = tuition + miscFee + idFee;
-  const paidAmount = Number(approvedDownpayment?.amount_paid || approvedDownpayment?.amount || 0);
+  const paidAmount = Number(
+    approvedDownpayment?.amount_paid || approvedDownpayment?.amount || 0,
+  );
 
   const courseRows = courses.length
     ? courses
@@ -463,6 +807,23 @@ function buildApprovalEmail({ enrollment, student, generatedPassword, approvedDo
       <tr>
         <td colspan="4" style="border:1px solid #cbd5e1;padding:7px;text-align:center;">No course details available.</td>
       </tr>
+    `;
+
+  const loginBlock = isReturningStudent
+    ? `
+      <hr style="margin:20px 0;border:none;border-top:1px solid #d1d5db;" />
+      <h3 style="margin-bottom:8px;">Student Portal</h3>
+      <p><strong>Official Student Number:</strong> ${student.student_number || student.id}</p>
+      <p><strong>Username:</strong> ${email}</p>
+      <p>Your existing student portal password is still active.</p>
+    `
+    : `
+      <hr style="margin:20px 0;border:none;border-top:1px solid #d1d5db;" />
+      <h3 style="margin-bottom:8px;">Student Portal Login</h3>
+      <p><strong>Official Student Number:</strong> ${student.student_number || student.id}</p>
+      <p><strong>Username:</strong> ${email}</p>
+      <p><strong>Password:</strong> ${generatedPassword}</p>
+      <p>Please keep your login details secure.</p>
     `;
 
   return `
@@ -507,12 +868,7 @@ function buildApprovalEmail({ enrollment, student, generatedPassword, approvedDo
         <tr><td style="padding:4px 10px;"><strong>Payment:</strong></td><td style="padding:4px 10px;text-align:right;">${formatMoney(paidAmount)}</td></tr>
       </table>
 
-      <hr style="margin:20px 0;border:none;border-top:1px solid #d1d5db;" />
-      <h3 style="margin-bottom:8px;">Student Portal Login</h3>
-      <p><strong>Official Student Number:</strong> ${student.student_number || student.id}</p>
-      <p><strong>Username:</strong> ${email}</p>
-      <p><strong>Password:</strong> ${generatedPassword}</p>
-      <p>Please keep your login details secure.</p>
+      ${loginBlock}
       <p>Thank you and congratulations.</p>
     </div>
   `;
@@ -766,7 +1122,7 @@ function drawPdfField(doc, x, y, width, label, value) {
     .fillColor("#111111")
     .text(`${label}:`, x, y, { continued: true });
   doc.font("Helvetica").text(` ${String(value || "-")}`, {
-    width: width,
+    width,
   });
 
   return doc.y + 2;

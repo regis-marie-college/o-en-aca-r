@@ -28,9 +28,61 @@ module.exports = async (req, res) => {
       [id],
     );
 
+    const auditLogsResult = await db.query(
+      `
+      select *
+      from audit_logs
+      where entity_type = 'enrollment'
+        and entity_id = $1
+      order by created_at desc
+      `,
+      [String(id)],
+    );
+
+    const normalizedEmail = String(enrollment.email || "").trim().toLowerCase();
+    const userResult = normalizedEmail
+      ? await db.query(
+          `
+          select id, student_number, email
+          from users
+          where lower(email) = $1
+            and deleted_at is null
+          order by updated_at desc, created_at desc
+          limit 1
+          `,
+          [normalizedEmail],
+        )
+      : { rows: [] };
+    const matchedUser = userResult.rows[0] || null;
+    const studentRecordIds = Array.from(
+      new Set(
+        [enrollment.student_id, matchedUser?.id, matchedUser?.student_number]
+          .filter(Boolean)
+          .map((value) => String(value).trim())
+          .filter(Boolean),
+      ),
+    );
+
+    const takenCoursesResult = studentRecordIds.length
+      ? await db.query(
+          `
+          select *
+          from student_records
+          where student_id = any($1::text[])
+          order by
+            coalesce(academic_year, school_year) desc,
+            semester asc nulls last,
+            created_at desc
+          `,
+          [studentRecordIds],
+        )
+      : { rows: [] };
+
     return okay(res, {
       ...enrollment,
       downpayment_billing: downpaymentResult.rows[0] || null,
+      audit_logs: auditLogsResult.rows,
+      taken_courses: takenCoursesResult.rows,
     });
   } catch (err) {
     console.error(err);
