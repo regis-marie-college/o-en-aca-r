@@ -6,16 +6,16 @@ const { generateReceiptNo } = require("../../lib/receipt-number");
 const { requireAuth } = require("../../lib/auth");
 
 module.exports = async (req, res) => {
-  if (req.method !== "POST") {
-    return notAllowed(res);
-  }
-
-  const auth = await requireAuth(req, res);
-  if (!auth) {
-    return;
-  }
-
   try {
+    if (req.method !== "POST") {
+      return notAllowed(res);
+    }
+
+    const auth = await requireAuth(req, res);
+    if (!auth) {
+      return;
+    }
+
     const body = await bodyParser(req);
     const billing = await updateBilling(body);
     return okay(res, billing);
@@ -26,6 +26,8 @@ module.exports = async (req, res) => {
 };
 
 async function updateBilling(data) {
+  await ensureBillingUpdateSchema();
+
   const {
     id,
     payment_amount,
@@ -374,7 +376,7 @@ async function syncEnrollmentPaymentStatus(billing) {
     paymentStatus === "approved"
       ? "Pending"
       : paymentStatus === "denied"
-        ? "Payment Rejected"
+        ? "Pending"
         : null;
 
   if (!nextEnrollmentStatus) {
@@ -420,6 +422,44 @@ async function insertTransaction({
       processed_by || null,
     ],
   );
+}
+
+async function ensureBillingUpdateSchema() {
+  await db.query(`
+    alter table if exists billings
+      add column if not exists payment_method text not null default 'Cash',
+      add column if not exists payment_channel text,
+      add column if not exists reference_no text,
+      add column if not exists proof_of_payment text,
+      add column if not exists payment_status text not null default 'Unpaid',
+      add column if not exists pending_payment_amount numeric(12, 2) not null default 0,
+      add column if not exists treasury_reviewed_by text,
+      add column if not exists notes text;
+  `);
+
+  await db.query(`
+    create extension if not exists "pgcrypto";
+
+    create table if not exists treasury_transactions (
+      id uuid primary key default gen_random_uuid(),
+      billing_id uuid references billings(id) on delete set null,
+      enrollment_id uuid references enrollments(id) on delete set null,
+      student_name text not null,
+      email text not null,
+      reference_no text not null,
+      description text not null,
+      amount numeric(12, 2) not null default 0,
+      payment_method text not null default 'Cash',
+      status text not null default 'Paid',
+      processed_by text,
+      created_at timestamp default now()
+    );
+  `);
+
+  await db.query(`
+    alter table treasury_transactions
+      add column if not exists receipt_no text;
+  `);
 }
 
 module.exports.updateBilling = updateBilling;

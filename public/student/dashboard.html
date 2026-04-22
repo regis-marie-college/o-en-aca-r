@@ -1508,7 +1508,7 @@
                 },
               );
 
-              const data = await response.json();
+              const data = await readApiResponse(response);
               if (!response.ok) {
                 alert(data.error || "Failed to resubmit billing proof");
                 return;
@@ -1700,7 +1700,7 @@
             },
           );
 
-          const data = await response.json();
+          const data = await readApiResponse(response);
 
           if (!response.ok) {
             alert(data.error || "Failed to pay billing.");
@@ -1774,6 +1774,22 @@
           form.reset();
           await loadPortal();
         });
+      }
+
+      async function readApiResponse(response) {
+        const raw = await response.text();
+
+        if (!raw) {
+          return {};
+        }
+
+        try {
+          return JSON.parse(raw);
+        } catch (error) {
+          return {
+            error: raw,
+          };
+        }
       }
 
       document.addEventListener("DOMContentLoaded", async () => {
