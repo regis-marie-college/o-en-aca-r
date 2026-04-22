@@ -135,208 +135,221 @@ module.exports = async (req, res) => {
       schoolYear: school_year || defaultSchoolYear,
     });
 
-    const mobileNumberColumn = await db.query(
-      `
-      select 1
-      from information_schema.columns
-      where table_name = 'enrollments'
-        and column_name = 'mobile_number'
-      limit 1
-      `,
-    );
-    const studentIdColumn = await db.query(
-      `
-      select 1
-      from information_schema.columns
-      where table_name = 'enrollments'
-        and column_name = 'student_id'
-      limit 1
-      `,
-    );
-    const requestTypeColumn = await db.query(
-      `
-      select 1
-      from information_schema.columns
-      where table_name = 'enrollments'
-        and column_name = 'request_type'
-      limit 1
-      `,
-    );
-    const idPictureColumn = await db.query(
-      `
-      select 1
-      from information_schema.columns
-      where table_name = 'enrollments'
-        and column_name = 'idpic_url'
-      limit 1
-      `,
-    );
+    const client = await db.connect();
 
-    const columns = [
-      "last_name",
-      "first_name",
-      "middle_name",
-      "email",
-      "mobile",
-      "birthday",
-    ];
-    const values = [
-      last_name,
-      first_name,
-      middle_name,
-      email,
-      mobile,
-      birthday,
-    ];
+    try {
+      await client.query("BEGIN");
 
-    if (mobileNumberColumn.rows.length > 0) {
-      columns.push("mobile_number");
-      values.push(mobile);
-    }
+      const mobileNumberColumn = await client.query(
+        `
+        select 1
+        from information_schema.columns
+        where table_name = 'enrollments'
+          and column_name = 'mobile_number'
+        limit 1
+        `,
+      );
+      const studentIdColumn = await client.query(
+        `
+        select 1
+        from information_schema.columns
+        where table_name = 'enrollments'
+          and column_name = 'student_id'
+        limit 1
+        `,
+      );
+      const requestTypeColumn = await client.query(
+        `
+        select 1
+        from information_schema.columns
+        where table_name = 'enrollments'
+          and column_name = 'request_type'
+        limit 1
+        `,
+      );
+      const idPictureColumn = await client.query(
+        `
+        select 1
+        from information_schema.columns
+        where table_name = 'enrollments'
+          and column_name = 'idpic_url'
+        limit 1
+        `,
+      );
 
-    if (studentIdColumn.rows.length > 0) {
-      columns.push("student_id");
-      values.push(student_id || null);
-    }
-
-    if (requestTypeColumn.rows.length > 0) {
-      columns.push("request_type");
-      values.push(normalizedRequestType);
-    }
-
-    columns.push(
-      "program_id",
-      "program_name",
-      "program_code",
-      "major",
-      "school_year",
-      "year_level",
-      "semester",
-      "selected_courses",
-      "total_units",
-      "total_amount",
-      "status",
-    );
-    values.push(
-      program_id,
-      program_name || null,
-      program_code || null,
-      major || null,
-      school_year || defaultSchoolYear,
-      year_level,
-      semester,
-      JSON.stringify(normalizedSelectedCourses),
-      nextTotalUnits,
-      courseAmount.toFixed(2),
-      isReturningStudent ? PENDING_EVALUATION_STATUS : PAYMENT_SUBMITTED_STATUS,
-    );
-
-    if (idPictureColumn.rows.length > 0) {
-      columns.push("idpic_url");
-      values.push(idpic_url || null);
-    }
-
-    const placeholders = values.map((_, index) => {
-      const value = values[index];
-      return Array.isArray(value) || typeof value === "object"
-        ? `$${index + 1}::jsonb`
-        : `$${index + 1}`;
-    });
-
-    const selectedCourseIndex = columns.indexOf("selected_courses");
-    if (selectedCourseIndex >= 0) {
-      placeholders[selectedCourseIndex] = `$${selectedCourseIndex + 1}::jsonb`;
-    }
-
-    const returningColumns = [
-      "id",
-      "last_name",
-      "first_name",
-      "middle_name",
-      "email",
-      "mobile",
-      "program_name",
-      "program_code",
-      "major",
-      "school_year",
-      "year_level",
-      "semester",
-      "selected_courses",
-      "total_units",
-      "total_amount",
-      "status",
-      "created_at",
-    ];
-
-    if (studentIdColumn.rows.length > 0) {
-      returningColumns.splice(returningColumns.length - 2, 0, "student_id");
-    }
-
-    if (requestTypeColumn.rows.length > 0) {
-      returningColumns.splice(returningColumns.length - 2, 0, "request_type");
-    }
-
-    if (idPictureColumn.rows.length > 0) {
-      returningColumns.splice(returningColumns.length - 1, 0, "idpic_url");
-    }
-
-    const result = await db.query(
-      `insert into enrollments
-      (${columns.join(", ")})
-      values (${placeholders.join(", ")})
-      returning ${returningColumns.join(", ")}`,
-      values,
-    );
-
-    const enrollment = {
-      ...result.rows[0],
-      idpic_url:
-        idPictureColumn.rows.length > 0 ? result.rows[0]?.idpic_url || null : null,
-    };
-
-    if (!isReturningStudent) {
-      await createInstallmentBillings({
-        enrollment,
-        first_name,
+      const columns = [
+        "last_name",
+        "first_name",
+        "middle_name",
+        "email",
+        "mobile",
+        "birthday",
+      ];
+      const values = [
         last_name,
+        first_name,
+        middle_name,
         email,
-        courseAmount,
-        downpaymentAmount: submittedDownpayment,
-        initialPayment: {
-          paymentChannel: payment_channel,
-          referenceNo: reference_no,
-          proofOfPayment: proof_of_payment,
-        },
-      });
-    }
+        mobile,
+        birthday,
+      ];
 
-    if (documents && Object.keys(documents).length > 0) {
-      for (const [type, documentValue] of Object.entries(documents)) {
-        const fileName =
-          typeof documentValue === "object" && documentValue !== null
-            ? documentValue.name
-            : documentValue;
-        const fileUrl =
-          typeof documentValue === "object" && documentValue !== null
-            ? documentValue.url || null
-            : null;
-
-        await db.query(
-          `insert into documents (enrollment_id, user_full_name, name, description, category, type)
-           values ($1,$2,$3,$4,$5,$6)`,
-          [
-            enrollment.id,
-            `${last_name} ${first_name}`,
-            fileName,
-            fileUrl,
-            "Requirements",
-            type,
-          ],
-        );
+      if (mobileNumberColumn.rows.length > 0) {
+        columns.push("mobile_number");
+        values.push(mobile);
       }
-    }
 
-    return okay(res, enrollment);
+      if (studentIdColumn.rows.length > 0) {
+        columns.push("student_id");
+        values.push(student_id || null);
+      }
+
+      if (requestTypeColumn.rows.length > 0) {
+        columns.push("request_type");
+        values.push(normalizedRequestType);
+      }
+
+      columns.push(
+        "program_id",
+        "program_name",
+        "program_code",
+        "major",
+        "school_year",
+        "year_level",
+        "semester",
+        "selected_courses",
+        "total_units",
+        "total_amount",
+        "status",
+      );
+      values.push(
+        program_id,
+        program_name || null,
+        program_code || null,
+        major || null,
+        school_year || defaultSchoolYear,
+        year_level,
+        semester,
+        JSON.stringify(normalizedSelectedCourses),
+        nextTotalUnits,
+        courseAmount.toFixed(2),
+        isReturningStudent ? PENDING_EVALUATION_STATUS : PAYMENT_SUBMITTED_STATUS,
+      );
+
+      if (idPictureColumn.rows.length > 0) {
+        columns.push("idpic_url");
+        values.push(idpic_url || null);
+      }
+
+      const placeholders = values.map((_, index) => {
+        const value = values[index];
+        return Array.isArray(value) || typeof value === "object"
+          ? `$${index + 1}::jsonb`
+          : `$${index + 1}`;
+      });
+
+      const selectedCourseIndex = columns.indexOf("selected_courses");
+      if (selectedCourseIndex >= 0) {
+        placeholders[selectedCourseIndex] = `$${selectedCourseIndex + 1}::jsonb`;
+      }
+
+      const returningColumns = [
+        "id",
+        "last_name",
+        "first_name",
+        "middle_name",
+        "email",
+        "mobile",
+        "program_name",
+        "program_code",
+        "major",
+        "school_year",
+        "year_level",
+        "semester",
+        "selected_courses",
+        "total_units",
+        "total_amount",
+        "status",
+        "created_at",
+      ];
+
+      if (studentIdColumn.rows.length > 0) {
+        returningColumns.splice(returningColumns.length - 2, 0, "student_id");
+      }
+
+      if (requestTypeColumn.rows.length > 0) {
+        returningColumns.splice(returningColumns.length - 2, 0, "request_type");
+      }
+
+      if (idPictureColumn.rows.length > 0) {
+        returningColumns.splice(returningColumns.length - 1, 0, "idpic_url");
+      }
+
+      const result = await client.query(
+        `insert into enrollments
+        (${columns.join(", ")})
+        values (${placeholders.join(", ")})
+        returning ${returningColumns.join(", ")}`,
+        values,
+      );
+
+      const enrollment = {
+        ...result.rows[0],
+        idpic_url:
+          idPictureColumn.rows.length > 0 ? result.rows[0]?.idpic_url || null : null,
+      };
+
+      if (!isReturningStudent) {
+        await createInstallmentBillings({
+          enrollment,
+          first_name,
+          last_name,
+          email,
+          courseAmount,
+          downpaymentAmount: submittedDownpayment,
+          initialPayment: {
+            paymentChannel: payment_channel,
+            referenceNo: reference_no,
+            proofOfPayment: proof_of_payment,
+          },
+          executor: client,
+        });
+      }
+
+      if (documents && Object.keys(documents).length > 0) {
+        for (const [type, documentValue] of Object.entries(documents)) {
+          const fileName =
+            typeof documentValue === "object" && documentValue !== null
+              ? documentValue.name
+              : documentValue;
+          const fileUrl =
+            typeof documentValue === "object" && documentValue !== null
+              ? documentValue.url || null
+              : null;
+
+          await client.query(
+            `insert into documents (enrollment_id, user_full_name, name, description, category, type)
+             values ($1,$2,$3,$4,$5,$6)`,
+            [
+              enrollment.id,
+              `${last_name} ${first_name}`,
+              fileName,
+              fileUrl,
+              "Requirements",
+              type,
+            ],
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+      return okay(res, enrollment);
+    } catch (txError) {
+      await client.query("ROLLBACK");
+      throw txError;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);
@@ -351,6 +364,7 @@ async function createInstallmentBillings({
   courseAmount,
   downpaymentAmount,
   initialPayment = null,
+  executor = db,
 }) {
   const studentName = `${first_name} ${last_name}`.trim();
   const totalAssessment = Number(courseAmount || 0) + MISC_FEE + ID_FEE;
@@ -409,7 +423,7 @@ async function createInstallmentBillings({
       );
     }
 
-    await db.query(
+    await executor.query(
       `
       insert into billings
       (enrollment_id, student_name, email, description, amount, amount_paid, balance, due_date, status, created_by, updated_by${paymentColumns})

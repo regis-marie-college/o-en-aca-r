@@ -1,9 +1,15 @@
 const { okay, notAllowed, badRequest } = require("../../lib/response");
 const db = require("../../services/supabase");
+const { requireAuth } = require("../../lib/auth");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res, ["admin", "treasury", "records"]);
+  if (!auth) {
+    return;
   }
 
   try {

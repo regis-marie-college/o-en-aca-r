@@ -62,7 +62,10 @@ module.exports = async (req, res) => {
       ],
     );
 
-    return okay(res, result.rows[0]);
+    return okay(res, {
+      ...result.rows[0],
+      session_id: session.rows[0]?.id || null,
+    });
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);

@@ -1,11 +1,17 @@
-const { okay, badRequest, notAllowed } = require("../../lib/response");
+const { okay, badRequest, notAllowed, forbidden } = require("../../lib/response");
 const db = require("../../services/supabase");
 const config = require("../../lib/config");
 const { normalizeEmail } = require("../../lib/email");
+const { requireAuth } = require("../../lib/auth");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res);
+  if (!auth) {
+    return;
   }
 
   const { email } = req.query;
@@ -16,6 +22,14 @@ module.exports = async (req, res) => {
 
   try {
     const normalizedEmail = normalizeEmail(email);
+    const normalizedAuthEmail = normalizeEmail(auth.email || "");
+    const normalizedRole = String(auth.type || "").toLowerCase();
+    const isPrivileged = ["admin", "records", "treasury"].includes(normalizedRole);
+
+    if (!isPrivileged && normalizedEmail !== normalizedAuthEmail) {
+      return forbidden(res, "You are not allowed to view this portal");
+    }
+
     const userResult = await db.query(
       `
       select *

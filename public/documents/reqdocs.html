@@ -4,14 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="../styles/reqdocs.css" rel="stylesheet" />
-    <script src="../scripts/load-component.js" defer></script>
     <title>Document Requests</title>
   </head>
   <body class="reqdocs-body">
     <div class="left-panel">
       <h1>University Document Request Portal</h1>
       <p>
-        Easily request your official academic documents online.
+        Official document requests are now handled inside the student portal so
+        your payment, status, and release progress stay in one place.
+        <br /><br />
+        Available requests include:
         <br /><br />
         - Statement of Account (SOA)<br />
         - Transcript of Records (TOR)<br />
@@ -24,101 +26,86 @@
     </div>
 
     <div class="right-panel">
-      <h2>Request Form</h2>
+      <h2>Continue In Portal</h2>
+      <p style="margin-top: 0; color: #526072; line-height: 1.7">
+        This page has been connected to the live document request flow. Use the
+        button below to continue to the actual request form in the system.
+      </p>
 
-      <form>
-        <div class="form-group">
-          <label>Full Name</label>
-          <input type="text" placeholder="Enter your full name" required />
-        </div>
+      <div class="form-group">
+        <label>Current Flow</label>
+        <input type="text" value="Student Portal > Document Requests" readonly />
+      </div>
 
-        <div class="form-group">
-          <label>Student ID</label>
-          <input type="text" placeholder="Enter your student ID" required />
-        </div>
+      <div class="form-group">
+        <label>Status Tracking</label>
+        <input
+          type="text"
+          value="Payment, approval, printing, and release are tracked in one place"
+          readonly
+        />
+      </div>
 
-        <div class="form-group">
-          <label>Email Address</label>
-          <input type="email" placeholder="Enter your email" required />
-        </div>
+      <button id="openPortal" type="button">Open Document Request Form</button>
+      <button
+        id="openLogin"
+        type="button"
+        style="margin-top: 12px; background: #e5eefb; color: #123055"
+      >
+        Login First
+      </button>
 
-        <div class="form-group">
-          <label>Document Type</label>
-          <div class="document-choice-grid" id="documentTypes">
-            <label class="document-choice">
-              <input type="checkbox" value="Statement of Account (SOA)" />
-              <span>Statement of Account (SOA)</span>
-            </label>
-            <label class="document-choice">
-              <input type="checkbox" value="Transcript of Records (TOR)" />
-              <span>Transcript of Records (TOR)</span>
-            </label>
-            <label class="document-choice">
-              <input type="checkbox" value="Certificate of Enrollment" />
-              <span>Certificate of Enrollment</span>
-            </label>
-            <label class="document-choice">
-              <input type="checkbox" value="Certificate of Graduation" />
-              <span>Certificate of Graduation</span>
-            </label>
-            <label class="document-choice">
-              <input type="checkbox" value="Good Moral Certificate" />
-              <span>Good Moral Certificate</span>
-            </label>
-            <label class="document-choice">
-              <input type="checkbox" value="Copy of Grades" />
-              <span>Copy of Grades</span>
-            </label>
-            <label class="document-choice">
-              <input type="checkbox" value="Other" />
-              <span>Other</span>
-            </label>
-          </div>
-          <small>Tap each document you want to request.</small>
-        </div>
-
-        <div class="form-group">
-          <label>Total Amount</label>
-          <input id="requestAmount" type="text" value="PHP 0.00" readonly />
-        </div>
-
-        <div class="form-group">
-          <label>Purpose of Request</label>
-          <textarea rows="3" placeholder="Enter purpose"></textarea>
-        </div>
-
-        <div class="form-group">
-          <label>Upload Proof of Payment (Optional)</label>
-          <input type="file" />
-        </div>
-
-        <button type="submit">Submit Request</button>
-
-        <div class="footer-text">Processing time: 3-5 working days</div>
-      </form>
+      <div class="footer-text" id="pageStatus">
+        Redirect target: <strong>/student/dashboard.html#document-request-form</strong>
+      </div>
     </div>
 
     <script>
-      const DOCUMENT_PRICE = 300;
-      const documentTypes = document.querySelector("#documentTypes");
-      const requestAmount = document.querySelector("#requestAmount");
-
-      function formatCurrency(value) {
-        return new Intl.NumberFormat("en-PH", {
-          style: "currency",
-          currency: "PHP",
-        }).format(Number(value || 0));
+      function getStoredUser() {
+        try {
+          return JSON.parse(
+            window.sessionStorage.getItem("user") ||
+              window.localStorage.getItem("user") ||
+              "null",
+          );
+        } catch (error) {
+          return null;
+        }
       }
 
-      function updateRequestAmount() {
-        const selectedCount = documentTypes.querySelectorAll("input:checked").length;
-        requestAmount.value = formatCurrency(selectedCount * DOCUMENT_PRICE);
+      function getPortalTarget() {
+        const user = getStoredUser();
+
+        if (user?.type === "student") {
+          return "../student/dashboard.html#document-request-form";
+        }
+
+        return "../auth/login.html";
       }
 
-      documentTypes.querySelectorAll("input").forEach((input) => {
-        input.addEventListener("change", updateRequestAmount);
+      function updatePageStatus() {
+        const user = getStoredUser();
+        const status = document.querySelector("#pageStatus");
+
+        if (user?.type === "student") {
+          status.innerHTML =
+            'You are logged in as student. Redirect target: <strong>/student/dashboard.html#document-request-form</strong>';
+          return;
+        }
+
+        status.innerHTML =
+          'Login required for live requests. Redirect target: <strong>/auth/login.html</strong>';
+      }
+
+      document.querySelector("#openPortal").addEventListener("click", () => {
+        window.location.assign(getPortalTarget());
       });
-      updateRequestAmount();
+
+      document.querySelector("#openLogin").addEventListener("click", () => {
+        window.location.assign("../auth/login.html");
+      });
+
+      updatePageStatus();
     </script>
   </body>
 </html>

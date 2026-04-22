@@ -47,8 +47,7 @@ module.exports = async (req, res) => {
       return badRequest(res, "Invalid email or password");
     }
 
-    // Create session for the current user
-    await db.query(
+    const sessionResult = await db.query(
       `insert into sessions (user_id, name)
       values ($1,$2)
       returning id, user_id, name
@@ -61,7 +60,10 @@ module.exports = async (req, res) => {
 
     delete user.password;
 
-    return okay(res, user);
+    return okay(res, {
+      ...user,
+      session_id: sessionResult.rows[0]?.id || null,
+    });
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);

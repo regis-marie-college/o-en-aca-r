@@ -1,10 +1,16 @@
-const { okay, notAllowed, badRequest } = require("../../lib/response");
+const { okay, notAllowed, badRequest, forbidden } = require("../../lib/response");
 const db = require("../../services/supabase");
+const { requireAuth } = require("../../lib/auth");
 
 module.exports = async (req, res) => {
   // Allow only GET requests
   if (req.method !== "GET") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res);
+  if (!auth) {
+    return;
   }
 
   // Get student_id from query params
@@ -13,6 +19,16 @@ module.exports = async (req, res) => {
   // Validate input
   if (!student_id) {
     return badRequest(res, "student_id is required");
+  }
+
+  const normalizedRole = String(auth.type || "").toLowerCase();
+  const isPrivileged = ["admin", "records"].includes(normalizedRole);
+  const isSelf =
+    String(auth.id || "") === String(student_id) ||
+    String(auth.student_number || "") === String(student_id);
+
+  if (!isPrivileged && !isSelf) {
+    return forbidden(res, "You are not allowed to view these student records");
   }
 
   try {

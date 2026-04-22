@@ -121,7 +121,7 @@
           } = course;
 
           row.innerHTML = `
-            <td><a href="read.html?id=${id}">${escapeHtml(id.substring(0, 6))}</a></td>
+            <td>${escapeHtml(id.substring(0, 6))}</td>
             <td>${escapeHtml(name)}</td>
             <td>${escapeHtml(description || "-")}</td>
             <td>${escapeHtml(program_code || "-")}</td>

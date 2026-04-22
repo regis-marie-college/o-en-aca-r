@@ -1,14 +1,25 @@
 const { okay, notAllowed, badRequest } = require("../../lib/response");
 const db = require("../../services/supabase");
+const { requireAuth } = require("../../lib/auth");
+const { readAuditLogs } = require("../../lib/audit-log");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     return notAllowed(res);
   }
 
+  const auth = await requireAuth(req, res, ["admin", "treasury"]);
+  if (!auth) {
+    return;
+  }
+
   const { id } = req.query;
 
   try {
+    if (!id) {
+      return badRequest(res, "Enrollment ID is required");
+    }
+
     const result = await db.query(`SELECT * FROM enrollments WHERE id = $1`, [id]);
     const enrollment = result.rows[0];
 
@@ -28,16 +39,10 @@ module.exports = async (req, res) => {
       [id],
     );
 
-    const auditLogsResult = await db.query(
-      `
-      select *
-      from audit_logs
-      where entity_type = 'enrollment'
-        and entity_id = $1
-      order by created_at desc
-      `,
-      [String(id)],
-    );
+    const auditLogsResult = await readAuditLogs(db, {
+      entityType: "enrollment",
+      entityId: String(id),
+    });
 
     const normalizedEmail = String(enrollment.email || "").trim().toLowerCase();
     const userResult = normalizedEmail
@@ -81,7 +86,7 @@ module.exports = async (req, res) => {
     return okay(res, {
       ...enrollment,
       downpayment_billing: downpaymentResult.rows[0] || null,
-      audit_logs: auditLogsResult.rows,
+      audit_logs: auditLogsResult,
       taken_courses: takenCoursesResult.rows,
     });
   } catch (err) {

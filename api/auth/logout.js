@@ -16,11 +16,21 @@ module.exports = async (req, res) => {
   try {
     const body = await bodyParser(req);
 
-    const { id } = body;
+    const { id, session_id } = body;
 
-    const result = await db.query(`delete from sessions where user_id = $1`, [
-      id,
-    ]);
+    if (session_id) {
+      await db.query(`delete from sessions where id = $1 and user_id = $2`, [
+        session_id,
+        id || null,
+      ]);
+      return okay(res, { deleted: true });
+    }
+
+    if (!id) {
+      return badRequest(res, "User ID or session ID is required");
+    }
+
+    await db.query(`delete from sessions where user_id = $1`, [id]);
 
     return okay(res, { deleted: true });
   } catch (err) {

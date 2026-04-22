@@ -4,6 +4,7 @@ const { formidable } = require("formidable");
 const XLSX = require("xlsx");
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const db = require("../../services/supabase");
+const { requireAuth } = require("../../lib/auth");
 
 const TEMP_UPLOAD_DIR = path.resolve(
   __dirname,
@@ -193,6 +194,11 @@ async function parseUpload(req) {
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res, ["admin", "records"]);
+  if (!auth) {
+    return;
   }
 
   let uploadedFile = null;

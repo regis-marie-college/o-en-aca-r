@@ -3,10 +3,16 @@ const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
 const { writeAuditLog } = require("../../lib/audit-log");
 const { generateReceiptNo } = require("../../lib/receipt-number");
+const { requireAuth } = require("../../lib/auth");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res);
+  if (!auth) {
+    return;
   }
 
   try {

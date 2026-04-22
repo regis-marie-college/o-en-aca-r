@@ -1,15 +1,28 @@
-const { okay, notAllowed, badRequest } = require("../../lib/response");
+const { okay, notAllowed, badRequest, forbidden } = require("../../lib/response");
 const db = require("../../services/supabase");
+const { requireAuth } = require("../../lib/auth");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     return notAllowed(res);
   }
 
+  const auth = await requireAuth(req, res);
+  if (!auth) {
+    return;
+  }
+
   const { id } = req.query;
 
   if (!id) {
     return badRequest(res, "id is required");
+  }
+
+  const isPrivileged = ["admin", "records"].includes(String(auth.type || "").toLowerCase());
+  const isSelf = String(auth.id || "") === String(id);
+
+  if (!isPrivileged && !isSelf) {
+    return forbidden(res, "You are not allowed to view this user");
   }
 
   try {

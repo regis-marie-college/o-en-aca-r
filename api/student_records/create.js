@@ -1,10 +1,16 @@
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
+const { requireAuth } = require("../../lib/auth");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res, ["admin", "records"]);
+  if (!auth) {
+    return;
   }
 
   try {
@@ -46,6 +52,32 @@ module.exports = async (req, res) => {
 
     if (parsedGrade !== null && !Number.isFinite(parsedGrade)) {
       return badRequest(res, "Grade must be a valid number");
+    }
+
+    const duplicateResult = await db.query(
+      `
+      select id
+      from student_records
+      where student_id = $1
+        and course_id = $2
+        and lower(course_name) = lower($3)
+        and coalesce(academic_year, school_year) = $4
+        and coalesce(semester, '') = $5
+        and coalesce(grade::text, '') = $6
+      limit 1
+      `,
+      [
+        student_id,
+        course_id,
+        course_name,
+        academic_year || school_year,
+        semester || "",
+        parsedGrade === null ? "" : String(parsedGrade),
+      ],
+    );
+
+    if (duplicateResult.rows.length) {
+      return badRequest(res, "Duplicate student academic record already exists");
     }
 
     const result = await db.query(

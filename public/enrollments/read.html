@@ -155,6 +155,20 @@
         margin: 18px 0;
       }
 
+      .task-section {
+        margin: 18px 0;
+        padding: 18px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .task-section h2,
+      .task-section h3,
+      .task-section p {
+        margin-top: 0;
+      }
+
       .request-badge {
         display: inline-flex;
         align-items: center;
@@ -249,53 +263,73 @@
 
         <div class="info-holder"></div>
 
-        <div class="form-group">
-          <label for="approval">Admin approval</label>
-          <select id="approval" name="approval" required>
-            <option value="">Loading status options...</option>
-          </select>
-          <div class="status-help" id="status-help">
-            Status options will be adjusted based on the current enrollment stage.
+        <section id="treasury-task-section" class="task-section" hidden>
+          <h2>Treasury Task</h2>
+          <p class="portal-form-note">
+            Set the enrollment miscellaneous fee and describe the charge. This section is visible to treasury only.
+          </p>
+          <div class="notes-grid">
+            <div class="form-group">
+              <label for="misc-fee">Misc Fee</label>
+              <input
+                id="misc-fee"
+                name="misc_fee"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Enter misc fee"
+              />
+            </div>
+            <div class="form-group">
+              <label for="misc-fee-description">Misc Fee Description</label>
+              <textarea
+                id="misc-fee-description"
+                name="misc_fee_description"
+                rows="4"
+                placeholder="Example: 500 aircon fee"
+              ></textarea>
+            </div>
           </div>
-        </div>
+          <div class="action-row">
+            <button type="button" id="save-treasury-task">Save Treasury Task</button>
+          </div>
+        </section>
 
-        <div class="form-group">
-          <label for="misc-fee">Misc Fee</label>
-          <input
-            id="misc-fee"
-            name="misc_fee"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Enter misc fee"
-          />
-          <small>
-            Treasury can set the miscellaneous fee here before enrollment approval.
-          </small>
-        </div>
-
-        <div class="notes-grid">
+        <section id="admin-task-section" class="task-section" hidden>
+          <h2>Admin Task</h2>
           <div class="form-group">
-            <label for="admin-notes">Admin Notes</label>
-            <textarea
-              id="admin-notes"
-              name="admin_notes"
-              rows="4"
-              placeholder="Add internal evaluation notes"
-            ></textarea>
+            <label for="approval">Admin approval</label>
+            <select id="approval" name="approval" required>
+              <option value="">Loading status options...</option>
+            </select>
+            <div class="status-help" id="status-help">
+              Status options will be adjusted based on the current enrollment stage.
+            </div>
           </div>
-          <div class="form-group">
-            <label for="decline-reason">Decline Reason</label>
-            <textarea
-              id="decline-reason"
-              name="decline_reason"
-              rows="4"
-              placeholder="Required if declining this enrollment"
-            ></textarea>
-          </div>
-        </div>
 
-        <section class="table-section">
+          <div class="notes-grid">
+            <div class="form-group">
+              <label for="admin-notes">Admin Notes</label>
+              <textarea
+                id="admin-notes"
+                name="admin_notes"
+                rows="4"
+                placeholder="Add internal evaluation notes"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="decline-reason">Decline Reason</label>
+              <textarea
+                id="decline-reason"
+                name="decline_reason"
+                rows="4"
+                placeholder="Required if declining this enrollment"
+              ></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section id="admin-evaluation-section" class="table-section" hidden>
           <h2>Admin Course Evaluation</h2>
           <p class="portal-form-note">
             For returning students, select the subjects the student should take before approval.
@@ -352,6 +386,49 @@
       let availableCourses = [];
       const selectedCourses = new Map();
       const takenCourseKeys = new Set();
+
+      function getCurrentUser() {
+        try {
+          if (typeof window.getStoredUser === "function") {
+            return window.getStoredUser();
+          }
+
+          return JSON.parse(
+            sessionStorage.getItem("user") ||
+              localStorage.getItem("user") ||
+              "null",
+          );
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function getCurrentUserType() {
+        return String(getCurrentUser()?.type || "").trim().toLowerCase();
+      }
+
+      function isAdminUser() {
+        return getCurrentUserType() === "admin";
+      }
+
+      function isTreasuryUser() {
+        return getCurrentUserType() === "treasury";
+      }
+
+      function getCurrentActorLabel(fallback) {
+        const user = getCurrentUser() || {};
+        return user.email || user.first_name || fallback;
+      }
+
+      function applyRoleVisibility() {
+        const adminTaskSection = document.querySelector("#admin-task-section");
+        const adminEvaluationSection = document.querySelector("#admin-evaluation-section");
+        const treasuryTaskSection = document.querySelector("#treasury-task-section");
+
+        adminTaskSection.hidden = !isAdminUser();
+        adminEvaluationSection.hidden = !isAdminUser();
+        treasuryTaskSection.hidden = !isTreasuryUser();
+      }
 
       function getEnrollmentId() {
         const params = new URLSearchParams(window.location.search);
@@ -479,13 +556,33 @@
         const container = document.querySelector("#audit-history");
         if (!container) return;
 
-        if (!Array.isArray(items) || !items.length) {
+        const filteredItems = (Array.isArray(items) ? items : []).filter((item) => {
+          const action = String(item?.action || "").trim().toLowerCase();
+
+          if (isAdminUser()) {
+            return ![
+              "enrollment_misc_fee_updated",
+              "enrollment_misc_fee_description_updated",
+            ].includes(action);
+          }
+
+          if (isTreasuryUser()) {
+            return [
+              "enrollment_misc_fee_updated",
+              "enrollment_misc_fee_description_updated",
+            ].includes(action);
+          }
+
+          return true;
+        });
+
+        if (!filteredItems.length) {
           container.innerHTML =
             '<div class="empty-state">No enrollment history recorded yet.</div>';
           return;
         }
 
-        container.innerHTML = items
+        container.innerHTML = filteredItems
           .map((item) => {
             const details = item.details && typeof item.details === "object"
               ? item.details
@@ -746,12 +843,25 @@
 
       async function loadDocuments() {
         const id = getEnrollmentId();
+        const tbody = document.querySelector("#table-documents tbody");
+
+        if (!id) {
+          tbody.innerHTML =
+            '<tr><td colspan="6">Missing enrollment ID.</td></tr>';
+          return;
+        }
+
         const res = await fetch(
           `${window.APP_CONFIG.API_BASE_URL}/documents/list?enrollment_id=${id}`,
         );
         const data = await res.json();
-        const tbody = document.querySelector("#table-documents tbody");
         tbody.innerHTML = "";
+
+        if (!Array.isArray(data) || !data.length) {
+          tbody.innerHTML =
+            '<tr><td colspan="6">No submitted documents found.</td></tr>';
+          return;
+        }
 
         data.forEach((doc) => {
           const row = document.createElement("tr");
@@ -773,7 +883,6 @@
       }
 
       async function submitEvaluation(statusValue) {
-        const miscFeeInput = document.querySelector("#misc-fee");
         const adminNotesInput = document.querySelector("#admin-notes");
         const declineReasonInput = document.querySelector("#decline-reason");
         const courses = getSelectedCourseArray();
@@ -796,10 +905,9 @@
             body: JSON.stringify({
               id: getEnrollmentId(),
               status: statusValue,
-              misc_fee: miscFeeInput.value,
               admin_notes: adminNotesInput.value,
               decline_reason: declineReasonInput.value,
-              processed_by: "Admin",
+              processed_by: getCurrentActorLabel("Admin"),
               selected_courses: courses,
               total_units: totalUnits,
               total_amount: totalAmount,
@@ -824,12 +932,64 @@
         return true;
       }
 
+      async function submitTreasuryTask() {
+        const miscFeeInput = document.querySelector("#misc-fee");
+        const miscFeeDescriptionInput = document.querySelector("#misc-fee-description");
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/enrollments/update-finance`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              id: getEnrollmentId(),
+              misc_fee: miscFeeInput.value,
+              misc_fee_description: miscFeeDescriptionInput.value,
+              processed_by: getCurrentActorLabel("Treasury"),
+            }),
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.error || "Failed to update treasury task");
+          return false;
+        }
+
+        return true;
+      }
+
       async function readEnrollment() {
         const id = getEnrollmentId();
+        const infoHolder = document.querySelector(".info-holder");
+
+        if (!id) {
+          infoHolder.innerHTML =
+            '<div class="empty-state">Missing enrollment ID.</div>';
+          document.querySelector("#audit-history").innerHTML =
+            '<div class="empty-state">No enrollment history available.</div>';
+          return;
+        }
+
         const res = await fetch(
           `${window.APP_CONFIG.API_BASE_URL}/enrollments/read?id=${id}`,
         );
         const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load enrollment details");
+        }
+
+        if (!data) {
+          infoHolder.innerHTML =
+            '<div class="empty-state">Enrollment record not found.</div>';
+          document.querySelector("#audit-history").innerHTML =
+            '<div class="empty-state">No enrollment history available.</div>';
+          return;
+        }
 
         enrollmentData = data;
         selectedCourses.clear();
@@ -850,6 +1010,7 @@
 
         const approval = document.querySelector("#approval");
         const miscFeeInput = document.querySelector("#misc-fee");
+        const miscFeeDescriptionInput = document.querySelector("#misc-fee-description");
         const adminNotesInput = document.querySelector("#admin-notes");
         const declineReasonInput = document.querySelector("#decline-reason");
         const downpayment = data.downpayment_billing || {};
@@ -858,7 +1019,20 @@
           ? `<a href="${escapeHtml(proofValue)}" target="_blank" rel="noopener noreferrer">View Proof</a>`
           : "-";
 
-        document.querySelector(".info-holder").innerHTML = `
+        const treasuryInfoLines = isTreasuryUser()
+          ? `
+              <p><strong>Misc Fee:</strong> ${formatCurrency(data.misc_fee || 0)}</p>
+              <p><strong>Misc Fee Description:</strong> ${escapeHtml(data.misc_fee_description || "-")}</p>
+            `
+          : "";
+        const adminInfoLines = isAdminUser()
+          ? `
+              <p><strong>Evaluated By:</strong> ${escapeHtml(data.evaluated_by || "-")}</p>
+              <p><strong>Evaluated At:</strong> ${data.evaluated_at ? defaultDate(data.evaluated_at) : "-"}</p>
+            `
+          : "";
+
+        infoHolder.innerHTML = `
           <p><strong>ID:</strong> <span style="color: #1d4ed8; font-weight: 700;">${escapeHtml(data.id)}</span></p>
           <p><strong>Request Type:</strong> <span class="request-badge">${escapeHtml(data.request_type || "New Student")}</span></p>
           <p><strong>Student ID:</strong> ${escapeHtml(data.student_id || "-")}</p>
@@ -871,9 +1045,8 @@
           <p><strong>Year / Semester:</strong> ${escapeHtml(data.year_level || "-")} / ${escapeHtml(data.semester || "-")}</p>
           <p><strong>School Year:</strong> ${escapeHtml(data.school_year || "-")}</p>
           <p><strong>Status:</strong> ${escapeHtml(data.status || "Pending")}</p>
-          <p><strong>Evaluated By:</strong> ${escapeHtml(data.evaluated_by || "-")}</p>
-          <p><strong>Evaluated At:</strong> ${data.evaluated_at ? defaultDate(data.evaluated_at) : "-"}</p>
-          <p><strong>Misc Fee:</strong> ${formatCurrency(data.misc_fee || 0)}</p>
+          ${adminInfoLines}
+          ${treasuryInfoLines}
           <hr style="margin:16px 0;border:none;border-top:1px solid rgba(255,255,255,.2);" />
           <p><strong>Downpayment:</strong> ${formatCurrency(downpayment.amount || 0)}</p>
           <p><strong>Payment Status:</strong> ${escapeHtml(downpayment.payment_status || "No payment submitted")}</p>
@@ -883,16 +1056,25 @@
           <p><strong>Proof:</strong> ${proofLink}</p>
         `;
 
-        renderStatusOptions(data.request_type || "New Student", data.status || "Pending");
+        if (isAdminUser()) {
+          renderStatusOptions(data.request_type || "New Student", data.status || "Pending");
+        }
         miscFeeInput.value = Number(data.misc_fee || 0);
+        miscFeeDescriptionInput.value = data.misc_fee_description || "";
         adminNotesInput.value = data.admin_notes || "";
         declineReasonInput.value = data.decline_reason || "";
         renderAuditLogs(data.audit_logs || []);
 
-        await loadAvailableCourses();
+        if (isAdminUser()) {
+          await loadAvailableCourses();
+        }
       }
 
       function initApproval() {
+        if (!isAdminUser()) {
+          return;
+        }
+
         const approval = document.querySelector("#approval");
 
         approval.addEventListener("change", async () => {
@@ -916,9 +1098,35 @@
           });
       }
 
+      function initTreasuryTask() {
+        if (!isTreasuryUser()) {
+          return;
+        }
+
+        document
+          .querySelector("#save-treasury-task")
+          .addEventListener("click", async () => {
+            const saved = await submitTreasuryTask();
+
+            if (saved) {
+              alert("Treasury task saved.");
+              await readEnrollment();
+            }
+          });
+      }
+
       document.addEventListener("DOMContentLoaded", async () => {
+        applyRoleVisibility();
         initApproval();
-        await Promise.all([readEnrollment(), loadDocuments()]);
+        initTreasuryTask();
+        try {
+          await Promise.all([readEnrollment(), loadDocuments()]);
+        } catch (error) {
+          console.error(error);
+          document.querySelector(".info-holder").innerHTML = `
+            <div class="empty-state">${escapeHtml(error.message || "Failed to load enrollment details.")}</div>
+          `;
+        }
       });
     </script>
   </body>

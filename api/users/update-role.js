@@ -1,12 +1,18 @@
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
+const { requireAuth } = require("../../lib/auth");
 
 const ALLOWED_USER_TYPES = ["admin", "treasury", "records", "student"];
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res, "admin");
+  if (!auth) {
+    return;
   }
 
   try {

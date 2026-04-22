@@ -731,6 +731,22 @@
     <script>
       let activeBillingFilter = "paid";
 
+      function getCurrentUser() {
+        if (typeof window.getStoredUser === "function") {
+          return window.getStoredUser() || {};
+        }
+
+        try {
+          return JSON.parse(
+            sessionStorage.getItem("user") ||
+              localStorage.getItem("user") ||
+              "{}",
+          );
+        } catch (error) {
+          return {};
+        }
+      }
+
       function formatCurrency(value) {
         return new Intl.NumberFormat("en-PH", {
           style: "currency",
@@ -977,7 +993,7 @@
 
             if (!amount) return;
 
-            const user = JSON.parse(localStorage.getItem("user") || "{}");
+            const user = getCurrentUser();
 
             const response = await fetch(
               `${window.APP_CONFIG.API_BASE_URL}/billings/update`,
@@ -1008,7 +1024,7 @@
       function bindReviewButtons() {
         document.querySelectorAll(".btn-review-payment").forEach((button) => {
           button.addEventListener("click", async () => {
-            const user = JSON.parse(localStorage.getItem("user") || "{}");
+            const user = getCurrentUser();
             const nextStatus = button.dataset.status;
             const note = window.prompt(
               nextStatus === "Approved"
@@ -1061,7 +1077,7 @@
           event.preventDefault();
 
           const formData = new FormData(form);
-          const user = JSON.parse(localStorage.getItem("user") || "{}");
+          const user = getCurrentUser();
 
           const response = await fetch(
             `${window.APP_CONFIG.API_BASE_URL}/billings/create`,

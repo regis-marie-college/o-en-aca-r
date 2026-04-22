@@ -8,9 +8,11 @@ const PDFDocument = require("pdfkit");
 const { generateStudentNumber } = require("../../lib/student-number");
 const { writeAuditLog } = require("../../lib/audit-log");
 const { normalizeEmail } = require("../../lib/email");
+const { requireAuth } = require("../../lib/auth");
 const {
   assertValidStatusTransition,
   calculateCourseTotals,
+  ensureEnrollmentEvaluationColumns,
   normalizeEnrollmentStatus,
   normalizeRequestType,
   validateFinancialTotals,
@@ -22,6 +24,11 @@ const DEFAULT_DOWNPAYMENT_AMOUNT = 2000;
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res, "admin");
+  if (!auth) {
+    return;
   }
 
   let emailJob = null;
@@ -57,6 +64,7 @@ module.exports = async (req, res) => {
     const client = await db.connect();
 
     try {
+      await ensureEnrollmentEvaluationColumns(client);
       await client.query("BEGIN");
 
       const enrollmentResult = await client.query(

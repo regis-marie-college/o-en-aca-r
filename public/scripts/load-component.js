@@ -88,7 +88,11 @@
       btn_user.classList.remove("active");
     });
 
-    const user = JSON.parse(localStorage.getItem("user"));
+    const user = typeof window.getStoredUser === "function"
+      ? window.getStoredUser()
+      : null;
+
+    if (!user) return;
 
     if (!btn_user) return;
 
@@ -104,7 +108,7 @@
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ id: user.id }),
+            body: JSON.stringify({ id: user.id, session_id: user.session_id || null }),
           },
         );
 
@@ -113,7 +117,9 @@
         if (!response.ok) {
           throw new Error(data.message || "Something went wrong");
         }
-        localStorage.removeItem("user");
+        if (typeof window.clearStoredUser === "function") {
+          window.clearStoredUser();
+        }
         window.location.assign("/auth/login.html");
       } catch (error) {
         console.error(error);
@@ -125,7 +131,9 @@
     const menu = document.querySelector(".sidebar nav");
     if (!menu) return;
 
-    const user = JSON.parse(localStorage.getItem("user"));
+    const user = typeof window.getStoredUser === "function"
+      ? window.getStoredUser()
+      : null;
 
     if (!user) return;
 
@@ -164,6 +172,8 @@
           { href: "../student/dashboard.html", label: "Dashboard" },
           { href: "../profile/profile.html", label: "Profile" },
           { href: "../courses/list.html", label: "My Courses" },
+          { href: "../student/dashboard.html#document-request-form", label: "Document Requests" },
+          { href: "../student/dashboard.html#reenrollment-form", label: "Re-Enrollment" },
           { href: "../student/dashboard.html#billing-summary", label: "Billing Summary" },
           { href: "../student/dashboard.html#transaction-history", label: "Transaction History" },
         ];
@@ -189,15 +199,30 @@
       )
       .join("");
 
-    const currentPath = window.location.pathname.split("/").pop();
+    const setActiveSidebarLink = () => {
+      const currentUrl = new URL(window.location.href);
 
-    menu.querySelectorAll("a").forEach((link) => {
-      const linkPath = link.getAttribute("href")?.split("/").pop();
+      menu.querySelectorAll("a").forEach((link) => {
+        const href = link.getAttribute("href");
 
-      if (linkPath && linkPath === currentPath) {
-        link.classList.add("active");
-      }
-    });
+        if (!href) {
+          link.classList.remove("active");
+          return;
+        }
+
+        const linkUrl = new URL(href, window.location.href);
+        const samePath = linkUrl.pathname === currentUrl.pathname;
+        const wantsHash = Boolean(linkUrl.hash);
+        const isActive = wantsHash
+          ? samePath && linkUrl.hash === currentUrl.hash
+          : samePath && !currentUrl.hash;
+
+        link.classList.toggle("active", isActive);
+      });
+    };
+
+    setActiveSidebarLink();
+    window.addEventListener("hashchange", setActiveSidebarLink);
   }
 
   document.addEventListener("DOMContentLoaded", async function () {

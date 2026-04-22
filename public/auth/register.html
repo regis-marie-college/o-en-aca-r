@@ -56,6 +56,43 @@
       const form = document.querySelector(".register-card form");
       const submit = form.querySelector("button");
 
+      async function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function fetchWithRetry(url, options, attempts = 2) {
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= attempts; attempt += 1) {
+          try {
+            return await fetch(url, options);
+          } catch (error) {
+            lastError = error;
+
+            if (attempt < attempts) {
+              await sleep(700);
+            }
+          }
+        }
+
+        throw lastError || new Error("Request failed");
+      }
+
+      async function probeApiAvailability() {
+        try {
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/auth/session`,
+            {
+              method: "GET",
+            },
+          );
+
+          return response.ok;
+        } catch (error) {
+          return false;
+        }
+      }
+
       submit.addEventListener("click", async (event) => {
         event.preventDefault();
 
@@ -73,7 +110,7 @@
         };
 
         try {
-          const response = await fetch(
+          const response = await fetchWithRetry(
             `${window.APP_CONFIG.API_BASE_URL}/auth/register`,
             {
               method: "POST",
@@ -90,13 +127,23 @@
             throw new Error(data.message || "Something went wrong");
           }
 
-          window.location.assign("/admin/dashboard.html");
+          if (typeof window.setStoredUser === "function") {
+            window.setStoredUser(data);
+          } else {
+            window.sessionStorage.setItem("user", JSON.stringify(data));
+            window.localStorage.removeItem("user");
+          }
 
-          localStorage.setItem("user", JSON.stringify(data));
+          window.location.assign("/student/dashboard.html");
 
           form.reset();
         } catch (error) {
           console.error(error);
+          const apiReachable = await probeApiAvailability();
+          const message = apiReachable
+            ? error.message || "Unable to register right now."
+            : "Cannot reach the local API server right now. Please make sure the backend is running on http://localhost:8000 and try again.";
+          alert(message);
         } finally {
           submit.disabled = false;
           submit.textContent = "Sign In";

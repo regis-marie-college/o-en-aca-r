@@ -1,9 +1,16 @@
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const db = require("../../services/supabase");
+const { requireAuth } = require("../../lib/auth");
+const { readAuditLogs } = require("../../lib/audit-log");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res, ["admin", "treasury", "records"]);
+  if (!auth) {
+    return;
   }
 
   const { id } = req.query;
@@ -67,23 +74,17 @@ module.exports = async (req, res) => {
         )
       : { rows: [] };
 
-    const auditLogsResult = await db.query(
-      `
-      select *
-      from audit_logs
-      where entity_type = 'document_request'
-        and entity_id = $1
-      order by created_at desc
-      `,
-      [String(request.id)],
-    );
+    const auditLogsResult = await readAuditLogs(db, {
+      entityType: "document_request",
+      entityId: String(request.id),
+    });
 
     return okay(res, {
       request,
       student: userResult.rows[0] || null,
       enrollment: enrollmentResult.rows[0] || null,
       student_records: recordsResult.rows,
-      audit_logs: auditLogsResult.rows,
+      audit_logs: auditLogsResult,
     });
   } catch (err) {
     console.error(err);

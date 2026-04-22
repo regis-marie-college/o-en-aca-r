@@ -6,10 +6,16 @@ const {
   recordDocumentPaymentTransaction,
   notifyDocumentRequestStatus,
 } = require("./helpers");
+const { requireAuth } = require("../../lib/auth");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return notAllowed(res);
+  }
+
+  const auth = await requireAuth(req, res);
+  if (!auth) {
+    return;
   }
 
   try {
