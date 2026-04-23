@@ -36,6 +36,7 @@
         <div class="form-group">
           <label>Email</label>
           <input type="email" name="email" required />
+          <small class="portal-form-note">Please use an active email address. This will be used for your student portal and enrollment updates.</small>
         </div>
 
         <div class="form-group">
@@ -96,14 +97,24 @@
           <div id="course-selected" class="selected-list"></div>
         </div>
 
-        <h2>Downpayment</h2>
+        <h2>Payment</h2>
         <p class="portal-form-note" style="margin-bottom: 14px">
-          Submit your downpayment proof now. Treasury must approve this payment
+          Submit your payment proof now. Treasury must approve this payment
           before admin can approve your enrollment application.
         </p>
 
         <div class="form-group">
-          <label>Downpayment Amount</label>
+          <label>Payment Plan</label>
+          <select name="payment_plan" id="payment_plan" required>
+            <option value="">Select Payment Plan</option>
+            <option value="installment">Installment / Downpayment</option>
+            <option value="full">Full Payment</option>
+          </select>
+          <small class="portal-form-note">Choose Full Payment if the student will pay the full assessment now. Choose Installment if the student will pay PHP 2,000.00 downpayment first.</small>
+        </div>
+
+        <div class="form-group">
+          <label id="payment_amount_label">Payment Amount</label>
           <input
             type="number"
             name="downpayment_amount"
@@ -112,6 +123,7 @@
             value="2000"
             required
           />
+          <small class="portal-form-note" id="payment_amount_note">For installment, minimum downpayment is PHP 2,000.00. For full payment, this must equal the full assessment.</small>
         </div>
 
         <div class="form-group">
@@ -129,7 +141,7 @@
         </div>
 
         <div class="requirement-item">
-          <label>Proof of Downpayment</label>
+          <label>Proof of Payment</label>
           <input
             type="file"
             id="proof_of_payment"
@@ -161,8 +173,11 @@
       const programEl = document.querySelector("#program");
       const yearLevelEl = document.querySelector("#year_level");
       const semesterEl = document.querySelector("#semester");
+      const paymentPlanEl = document.querySelector("#payment_plan");
       const paymentChannelEl = document.querySelector("#payment_channel");
       const downpaymentAmountEl = form.querySelector('[name="downpayment_amount"]');
+      const paymentAmountLabelEl = document.querySelector("#payment_amount_label");
+      const paymentAmountNoteEl = document.querySelector("#payment_amount_note");
 
       function getSelectedProgramParts() {
         const [programId, programName, programCode, programMajor] = (programEl.value || "").split(":");
@@ -187,6 +202,10 @@
           style: "currency",
           currency: "PHP",
         }).format(Number(value || 0));
+      }
+
+      function isSameCurrencyAmount(left, right) {
+        return Math.round(Number(left || 0) * 100) === Math.round(Number(right || 0) * 100);
       }
 
       async function uploadIdPicture(file) {
@@ -237,21 +256,78 @@
           .filter(Boolean);
       }
 
-      function updateDownpaymentMinimum() {
+      function getTotalAssessment() {
         const totalUnits = getSelectedCourseObjects().reduce(
           (sum, course) => sum + Number(course.units || 0),
           0,
         );
         const totalAmount = totalUnits * RATE_PER_UNIT;
-        const totalAssessment = totalUnits > 0 ? totalAmount + MISC_FEE + ID_FEE : 0;
-        const minimumDownpayment =
-          totalUnits > 0 ? Math.min(MIN_DOWNPAYMENT, totalAssessment) : MIN_DOWNPAYMENT;
 
-        downpaymentAmountEl.min = minimumDownpayment.toFixed(2);
+        return totalUnits > 0 ? totalAmount + MISC_FEE + ID_FEE : 0;
+      }
 
-        if (Number(downpaymentAmountEl.value || 0) < minimumDownpayment) {
-          downpaymentAmountEl.value = minimumDownpayment.toFixed(2);
+      function getPaymentPlan() {
+        return String(paymentPlanEl.value || "").trim().toLowerCase();
+      }
+
+      function updatePaymentAmountRules() {
+        const paymentPlan = getPaymentPlan();
+        const totalAssessment = getTotalAssessment();
+
+        if (paymentPlan === "full") {
+          const fullAmount = totalAssessment.toFixed(2);
+          paymentAmountLabelEl.textContent = "Full Payment Amount";
+          paymentAmountNoteEl.textContent =
+            totalAssessment > 0
+              ? `Full payment must equal ${formatCurrency(totalAssessment)}.`
+              : "Select courses first to calculate the full payment amount.";
+          downpaymentAmountEl.min = fullAmount;
+          downpaymentAmountEl.max = fullAmount;
+          downpaymentAmountEl.value = fullAmount;
+          downpaymentAmountEl.readOnly = true;
+          return;
         }
+
+        paymentAmountLabelEl.textContent = "Downpayment Amount";
+        paymentAmountNoteEl.textContent =
+          "Minimum downpayment is PHP 2,000.00. Amounts below PHP 2,000.00 cannot be submitted.";
+        downpaymentAmountEl.min = MIN_DOWNPAYMENT.toFixed(2);
+        downpaymentAmountEl.removeAttribute("max");
+        downpaymentAmountEl.readOnly = false;
+
+        if (Number(downpaymentAmountEl.value || 0) < MIN_DOWNPAYMENT) {
+          downpaymentAmountEl.value = MIN_DOWNPAYMENT.toFixed(2);
+        }
+      }
+
+      function validateRequiredTextFields() {
+        const requiredFields = [
+          ["last_name", "Last name"],
+          ["first_name", "First name"],
+          ["middle_name", "Middle name"],
+          ["email", "Active email"],
+          ["mobile", "Mobile number"],
+          ["birthday", "Birthday"],
+          ["program", "Program"],
+          ["year_level", "Year level"],
+          ["semester", "Semester"],
+          ["payment_plan", "Payment plan"],
+          ["payment_channel", "Payment channel"],
+          ["reference_no", "Reference number"],
+        ];
+
+        for (const [name, label] of requiredFields) {
+          const field = form.elements[name];
+          const value = String(field?.value || "").trim();
+
+          if (!value) {
+            field?.focus();
+            message.innerHTML = `<span class='error'>${label} is required.</span>`;
+            return false;
+          }
+        }
+
+        return true;
       }
 
       function renderPaymentOptions(selectedKey = "") {
@@ -340,7 +416,7 @@
           )
           .join("");
 
-        updateDownpaymentMinimum();
+        updatePaymentAmountRules();
       }
 
       async function loadPrograms() {
@@ -439,12 +515,18 @@
         renderPaymentOptions(paymentChannelEl.value);
       });
 
+      paymentPlanEl.addEventListener("change", updatePaymentAmountRules);
+
       form
         .querySelector("button.btn-enroll")
         .addEventListener("click", async (event) => {
           event.preventDefault();
 
           if (!form.reportValidity()) {
+            return;
+          }
+
+          if (!validateRequiredTextFields()) {
             return;
           }
 
@@ -467,7 +549,7 @@
 
           if (!proofFile) {
             message.innerHTML =
-              "<span class='error'>Please upload your proof of downpayment.</span>";
+              "<span class='error'>Please upload your proof of payment.</span>";
             return;
           }
 
@@ -481,13 +563,21 @@
           );
           const totalAmount = totalUnits * RATE_PER_UNIT;
           const totalAssessment = totalAmount + MISC_FEE + ID_FEE;
-          const minimumDownpayment = Math.min(MIN_DOWNPAYMENT, totalAssessment);
+          const paymentPlan = getPaymentPlan();
+          const minimumDownpayment = paymentPlan === "full" ? totalAssessment : MIN_DOWNPAYMENT;
           const downpaymentAmount = Number(form.downpayment_amount.value || 0);
           const { programId: program_id, programName: program_name, programCode: program_code } =
             getSelectedProgramParts();
           const major = getSelectedMajor();
 
-          if (downpaymentAmount < minimumDownpayment) {
+          if (paymentPlan === "full" && !isSameCurrencyAmount(downpaymentAmount, totalAssessment)) {
+            message.innerHTML = `<span class='error'>Full payment must equal ${formatCurrency(totalAssessment)}.</span>`;
+            button.disabled = false;
+            button.textContent = "Submit Enrollment";
+            return;
+          }
+
+          if (paymentPlan === "installment" && downpaymentAmount < minimumDownpayment) {
             message.innerHTML = `<span class='error'>Minimum downpayment is ${formatCurrency(minimumDownpayment)}.</span>`;
             button.disabled = false;
             button.textContent = "Submit Enrollment";
@@ -554,6 +644,7 @@
                     },
                   },
                   downpayment_amount: downpaymentAmount,
+                  payment_plan: paymentPlan,
                   payment_channel: form.payment_channel.value,
                   reference_no: form.reference_no.value,
                   proof_of_payment: uploadedProof.file_url,

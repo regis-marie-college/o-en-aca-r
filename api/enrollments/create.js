@@ -44,6 +44,7 @@ module.exports = async (req, res) => {
       student_id,
       request_type,
       downpayment_amount,
+      payment_plan,
       payment_channel,
       reference_no,
       proof_of_payment,
@@ -60,12 +61,17 @@ module.exports = async (req, res) => {
     }
 
     if (
-      !last_name ||
-      !first_name ||
-      !email ||
-      !program_id ||
-      !year_level ||
-      !semester
+      !hasText(last_name) ||
+      !hasText(first_name) ||
+      !hasText(middle_name) ||
+      !hasText(email) ||
+      !hasText(mobile) ||
+      !hasText(birthday) ||
+      !hasText(program_id) ||
+      !hasText(program_name) ||
+      !hasText(program_code) ||
+      !hasText(year_level) ||
+      !hasText(semester)
     ) {
       return badRequest(res, "Missing required fields");
     }
@@ -95,6 +101,7 @@ module.exports = async (req, res) => {
         : Number(total_amount || 0);
     const totalAssessment = courseAmount + MISC_FEE + ID_FEE;
     const submittedDownpayment = Number(downpayment_amount || 0);
+    const normalizedPaymentPlan = normalizePaymentPlan(payment_plan);
     const nextTotalUnits =
       normalizedSelectedCourses.length > 0
         ? computedTotals.totalUnits
@@ -107,24 +114,38 @@ module.exports = async (req, res) => {
     });
 
     if (!isReturningStudent) {
-      const minimumDownpayment = Math.min(DOWNPAYMENT_AMOUNT, totalAssessment);
+      const minimumDownpayment =
+        normalizedPaymentPlan === "full" ? totalAssessment : DOWNPAYMENT_AMOUNT;
 
       if (submittedDownpayment < minimumDownpayment) {
         return badRequest(
           res,
-          `Minimum downpayment is PHP ${minimumDownpayment.toFixed(2)}`,
+          normalizedPaymentPlan === "full"
+            ? `Full payment must be PHP ${minimumDownpayment.toFixed(2)}`
+            : `Minimum downpayment is PHP ${minimumDownpayment.toFixed(2)}`,
         );
       }
 
       if (submittedDownpayment > totalAssessment) {
-        return badRequest(res, "Downpayment cannot exceed the total assessment");
+        return badRequest(res, "Payment cannot exceed the total assessment");
       }
 
-      if (!payment_channel || !reference_no || !proof_of_payment) {
+      if (
+        normalizedPaymentPlan === "full" &&
+        !isSameCurrencyAmount(submittedDownpayment, totalAssessment)
+      ) {
+        return badRequest(res, "Full payment must equal the total assessment");
+      }
+
+      if (!hasText(payment_channel) || !hasText(reference_no) || !hasText(proof_of_payment)) {
         return badRequest(
           res,
           "Payment channel, reference number, and proof of payment are required",
         );
+      }
+
+      if (!hasText(idpic_url)) {
+        return badRequest(res, "1x1 ID picture is required");
       }
     }
 
@@ -307,6 +328,7 @@ module.exports = async (req, res) => {
           email,
           courseAmount,
           downpaymentAmount: submittedDownpayment,
+          paymentPlan: normalizedPaymentPlan,
           initialPayment: {
             paymentChannel: payment_channel,
             referenceNo: reference_no,
@@ -363,48 +385,61 @@ async function createInstallmentBillings({
   email,
   courseAmount,
   downpaymentAmount,
+  paymentPlan = "installment",
   initialPayment = null,
   executor = db,
 }) {
   const studentName = `${first_name} ${last_name}`.trim();
   const totalAssessment = Number(courseAmount || 0) + MISC_FEE + ID_FEE;
   const downpayment = Number(downpaymentAmount || 0);
-  const remainingBalance = Math.max(totalAssessment - downpayment, 0);
-  const baseInstallment = Number((remainingBalance / 4).toFixed(2));
-  const installments = [];
-
-  for (let index = 0; index < 4; index += 1) {
-    if (index < 3) {
-      installments.push(baseInstallment);
-      continue;
-    }
-
-    const allocated = installments.reduce((sum, amount) => sum + amount, 0);
-    installments.push(Number((remainingBalance - allocated).toFixed(2)));
-  }
+  const isFullPayment = paymentPlan === "full";
+  const tuitionAmount = Number(courseAmount || 0);
+  const feeItems = [
+    { description: "Miscellaneous Fee", amount: MISC_FEE },
+    { description: "ID Fee", amount: ID_FEE },
+  ].filter((item) => Number(item.amount || 0) > 0);
+  const tuitionDownpayment = isFullPayment
+    ? tuitionAmount
+    : Math.min(downpayment, tuitionAmount);
+  const remainingTuitionBalance = Math.max(tuitionAmount - tuitionDownpayment, 0);
+  const installments = isFullPayment ? [] : splitAmounts(remainingTuitionBalance, 4);
+  const feePaymentAllocation = Math.max(downpayment - tuitionDownpayment, 0);
+  let remainingFeePaymentAllocation = isFullPayment
+    ? feeItems.reduce((sum, item) => sum + Number(item.amount || 0), 0)
+    : feePaymentAllocation;
 
   const billingItems = [
     {
-      description: `Downpayment - Tuition and Fees (Course Fee: PHP ${Number(
-        courseAmount || 0,
-      ).toFixed(2)}, Misc Fee: PHP ${MISC_FEE.toFixed(2)}, ID Fee: PHP ${ID_FEE.toFixed(2)})`,
-      amount: downpayment,
+      description: `${isFullPayment ? "Full Payment / Downpayment" : "Downpayment"} - Tuition Fee`,
+      amount: tuitionDownpayment,
+      submittedAmount: tuitionDownpayment,
     },
     ...installments.map((amount, index) => ({
-      description: `${ordinalLabel(index + 1)} Payment Installment`,
+      description: `${ordinalLabel(index + 1)} Payment Installment - Tuition Fee`,
       amount,
     })),
+    ...feeItems.map((item) => {
+      const submittedAmount = Math.min(remainingFeePaymentAllocation, Number(item.amount || 0));
+      remainingFeePaymentAllocation = Math.max(
+        remainingFeePaymentAllocation - submittedAmount,
+        0,
+      );
+
+      return {
+        ...item,
+        submittedAmount,
+      };
+    }),
   ].filter((item) => Number(item.amount || 0) > 0);
 
   for (const item of billingItems) {
-    const isDownpayment = item.description.toLowerCase().includes("downpayment");
-    const paymentColumns = isDownpayment
+    const submittedAmount = Number(item.submittedAmount || 0);
+    const hasSubmittedPayment = Boolean(initialPayment) && submittedAmount > 0;
+    const paymentColumns = hasSubmittedPayment
       ? ", payment_method, payment_channel, reference_no, proof_of_payment, payment_status, pending_payment_amount"
       : "";
-    const paymentValues = isDownpayment
-      ? initialPayment
-        ? ", 'Online', $7, $8, $9, 'Submitted', $5"
-        : ", null, null, null, null, null"
+    const paymentValues = hasSubmittedPayment
+      ? ", 'Online', $7, $8, $9, 'Submitted', $10"
       : "";
     const params = [
       enrollment.id,
@@ -415,11 +450,12 @@ async function createInstallmentBillings({
       "System Enrollment",
     ];
 
-    if (isDownpayment) {
+    if (hasSubmittedPayment) {
       params.push(
         initialPayment?.paymentChannel || null,
         initialPayment?.referenceNo || null,
         initialPayment?.proofOfPayment || null,
+        submittedAmount.toFixed(2),
       );
     }
 
@@ -449,6 +485,30 @@ function ordinalLabel(value) {
   }
 }
 
+function splitAmounts(total, count) {
+  const safeTotal = Number(total || 0);
+  const safeCount = Number(count || 0);
+
+  if (safeTotal <= 0 || safeCount <= 0) {
+    return [];
+  }
+
+  const baseAmount = Number((safeTotal / safeCount).toFixed(2));
+  const amounts = [];
+
+  for (let index = 0; index < safeCount; index += 1) {
+    if (index < safeCount - 1) {
+      amounts.push(baseAmount);
+      continue;
+    }
+
+    const allocated = amounts.reduce((sum, amount) => sum + amount, 0);
+    amounts.push(Number((safeTotal - allocated).toFixed(2)));
+  }
+
+  return amounts;
+}
+
 function getCurrentSchoolYear(date = new Date()) {
   const year = date.getFullYear();
   return `${year}-${year + 1}`;
@@ -464,4 +524,22 @@ async function getDefaultSchoolYear() {
   `);
 
   return result.rows[0]?.name || getCurrentSchoolYear();
+}
+
+function hasText(value) {
+  return String(value || "").trim().length > 0;
+}
+
+function normalizePaymentPlan(value) {
+  const normalized = String(value || "installment").trim().toLowerCase();
+
+  if (["full", "full_payment", "full payment", "fully paid"].includes(normalized)) {
+    return "full";
+  }
+
+  return "installment";
+}
+
+function isSameCurrencyAmount(left, right) {
+  return Math.round(Number(left || 0) * 100) === Math.round(Number(right || 0) * 100);
 }

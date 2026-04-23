@@ -146,6 +146,27 @@
         }).format(Number(value || 0));
       }
 
+      function formatDateInput(value) {
+        if (!value) {
+          return "";
+        }
+
+        const rawValue = String(value).trim();
+        const directDate = rawValue.match(/^\d{4}-\d{2}-\d{2}/);
+
+        if (directDate) {
+          return directDate[0];
+        }
+
+        const date = new Date(rawValue);
+
+        if (Number.isNaN(date.getTime())) {
+          return "";
+        }
+
+        return date.toISOString().slice(0, 10);
+      }
+
       function escapeHtml(value) {
         return String(value || "").replace(/[&<>"']/g, (char) => {
           const map = {
@@ -307,7 +328,13 @@
         form.querySelector('[name="last_name"]').value = lastName;
         form.querySelector('[name="email"]').value = user?.email || currentUser.email || "";
         form.querySelector('[name="mobile"]').value = user?.mobile || enrollment?.mobile || "-";
-        form.querySelector('[name="birthday"]').value = enrollment?.birthday || "";
+        form.querySelector('[name="birthday"]').value = formatDateInput(
+          enrollment?.birthday ||
+            user?.birthday ||
+            user?.date_of_birth ||
+            user?.dob ||
+            currentUser?.birthday,
+        );
         form.querySelector('[name="program"]').value = enrollment?.program_name || enrollment?.program_code || "-";
         form.querySelector('[name="year_level"]').value = enrollment?.year_level || "-";
         form.querySelector('[name="semester"]').value = enrollment?.semester || "-";

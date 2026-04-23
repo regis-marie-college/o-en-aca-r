@@ -38,39 +38,55 @@ module.exports = async (req, res) => {
 
     const userResult = await db.query(
       `
-      select id, first_name, middle_name, last_name, email, mobile, type, created_at
+      select id, student_number, first_name, middle_name, last_name, email, mobile, type, created_at
       from users
-      where email = $1
+      where lower(email) = lower($1)
          or id::text = $2
+         or student_number = $2
       order by created_at desc
       limit 1
       `,
       [request.email, request.student_id || ""],
     );
 
+    const studentLookupIds = Array.from(
+      new Set(
+        [request.student_id, userResult.rows[0]?.id, userResult.rows[0]?.student_number]
+          .filter(Boolean)
+          .map((value) => String(value).trim())
+          .filter(Boolean),
+      ),
+    );
+
     const enrollmentResult = await db.query(
       `
       select *
       from enrollments
-      where email = $1
-      order by created_at desc
+      where lower(email) = lower($1)
+         or regexp_replace(lower(concat_ws(' ', first_name, middle_name, last_name)), '\\s+', ' ', 'g') =
+            regexp_replace(lower($2), '\\s+', ' ', 'g')
+         or regexp_replace(lower(concat_ws(' ', first_name, last_name)), '\\s+', ' ', 'g') =
+            regexp_replace(lower($2), '\\s+', ' ', 'g')
+         or regexp_replace(lower(concat_ws(' ', last_name, first_name)), '\\s+', ' ', 'g') =
+            regexp_replace(lower($2), '\\s+', ' ', 'g')
+      order by
+        case when lower(coalesce(status, '')) = 'approved' then 0 else 1 end,
+        updated_at desc nulls last,
+        created_at desc
       limit 1
       `,
-      [request.email],
+      [request.email, request.student_name || ""],
     );
 
-    const studentId =
-      request.student_id || userResult.rows[0]?.id || null;
-
-    const recordsResult = studentId
+    const recordsResult = studentLookupIds.length
       ? await db.query(
           `
           select *
           from student_records
-          where student_id = $1
-          order by school_year asc, created_at asc
+          where student_id = any($1::text[])
+          order by coalesce(academic_year, school_year) desc, semester asc nulls last, created_at desc
           `,
-          [studentId],
+          [studentLookupIds],
         )
       : { rows: [] };
 

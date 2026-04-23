@@ -244,20 +244,6 @@
           matcher: (status) => status === "approved",
           sectionClass: "is-approved",
         },
-        {
-          key: "declined",
-          title: "Declined",
-          description: "Enrollment requests that were not approved.",
-          matcher: (status) => status === "declined",
-          sectionClass: "is-declined",
-        },
-        {
-          key: "other",
-          title: "Other Statuses",
-          description: "Records with uncategorized or custom statuses.",
-          matcher: () => true,
-          sectionClass: "",
-        },
       ];
 
       function normalizeStatus(value) {
@@ -282,14 +268,14 @@
         const grouped = {
           pending: [],
           approved: [],
-          declined: [],
-          other: [],
         };
 
         items.forEach((enrollment) => {
           const normalized = normalizeStatus(enrollment.status);
           const group = STATUS_GROUPS.find((item) => item.matcher(normalized));
-          grouped[group ? group.key : "other"].push(enrollment);
+          if (group) {
+            grouped[group.key].push(enrollment);
+          }
         });
 
         return grouped;
@@ -309,17 +295,8 @@
             detail: "Accepted enrollment requests",
           },
           {
-            label: "Declined",
-            value: grouped.declined.length,
-            detail: "Requests needing follow-up if appealed",
-          },
-          {
             label: "Total",
-            value:
-              grouped.pending.length +
-              grouped.approved.length +
-              grouped.declined.length +
-              grouped.other.length,
+            value: grouped.pending.length + grouped.approved.length,
             detail: "All enrollment records in this view",
           },
         ];
@@ -401,7 +378,7 @@
       function renderBoard(grouped) {
         const board = document.querySelector("#status-board");
 
-        board.innerHTML = STATUS_GROUPS.filter((group) => grouped[group.key].length > 0 || group.key !== "other")
+        board.innerHTML = STATUS_GROUPS.filter((group) => grouped[group.key].length > 0)
           .map(
             (group) => `
               <section class="status-section ${group.sectionClass}">

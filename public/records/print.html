@@ -238,6 +238,7 @@
         coe: "Certificate of Enrollment",
         cor: "Certificate of Registration",
         tor: "Transcript of Records",
+        "good-moral": "Certificate of Good Moral Character",
         cog: "Copy of Grades",
       };
 
@@ -275,23 +276,37 @@
 
       function getAcademicProgram(enrollment, records) {
         const firstRecord = Array.isArray(records) ? records[0] : null;
-        return (
+        const programName =
           firstRecord?.program_name ||
-          enrollment?.program ||
+          enrollment?.program_name ||
+          enrollment?.program_code ||
           enrollment?.course ||
+          enrollment?.program ||
           firstRecord?.course_name ||
-          "Not indicated"
-        );
+          "";
+        const major = enrollment?.major ? ` Major in ${enrollment.major}` : "";
+
+        return programName ? `${programName}${major}` : "Not indicated";
       }
 
       function getSchoolYear(enrollment, records) {
         const firstRecord = Array.isArray(records) ? records[0] : null;
         return (
-          firstRecord?.academic_year ||
           enrollment?.school_year ||
+          firstRecord?.academic_year ||
           firstRecord?.school_year ||
           "Current School Year"
         );
+      }
+
+      function getYearLevel(enrollment, records) {
+        const firstRecord = Array.isArray(records) ? records[0] : null;
+        return enrollment?.year_level || firstRecord?.year_level || "Not indicated";
+      }
+
+      function getSemester(enrollment, records) {
+        const firstRecord = Array.isArray(records) ? records[0] : null;
+        return enrollment?.semester || firstRecord?.semester || "Not indicated";
       }
 
       function mapTemplate(template) {
@@ -307,7 +322,7 @@
             </div>
             <div class="meta-item">
               <label>Student ID</label>
-              <strong>${escapeHtml(request.student_id || student?.id || enrollment?.student_id || "-")}</strong>
+              <strong>${escapeHtml(request.student_id || student?.student_number || enrollment?.student_id || student?.id || "-")}</strong>
             </div>
             <div class="meta-item">
               <label>Program</label>
@@ -316,6 +331,14 @@
             <div class="meta-item">
               <label>School Year</label>
               <strong>${escapeHtml(getSchoolYear(enrollment, records))}</strong>
+            </div>
+            <div class="meta-item">
+              <label>Year Level</label>
+              <strong>${escapeHtml(getYearLevel(enrollment, records))}</strong>
+            </div>
+            <div class="meta-item">
+              <label>Semester</label>
+              <strong>${escapeHtml(getSemester(enrollment, records))}</strong>
             </div>
             <div class="meta-item">
               <label>Purpose</label>
@@ -387,18 +410,97 @@
         `;
       }
 
+      function parseSelectedCourses(value) {
+        if (Array.isArray(value)) {
+          return value;
+        }
+
+        if (!value) {
+          return [];
+        }
+
+        try {
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function renderRegistrationCourses(enrollment) {
+        const courses = parseSelectedCourses(enrollment?.selected_courses);
+        const totalUnits =
+          enrollment?.total_units ||
+          courses.reduce((sum, course) => sum + Number(course.units || 0), 0);
+
+        if (!courses.length) {
+          return `
+            <div class="status-note">
+              No current enrolled course list is available yet for this registration.
+              Please verify the student's assigned courses from the enrollment record.
+            </div>
+          `;
+        }
+
+        return `
+          <table class="records-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Course Code</th>
+                <th>Course / Subject</th>
+                <th>Units</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${courses
+                .map(
+                  (course, index) => `
+                    <tr>
+                      <td>${index + 1}</td>
+                      <td>${escapeHtml(course.code || course.course_id || "-")}</td>
+                      <td>${escapeHtml(course.name || course.course_name || "-")}</td>
+                      <td>${escapeHtml(formatUnits(course.units))}</td>
+                    </tr>
+                  `,
+                )
+                .join("")}
+              <tr>
+                <td colspan="3"><strong>Total Units</strong></td>
+                <td><strong>${escapeHtml(formatUnits(totalUnits))}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+      }
+
       function renderBody(template, detail) {
         const { request, student, enrollment, student_records: records } = detail;
         const fullName = formatFullName(request, student);
         const program = getAcademicProgram(enrollment, records);
         const schoolYear = getSchoolYear(enrollment, records);
+        const yearLevel = getYearLevel(enrollment, records);
+        const semester = getSemester(enrollment, records);
 
         if (template === "coe") {
           return `
             <div class="content-copy">
-              This is to certify that <strong>${escapeHtml(fullName)}</strong> is officially enrolled
-              in <strong>${escapeHtml(program)}</strong> for the school year
-              <strong>${escapeHtml(schoolYear)}</strong> at OENACAR.
+              This is to certify that <strong>${escapeHtml(fullName)}</strong> is a bona fide student
+              of OENACAR and is officially enrolled in the
+              <strong>${escapeHtml(program)}</strong> program for
+              <strong>${escapeHtml(yearLevel)}</strong>, <strong>${escapeHtml(semester)}</strong>,
+              School Year <strong>${escapeHtml(schoolYear)}</strong>.
+              <br /><br />
+              This certification is issued upon the request of the above-named student for
+              <strong>${escapeHtml(request.purpose || "official purposes")}</strong> and is based on the
+              enrollment records currently maintained by the Records Office. The student's enrollment
+              status, program information, year level, and school year indicated herein were verified
+              from the available school records at the time this document was prepared.
+              <br /><br />
+              This document may be presented to the requesting agency, office, scholarship provider,
+              or other concerned institution as proof that the student is presently enrolled in this
+              institution. Any alteration, erasure, or unauthorized reproduction of this certification
+              without proper validation from the Records Office shall render this document invalid.
             </div>
           `;
         }
@@ -408,10 +510,11 @@
             <div class="content-copy">
               This certifies that <strong>${escapeHtml(fullName)}</strong> is officially registered
               under the program <strong>${escapeHtml(program)}</strong> for the school year
-              <strong>${escapeHtml(schoolYear)}</strong>. The registration is based on the current
-              academic data available in the student portal.
+              <strong>${escapeHtml(schoolYear)}</strong>, <strong>${escapeHtml(yearLevel)}</strong>,
+              <strong>${escapeHtml(semester)}</strong>. The list below shows the courses currently
+              assigned to the student for this registration, with the corresponding academic units.
             </div>
-            ${renderRecordsTable(records, template)}
+            ${renderRegistrationCourses(enrollment)}
           `;
         }
 
@@ -423,6 +526,32 @@
               official review, release preparation, and final registrar validation.
             </div>
             ${renderRecordsTable(records, template)}
+          `;
+        }
+
+        if (template === "good-moral") {
+          return `
+            <div class="content-copy">
+              This is to certify that <strong>${escapeHtml(fullName)}</strong>, a student enrolled
+              in <strong>${escapeHtml(program)}</strong>, <strong>${escapeHtml(yearLevel)}</strong>,
+              <strong>${escapeHtml(semester)}</strong>, School Year
+              <strong>${escapeHtml(schoolYear)}</strong>, is known to this institution as a person
+              of good moral character.
+              <br /><br />
+              Based on the records available at the Records Office, the above-named student has not
+              been found guilty of any serious disciplinary offense involving dishonesty, misconduct,
+              or behavior contrary to the rules and standards of the school as of the date this
+              certification is prepared.
+              <br /><br />
+              This certification is issued upon the request of the student for
+              <strong>${escapeHtml(request.purpose || "official purposes")}</strong>. It may be
+              presented to the concerned office, agency, school, scholarship provider, employer, or
+              other institution requiring proof of good moral standing.
+              <br /><br />
+              This document is valid only when signed by the authorized representative of the Records
+              Office and must not be altered, reproduced, or used for any purpose other than the one
+              stated above without proper authorization.
+            </div>
           `;
         }
 

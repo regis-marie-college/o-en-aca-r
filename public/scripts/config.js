@@ -36,6 +36,7 @@
     const sessionUser = parseStoredUser(window.sessionStorage.getItem("user"));
 
     if (sessionUser) {
+      window.localStorage.setItem("user", JSON.stringify(sessionUser));
       return sessionUser;
     }
 
@@ -43,7 +44,6 @@
 
     if (legacyUser) {
       window.sessionStorage.setItem("user", JSON.stringify(legacyUser));
-      window.localStorage.removeItem("user");
       return legacyUser;
     }
 
@@ -59,7 +59,7 @@
 
     const serializedUser = JSON.stringify(user);
     window.sessionStorage.setItem("user", serializedUser);
-    window.localStorage.removeItem("user");
+    window.localStorage.setItem("user", serializedUser);
   }
 
   function clearStoredUser() {

@@ -473,22 +473,23 @@ async function createInstallmentBillings({
 }) {
   const studentName = `${first_name} ${last_name}`.trim();
   const miscFee = Number(enrollment.misc_fee || 0);
-  const totalAssessment = Number(courseAmount || 0) + miscFee + ID_FEE;
   const downpayment = Number(downpaymentAmount || 0);
-  const remainingBalance = Math.max(totalAssessment - downpayment, 0);
+  const tuitionAmount = Number(courseAmount || 0);
+  const tuitionDownpayment = Math.min(downpayment, tuitionAmount);
+  const remainingBalance = Math.max(tuitionAmount - tuitionDownpayment, 0);
   const installments = splitAmounts(remainingBalance, 4);
 
   const billingItems = [
     {
-      description: `Downpayment - Tuition and Fees (Course Fee: PHP ${Number(
-        courseAmount || 0,
-      ).toFixed(2)}, Misc Fee: PHP ${miscFee.toFixed(2)}, ID Fee: PHP ${ID_FEE.toFixed(2)})`,
-      amount: downpayment,
+      description: "Downpayment - Tuition Fee",
+      amount: tuitionDownpayment,
     },
     ...installments.map((amount, index) => ({
-      description: `${ordinalLabel(index + 1)} Payment Installment`,
+      description: `${ordinalLabel(index + 1)} Payment Installment - Tuition Fee`,
       amount,
     })),
+    { description: "Miscellaneous Fee", amount: miscFee },
+    { description: "ID Fee", amount: ID_FEE },
   ].filter((item) => Number(item.amount || 0) > 0);
 
   for (const item of billingItems) {
@@ -540,10 +541,12 @@ async function syncEnrollmentBillings(enrollment, executor = db) {
 
   const miscFee = Number(enrollment.misc_fee || 0);
   const courseAmount = Number(enrollment.total_amount || 0);
-  const totalAssessment = courseAmount + miscFee + ID_FEE;
   const downpaymentAmount = Number(downpaymentBilling.amount || 0);
-  const installmentBillings = billings.filter((billing) => billing.id !== downpaymentBilling.id);
-  const remainingBalance = Math.max(totalAssessment - downpaymentAmount, 0);
+  const installmentBillings = billings.filter((billing) => {
+    const description = String(billing.description || "").toLowerCase();
+    return billing.id !== downpaymentBilling.id && description.includes("installment");
+  });
+  const remainingBalance = Math.max(courseAmount - downpaymentAmount, 0);
   const installmentAmounts = splitAmounts(remainingBalance, installmentBillings.length);
 
   await executor.query(
@@ -561,9 +564,7 @@ async function syncEnrollmentBillings(enrollment, executor = db) {
     `,
     [
       downpaymentBilling.id,
-      `Downpayment - Tuition and Fees (Course Fee: PHP ${courseAmount.toFixed(
-        2,
-      )}, Misc Fee: PHP ${miscFee.toFixed(2)}, ID Fee: PHP ${ID_FEE.toFixed(2)})`,
+      "Downpayment - Tuition Fee",
     ],
   );
 

@@ -7,7 +7,7 @@
     <script src="../scripts/config.js" defer></script>
     <script src="../scripts/load-component.js" defer></script>
     <script src="../scripts/datetime.js" defer></script>
-    <title>Records Accounts</title>
+    <title>Walk-in Student Accounts</title>
     <style>
       .records-page-grid {
         display: grid;
@@ -40,8 +40,48 @@
         gap: 14px;
       }
 
-      .records-form-grid input {
+      .records-form-grid input,
+      .records-form-grid select {
         width: 100%;
+      }
+
+      .course-picker {
+        display: grid;
+        gap: 10px;
+        max-height: 260px;
+        overflow: auto;
+        padding: 12px;
+        border: 1px solid #dbe4f0;
+        border-radius: 16px;
+        background: #f8fbff;
+      }
+
+      .course-option {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 10px;
+        border-radius: 12px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+      }
+
+      .course-option input {
+        width: auto;
+        margin-top: 3px;
+      }
+
+      .course-option strong,
+      .course-option small {
+        display: block;
+      }
+
+      .course-summary-note {
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-weight: 700;
       }
 
       .records-list-card {
@@ -113,8 +153,8 @@
         <div data-component="../../components/topbar.html"></div>
         <section class="records-page-grid">
           <article class="records-form-card">
-            <h2>Create Records Account</h2>
-            <p>Magdagdag ng bagong user para sa records office nang hindi na lumilipat ng page.</p>
+            <h2>Create Walk-in Student Portal</h2>
+            <p>Gumawa ng student portal account para sa walk-in student. Automatic na mag-aassign ng student number.</p>
             <form id="recordsAccountForm" class="records-form-grid">
               <div class="form-group">
                 <label>Last Name</label>
@@ -137,10 +177,57 @@
                 <input type="text" name="mobile" />
               </div>
               <div class="form-group">
+                <label>Birthday</label>
+                <input type="date" name="birthday" required />
+              </div>
+              <div class="form-group">
                 <label>Password</label>
                 <input type="password" name="password" required />
               </div>
-              <button type="submit" class="btn btn-primary">Create Records Account</button>
+              <div class="form-group">
+                <label>School Year</label>
+                <input type="text" name="school_year" required />
+              </div>
+              <div class="form-group">
+                <label>Program</label>
+                <select name="program" id="walkinProgram" required>
+                  <option value="">Loading programs...</option>
+                </select>
+              </div>
+              <div class="form-group" id="walkinMajorGroup" hidden>
+                <label>Major</label>
+                <select name="major" id="walkinMajor">
+                  <option value="">Select Major</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Year Level</label>
+                <select name="year_level" id="walkinYearLevel" required>
+                  <option value="">Select Year Level</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Semester</label>
+                <select name="semester" id="walkinSemester" required>
+                  <option value="">Select Semester</option>
+                  <option value="1st Sem">1st Sem</option>
+                  <option value="2nd Sem">2nd Sem</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Courses Taking</label>
+                <div id="walkinCourses" class="course-picker">
+                  Select program, year level, and semester to load courses.
+                </div>
+              </div>
+              <div class="course-summary-note" id="walkinCourseSummary">
+                Total Units: 0
+              </div>
+              <button type="submit" class="btn btn-primary">Create Student Portal</button>
             </form>
             <div id="recordsAccountMessage" class="records-form-message"></div>
           </article>
@@ -148,8 +235,8 @@
           <article class="records-list-card">
             <div class="records-toolbar">
               <div>
-                <h2>Records Team</h2>
-                <p>Listahan ng mga may access sa records request processing at document printing.</p>
+                <h2>Student Portal Accounts</h2>
+                <p>Listahan ng student accounts na puwedeng gamitin sa student portal.</p>
               </div>
               <input
                 id="recordsSearch"
@@ -163,6 +250,7 @@
                 <thead>
                   <tr>
                     <th>Name</th>
+                    <th>Student No.</th>
                     <th>Email</th>
                     <th>Mobile</th>
                     <th>Role</th>
@@ -178,6 +266,10 @@
     </div>
     <script>
       let recordsUsers = [];
+      let availablePrograms = [];
+      let availableCourses = [];
+      const RATE_PER_UNIT = 300;
+      const BSED_MAJORS = ["Filipino", "English", "Mathematics"];
 
       function escapeHtml(value) {
         return String(value || "").replace(/[&<>"']/g, (char) => {
@@ -199,11 +291,178 @@
           .join(", ");
       }
 
+      function getCurrentSchoolYear() {
+        const year = new Date().getFullYear();
+        return `${year}-${year + 1}`;
+      }
+
+      function getProgramParts() {
+        const value = document.querySelector("#walkinProgram")?.value || "";
+        const [programId, programName, programCode] = value.split(":");
+
+        return {
+          programId,
+          programName,
+          programCode,
+        };
+      }
+
+      function getSelectedCourseObjects() {
+        return Array.from(
+          document.querySelectorAll('#walkinCourses input[type="checkbox"]:checked'),
+        ).map((input) => {
+          return {
+            id: input.dataset.id || "",
+            code: input.dataset.code || "",
+            name: input.dataset.name || "",
+            units: Number(input.dataset.units || 0),
+            amount: Number(input.dataset.amount || 0),
+          };
+        });
+      }
+
+      function updateCourseSummary() {
+        const selectedCourses = getSelectedCourseObjects();
+        const totalUnits = selectedCourses.reduce(
+          (sum, course) => sum + Number(course.units || 0),
+          0,
+        );
+
+        document.querySelector("#walkinCourseSummary").textContent =
+          `Total Units: ${totalUnits}`;
+      }
+
+      function syncMajorVisibility() {
+        const { programCode } = getProgramParts();
+        const isBsed = String(programCode || "").toUpperCase() === "BSED";
+        const majorGroup = document.querySelector("#walkinMajorGroup");
+        const majorSelect = document.querySelector("#walkinMajor");
+
+        majorGroup.hidden = !isBsed;
+        majorSelect.required = isBsed;
+        majorSelect.innerHTML = `<option value="">Select Major</option>`;
+
+        if (isBsed) {
+          BSED_MAJORS.forEach((major) => {
+            const option = document.createElement("option");
+            option.value = major;
+            option.textContent = major;
+            majorSelect.appendChild(option);
+          });
+        } else {
+          majorSelect.value = "";
+        }
+      }
+
+      function renderCourses(courses) {
+        const root = document.querySelector("#walkinCourses");
+
+        if (!Array.isArray(courses) || !courses.length) {
+          root.innerHTML = "No courses found for the selected program, year level, and semester.";
+          updateCourseSummary();
+          return;
+        }
+
+        root.innerHTML = courses
+          .map((course) => {
+            const units = Number(course.units || 0);
+            const amount = Number(course.amount || units * RATE_PER_UNIT);
+
+            return `
+              <label class="course-option">
+                <input
+                  type="checkbox"
+                  data-id="${escapeHtml(course.id || "")}"
+                  data-code="${escapeHtml(course.course_id || course.code || "")}"
+                  data-name="${escapeHtml(course.name || "")}"
+                  data-units="${escapeHtml(units)}"
+                  data-amount="${escapeHtml(amount)}"
+                />
+                <span>
+                  <strong>${escapeHtml(course.name || "Course")}</strong>
+                  <small>${escapeHtml(course.course_id || course.code || "-")} | ${escapeHtml(course.year_level || "-")} | ${escapeHtml(course.semester || "-")} | ${escapeHtml(units)} units</small>
+                </span>
+              </label>
+            `;
+          })
+          .join("");
+
+        root.querySelectorAll("input").forEach((input) => {
+          input.addEventListener("change", updateCourseSummary);
+        });
+        updateCourseSummary();
+      }
+
+      async function loadPrograms() {
+        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/programs/list`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load programs");
+        }
+
+        availablePrograms = Array.isArray(data) ? data : [];
+        const select = document.querySelector("#walkinProgram");
+        select.innerHTML = `<option value="">Select Program</option>`;
+
+        availablePrograms.forEach((program) => {
+          const option = document.createElement("option");
+          option.value = `${program.id}:${program.name}:${program.code || ""}`;
+          option.textContent = `${program.code || program.name} - ${program.name}`;
+          select.appendChild(option);
+        });
+      }
+
+      async function loadCourses() {
+        const { programId } = getProgramParts();
+        const { programCode } = getProgramParts();
+        const yearLevel = document.querySelector("#walkinYearLevel").value;
+        const semester = document.querySelector("#walkinSemester").value;
+        const major = document.querySelector("#walkinMajor").value;
+        const root = document.querySelector("#walkinCourses");
+
+        if (!programId || !yearLevel || !semester) {
+          root.innerHTML = "Select program, year level, and semester to load courses.";
+          updateCourseSummary();
+          return;
+        }
+
+        if (String(programCode || "").toUpperCase() === "BSED" && !major) {
+          root.innerHTML = "Select a BSED major to load the correct courses.";
+          updateCourseSummary();
+          return;
+        }
+
+        root.innerHTML = "Loading courses...";
+
+        const query = new URLSearchParams({
+          program_id: programId,
+          year_level: yearLevel,
+          semester,
+        });
+
+        if (major) {
+          query.set("major", major);
+        }
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/courses/list?${query.toString()}`,
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load courses");
+        }
+
+        availableCourses = Array.isArray(data) ? data : [];
+        renderCourses(availableCourses);
+      }
+
       function renderUsers(users) {
         const searchValue = document.querySelector("#recordsSearch").value.trim().toLowerCase();
         const tbody = document.querySelector("#table-records-users tbody");
         const filteredUsers = users.filter((user) => {
-          const haystack = `${fullName(user)} ${user.email || ""} ${user.mobile || ""}`.toLowerCase();
+          const haystack = `${fullName(user)} ${user.student_number || ""} ${user.email || ""} ${user.mobile || ""}`.toLowerCase();
           return !searchValue || haystack.includes(searchValue);
         });
 
@@ -213,6 +472,7 @@
                 (user) => `
                   <tr>
                     <td>${escapeHtml(fullName(user) || "Unnamed")}</td>
+                    <td>${escapeHtml(user.student_number || "-")}</td>
                     <td>${escapeHtml(user.email)}</td>
                     <td>${escapeHtml(user.mobile || "-")}</td>
                     <td><span class="records-badge">${escapeHtml(user.type || "records")}</span></td>
@@ -223,17 +483,17 @@
               .join("")
           : `
               <tr>
-                <td colspan="5">No records accounts found.</td>
+                <td colspan="6">No student portal accounts found.</td>
               </tr>
             `;
       }
 
       async function loadUsers() {
-        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/users/list?type=records`);
+        const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/users/list?type=student`);
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Failed to load records accounts");
+          throw new Error(data.error || "Failed to load student portal accounts");
         }
 
         recordsUsers = Array.isArray(data) ? data : [];
@@ -255,6 +515,13 @@
           message.className = "records-form-message";
 
           try {
+            const programParts = getProgramParts();
+            const selectedCourses = getSelectedCourseObjects();
+
+            if (!selectedCourses.length) {
+              throw new Error("Please select at least one course for this student.");
+            }
+
             const response = await fetch(`${window.APP_CONFIG.API_BASE_URL}/users/create`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -265,7 +532,18 @@
                 email: formData.get("email"),
                 mobile: formData.get("mobile"),
                 password: formData.get("password"),
-                type: "records",
+                type: "student",
+                academic_profile: {
+                  birthday: formData.get("birthday"),
+                  school_year: formData.get("school_year"),
+                  program_id: programParts.programId,
+                  program_name: programParts.programName,
+                  program_code: programParts.programCode,
+                  major: formData.get("major"),
+                  year_level: formData.get("year_level"),
+                  semester: formData.get("semester"),
+                  selected_courses: selectedCourses,
+                },
               }),
             });
 
@@ -275,31 +553,54 @@
               throw new Error(data.error || data.message || "Failed to create account");
             }
 
-            message.textContent = "Records account created successfully.";
+            const studentNumber = data.student_number ? ` Student No: ${data.student_number}` : "";
+            message.textContent = `Student portal account created successfully.${studentNumber}`;
             message.classList.add("success");
             form.reset();
+            document.querySelector('[name="school_year"]').value = getCurrentSchoolYear();
+            syncMajorVisibility();
+            renderCourses([]);
             await loadUsers();
           } catch (error) {
             message.textContent = error.message || "Failed to create account";
             message.classList.add("error");
           } finally {
             button.disabled = false;
-            button.textContent = "Create Records Account";
+            button.textContent = "Create Student Portal";
           }
         });
 
         document.querySelector("#recordsSearch").addEventListener("input", () => {
           renderUsers(recordsUsers);
         });
+
+        ["#walkinProgram", "#walkinYearLevel", "#walkinSemester", "#walkinMajor"].forEach(
+          (selector) => {
+            document.querySelector(selector).addEventListener("change", async () => {
+              if (selector === "#walkinProgram") {
+                syncMajorVisibility();
+              }
+
+              try {
+                await loadCourses();
+              } catch (error) {
+                message.textContent = error.message || "Failed to load courses";
+                message.classList.add("error");
+              }
+            });
+          },
+        );
       }
 
       document.addEventListener("DOMContentLoaded", async () => {
+        document.querySelector('[name="school_year"]').value = getCurrentSchoolYear();
         initAccountForm();
         try {
+          await loadPrograms();
           await loadUsers();
         } catch (error) {
           const message = document.querySelector("#recordsAccountMessage");
-          message.textContent = error.message || "Failed to load records accounts";
+          message.textContent = error.message || "Failed to load student portal accounts";
           message.classList.add("error");
         }
       });

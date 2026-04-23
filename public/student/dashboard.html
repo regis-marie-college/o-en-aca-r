@@ -474,6 +474,14 @@
                 <select name="billing_id" required>
                   <option value="">Select Billing To Pay</option>
                 </select>
+                <label class="portal-form-note" style="display:flex;gap:10px;align-items:center">
+                  <input type="checkbox" name="pay_selected_full" style="width:auto" />
+                  Pay selected billing in full
+                </label>
+                <label class="portal-form-note" style="display:flex;gap:10px;align-items:center">
+                  <input type="checkbox" name="pay_full_balance" style="width:auto" />
+                  Pay all remaining balance
+                </label>
                 <input
                   name="payment_amount"
                   type="number"
@@ -625,6 +633,8 @@
         "2nd Payment",
         "3rd Payment",
         "4th Payment",
+        "Miscellaneous Fee",
+        "ID Fee",
       ];
       const DOCUMENT_LABELS = {
         form137: "Form 137",
@@ -697,11 +707,34 @@
           return "4th Payment";
         }
 
+        if (text.includes("misc")) {
+          return "Miscellaneous Fee";
+        }
+
+        if (text.includes("id fee")) {
+          return "ID Fee";
+        }
+
+        if (text.includes("tuition")) {
+          return "Tuition Fee";
+        }
+
         return "Other Billing";
       }
 
       function normalizeValue(value) {
         return String(value || "").trim().toLowerCase();
+      }
+
+      function isSameCurrencyAmount(left, right) {
+        return Math.round(Number(left || 0) * 100) === Math.round(Number(right || 0) * 100);
+      }
+
+      function getOutstandingBillingTotal() {
+        return outstandingBillings.reduce(
+          (sum, billing) => sum + Number(billing.balance || 0),
+          0,
+        );
       }
 
       function getReenrollmentProgramParts() {
@@ -844,6 +877,10 @@
           text.includes("tuition")
         ) {
           return "Tuition";
+        }
+
+        if (text.includes("misc") || text.includes("id fee")) {
+          return "School Fees";
         }
 
         if (text.includes("document")) {
@@ -1266,6 +1303,38 @@
         const amountInput = document.querySelector(
           '#billing-payment-form [name="payment_amount"]',
         );
+        const payFullInput = document.querySelector(
+          '#billing-payment-form [name="pay_full_balance"]',
+        );
+        const paySelectedFullInput = document.querySelector(
+          '#billing-payment-form [name="pay_selected_full"]',
+        );
+        const shouldPayFull = Boolean(payFullInput?.checked);
+        const shouldPaySelectedFull = Boolean(paySelectedFullInput?.checked);
+        const fullBalance = getOutstandingBillingTotal();
+
+        if (shouldPayFull) {
+          billingSelect.required = false;
+          billingSelect.disabled = true;
+          amountInput.readOnly = true;
+          amountInput.max = fullBalance.toFixed(2);
+          amountInput.value = fullBalance.toFixed(2);
+          if (paySelectedFullInput) {
+            paySelectedFullInput.checked = false;
+            paySelectedFullInput.disabled = true;
+          }
+          note.textContent = fullBalance > 0
+            ? `Full remaining balance to pay: ${formatCurrency(fullBalance)}. This will cover all unpaid billing items.`
+            : "No outstanding billing balance to pay right now.";
+          return;
+        }
+
+        billingSelect.required = true;
+        billingSelect.disabled = false;
+        if (paySelectedFullInput) {
+          paySelectedFullInput.disabled = false;
+        }
+        amountInput.readOnly = false;
         const selectedBilling = outstandingBillings.find(
           (billing) => billing.id === billingSelect.value,
         );
@@ -1275,10 +1344,20 @@
             ? "Select a billing item to see its remaining balance."
             : "No outstanding billing balance to pay right now.";
           amountInput.max = "";
+          amountInput.value = "";
           return;
         }
 
         amountInput.max = Number(selectedBilling.balance || 0).toFixed(2);
+        if (shouldPaySelectedFull) {
+          amountInput.value = Number(selectedBilling.balance || 0).toFixed(2);
+          amountInput.readOnly = true;
+          note.textContent = `${getBillingStageLabel(selectedBilling.description)} will be paid in full: ${formatCurrency(
+            selectedBilling.balance,
+          )}`;
+          return;
+        }
+
         note.textContent = `${getBillingStageLabel(selectedBilling.description)} remaining balance: ${formatCurrency(
           selectedBilling.balance,
         )}`;
@@ -1620,8 +1699,12 @@
         const billingSelect = form.querySelector('[name="billing_id"]');
         const paymentMethodInput = form.querySelector('[name="payment_method"]');
         const paymentChannelInput = form.querySelector('[name="payment_channel"]');
+        const payFullInput = form.querySelector('[name="pay_full_balance"]');
+        const paySelectedFullInput = form.querySelector('[name="pay_selected_full"]');
 
         billingSelect.addEventListener("change", updateSelectedBillingNote);
+        payFullInput.addEventListener("change", updateSelectedBillingNote);
+        paySelectedFullInput.addEventListener("change", updateSelectedBillingNote);
         paymentMethodInput.addEventListener("change", toggleBillingPaymentFields);
         paymentChannelInput.addEventListener("change", () => {
           renderBillingPaymentOptions(availablePaymentOptions, {
@@ -1639,17 +1722,26 @@
           }
 
           const formData = new FormData(form);
+          const shouldPayFull = formData.get("pay_full_balance") === "on";
+          const shouldPaySelectedFull = formData.get("pay_selected_full") === "on";
           const billing = outstandingBillings.find(
             (item) => item.id === formData.get("billing_id"),
           );
 
-          if (!billing) {
+          if (!shouldPayFull && !billing) {
             alert("Please select a valid billing item.");
             return;
           }
 
-          const paymentAmount = Number(formData.get("payment_amount") || 0);
-          const remainingBalance = Number(billing.balance || 0);
+          const fullBalance = getOutstandingBillingTotal();
+          const paymentAmount = shouldPayFull
+            ? fullBalance
+            : shouldPaySelectedFull && billing
+              ? Number(billing.balance || 0)
+              : Number(formData.get("payment_amount") || 0);
+          const remainingBalance = shouldPayFull
+            ? fullBalance
+            : Number(billing.balance || 0);
           const paymentMethod = formData.get("payment_method");
 
           if (paymentAmount <= 0) {
@@ -1657,7 +1749,12 @@
             return;
           }
 
-          if (paymentAmount > remainingBalance) {
+          if (shouldPayFull && !isSameCurrencyAmount(paymentAmount, fullBalance)) {
+            alert("Full payment must equal the full remaining balance.");
+            return;
+          }
+
+          if (!shouldPayFull && paymentAmount > remainingBalance) {
             alert("Payment amount cannot exceed the remaining balance.");
             return;
           }
@@ -1684,19 +1781,31 @@
 
           const user = auth();
           const response = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/billings/update`,
+            `${window.APP_CONFIG.API_BASE_URL}/billings/${shouldPayFull ? "pay-full" : "update"}`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                id: billing.id,
-                payment_amount: paymentAmount,
-                payment_method: paymentMethod,
-                payment_channel: formData.get("payment_channel"),
-                reference_no: formData.get("reference_no"),
-                proof_of_payment: proofUrl,
-                processed_by: user.email || user.id || "Student",
-              }),
+              body: JSON.stringify(
+                shouldPayFull
+                  ? {
+                      billing_ids: outstandingBillings.map((item) => item.id),
+                      payment_amount: paymentAmount,
+                      payment_method: paymentMethod,
+                      payment_channel: formData.get("payment_channel"),
+                      reference_no: formData.get("reference_no"),
+                      proof_of_payment: proofUrl,
+                      processed_by: user.email || user.id || "Student",
+                    }
+                  : {
+                      id: billing.id,
+                      payment_amount: paymentAmount,
+                      payment_method: paymentMethod,
+                      payment_channel: formData.get("payment_channel"),
+                      reference_no: formData.get("reference_no"),
+                      proof_of_payment: proofUrl,
+                      processed_by: user.email || user.id || "Student",
+                    },
+              ),
             },
           );
 
