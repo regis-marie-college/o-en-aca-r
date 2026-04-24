@@ -703,6 +703,8 @@
       let latestRemainingCourses = [];
       let availableReenrollmentCourses = [];
       const selectedReenrollmentCourses = new Map();
+      let isRefreshingPortal = false;
+      let queuedPortalRefresh = false;
       const INSTALLMENT_ORDER = [
         "Downpayment",
         "1st Payment",
@@ -1411,56 +1413,81 @@
         });
       }
 
-      async function loadPortal() {
-        const user = auth();
-        const response = await fetch(
-          `${window.APP_CONFIG.API_BASE_URL}/students/portal?email=${encodeURIComponent(user.email)}`,
-        );
-        const data = await response.json();
-        const billings = Array.isArray(data.billings) ? data.billings : [];
-        latestTakenCourses = Array.isArray(data.taken_courses) ? data.taken_courses : [];
-        latestRemainingCourses = Array.isArray(data.remaining_courses)
-          ? data.remaining_courses
-          : [];
-
-        renderCurrentCourses(data.current_courses || []);
-        renderCompletedCourses(latestTakenCourses);
-        renderBillings(billings);
-        renderRequests(data.document_requests || []);
-        renderTransactions(data.transactions || []);
-        renderDocuments(data.submitted_documents || []);
-        renderStudentHeader(data.user, data.enrollment, data.id_picture);
-        renderReenrollmentStatus(data);
-        await loadReenrollmentCourses();
-        const billingSummary = summarizeBillings(billings);
-        outstandingBillings = billings.filter(
-          (billing) =>
-            Number(billing.balance || 0) > 0 && billing.payment_status !== "Submitted",
-        );
-        renderInstallmentCards(billings);
-        populateBillingPaymentOptions(outstandingBillings);
-        availablePaymentOptions = Array.isArray(data.payment_options)
-          ? data.payment_options
-          : [];
-        populatePaymentChannels(availablePaymentOptions);
-        populateBillingPaymentChannels(availablePaymentOptions);
-        renderPaymentOptions(availablePaymentOptions, {
-          selectedKey: getSelectedPaymentChannel(),
-          prompt: "Select an online payment channel to view the account details.",
+      function refreshPortalInBackground(options = {}) {
+        loadPortal({ refreshReenrollmentCourses: false, ...options }).catch((error) => {
+          console.error("Failed to refresh portal:", error);
         });
-        renderBillingPaymentOptions(availablePaymentOptions, {
-          selectedKey: getSelectedBillingPaymentChannel(),
-          prompt: "Select an online payment channel to view the billing account details.",
-        });
+      }
 
-        setCard(".card-taking", String((data.current_courses || []).length));
-        setCard(".card-completed", String((data.taken_courses || []).length));
-        setCard(".card-paid", formatCurrency(billingSummary.totalPaid));
-        setCard(".card-balance", formatCurrency(billingSummary.totalBalance));
-        document.querySelector("#billing-need-to-pay").textContent = formatCurrency(
-          billingSummary.totalBalance,
-        );
-        updateCopyGradesRecordNote(document.querySelector("#document-request-form"));
+      async function loadPortal(options = {}) {
+        if (isRefreshingPortal) {
+          queuedPortalRefresh = true;
+          return;
+        }
+
+        isRefreshingPortal = true;
+        try {
+          const user = auth();
+          const response = await fetch(
+            `${window.APP_CONFIG.API_BASE_URL}/students/portal?email=${encodeURIComponent(user.email)}`,
+          );
+          const data = await response.json();
+          const billings = Array.isArray(data.billings) ? data.billings : [];
+          latestTakenCourses = Array.isArray(data.taken_courses) ? data.taken_courses : [];
+          latestRemainingCourses = Array.isArray(data.remaining_courses)
+            ? data.remaining_courses
+            : [];
+
+          renderCurrentCourses(data.current_courses || []);
+          renderCompletedCourses(latestTakenCourses);
+          renderBillings(billings);
+          renderRequests(data.document_requests || []);
+          renderTransactions(data.transactions || []);
+          renderDocuments(data.submitted_documents || []);
+          renderStudentHeader(data.user, data.enrollment, data.id_picture);
+          renderReenrollmentStatus(data);
+
+          if (options.refreshReenrollmentCourses !== false) {
+            await loadReenrollmentCourses();
+          }
+
+          const billingSummary = summarizeBillings(billings);
+          outstandingBillings = billings.filter(
+            (billing) =>
+              Number(billing.balance || 0) > 0 && billing.payment_status !== "Submitted",
+          );
+          renderInstallmentCards(billings);
+          populateBillingPaymentOptions(outstandingBillings);
+          availablePaymentOptions = Array.isArray(data.payment_options)
+            ? data.payment_options
+            : [];
+          populatePaymentChannels(availablePaymentOptions);
+          populateBillingPaymentChannels(availablePaymentOptions);
+          renderPaymentOptions(availablePaymentOptions, {
+            selectedKey: getSelectedPaymentChannel(),
+            prompt: "Select an online payment channel to view the account details.",
+          });
+          renderBillingPaymentOptions(availablePaymentOptions, {
+            selectedKey: getSelectedBillingPaymentChannel(),
+            prompt: "Select an online payment channel to view the billing account details.",
+          });
+
+          setCard(".card-taking", String((data.current_courses || []).length));
+          setCard(".card-completed", String((data.taken_courses || []).length));
+          setCard(".card-paid", formatCurrency(billingSummary.totalPaid));
+          setCard(".card-balance", formatCurrency(billingSummary.totalBalance));
+          document.querySelector("#billing-need-to-pay").textContent = formatCurrency(
+            billingSummary.totalBalance,
+          );
+          updateCopyGradesRecordNote(document.querySelector("#document-request-form"));
+        } finally {
+          isRefreshingPortal = false;
+
+          if (queuedPortalRefresh && !options.skipQueuedRefresh) {
+            queuedPortalRefresh = false;
+            refreshPortalInBackground();
+          }
+        }
       }
 
       function renderCurrentCourses(courses) {
@@ -1843,7 +1870,7 @@
                 return;
               }
 
-              await loadPortal();
+              refreshPortalInBackground();
             } catch (error) {
               alert(error.message || "Failed to upload proof");
             }
@@ -1888,7 +1915,7 @@
                 return;
               }
 
-              await loadPortal();
+              refreshPortalInBackground();
             } catch (error) {
               alert(error.message || "Failed to resubmit billing proof");
             }
@@ -1985,7 +2012,7 @@
           form.reset();
           updateDocumentRequestAmount();
           togglePaymentFields();
-          await loadPortal();
+          refreshPortalInBackground();
         });
       }
 
@@ -2114,7 +2141,7 @@
           form.reset();
           toggleBillingPaymentFields();
           updateSelectedBillingNote();
-          await loadPortal();
+          refreshPortalInBackground();
         });
       }
 
@@ -2237,7 +2264,7 @@
           selectedReenrollmentCourses.clear();
           availableReenrollmentCourses = [];
           renderReenrollmentCourses();
-          await loadPortal();
+          refreshPortalInBackground();
         });
       }
 

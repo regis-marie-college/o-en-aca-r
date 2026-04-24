@@ -99,6 +99,39 @@
     }
   }
 
+  function isRetryableMethod(input, init) {
+    const method =
+      init?.method ||
+      (input instanceof Request ? input.method : "GET") ||
+      "GET";
+
+    return String(method).toUpperCase() === "GET";
+  }
+
+  function isServerBusyResponse(response) {
+    return response.status === 503 || response.status === 429;
+  }
+
+  function delay(ms) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+
+  async function fetchWithBusyRetry(request, init, attempts = 3) {
+    let response = null;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      response = await originalFetch(request, init);
+
+      if (!isServerBusyResponse(response) || attempt === attempts) {
+        return response;
+      }
+
+      await delay(500 * attempt);
+    }
+
+    return response;
+  }
+
   window.fetch = function patchedFetch(input, init) {
     if (!isApiRequest(input)) {
       return originalFetch(input, init);
@@ -119,9 +152,14 @@
     };
 
     if (input instanceof Request) {
-      return originalFetch(new Request(input, nextInit));
+      const request = new Request(input, nextInit);
+      return isRetryableMethod(input, init)
+        ? fetchWithBusyRetry(request)
+        : originalFetch(request);
     }
 
-    return originalFetch(input, nextInit);
+    return isRetryableMethod(input, init)
+      ? fetchWithBusyRetry(input, nextInit)
+      : originalFetch(input, nextInit);
   };
 })();

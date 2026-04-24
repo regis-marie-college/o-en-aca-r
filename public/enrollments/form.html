@@ -624,8 +624,10 @@
           };
 
           try {
-            const uploadedIdPicture = await uploadIdPicture(idPictureFile);
-            const uploadedProof = await uploadProofOfPayment(proofFile);
+            const [uploadedIdPicture, uploadedProof] = await Promise.all([
+              uploadIdPicture(idPictureFile),
+              uploadProofOfPayment(proofFile),
+            ]);
 
             const response = await fetch(
               `${window.APP_CONFIG.API_BASE_URL}/enrollments/create`,

@@ -245,7 +245,8 @@
           sectionClass: "is-approved",
         },
       ];
-      const ENROLLMENT_REFRESH_MS = 10000;
+      const ENROLLMENT_REFRESH_MS =
+        ["localhost", "127.0.0.1"].includes(window.location.hostname) ? 3000 : 12000;
       let isLoadingEnrollments = false;
       let queuedEnrollmentRefresh = false;
 

@@ -83,7 +83,8 @@
       </main>
     </div>
     <script>
-      const STUDENTS_REFRESH_MS = 15000;
+      const STUDENTS_REFRESH_MS =
+        ["localhost", "127.0.0.1"].includes(window.location.hostname) ? 5000 : 20000;
       let isLoadingUsers = false;
       let queuedUsersRefresh = false;
 

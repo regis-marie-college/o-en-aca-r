@@ -2,7 +2,7 @@
 
 let activeBillingFilter = "paid";
 let latestBillingRequestId = 0;
-const BILLING_REFRESH_MS = 8000;
+const BILLING_REFRESH_MS = window.APP_CONFIG?.ENV === "local" ? 3000 : 12000;
 let isLoadingBillings = false;
 let queuedBillingRefresh = false;
 

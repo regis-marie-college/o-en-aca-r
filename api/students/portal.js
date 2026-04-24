@@ -4,8 +4,7 @@ const config = require("../../lib/config");
 const { normalizeEmail } = require("../../lib/email");
 const { requireAuth } = require("../../lib/auth");
 const {
-  getCompletedCourseKeys,
-  getStudentRecordIds,
+  getCourseKeys,
   isCourseCompleted,
 } = require("../../lib/course-completion");
 
@@ -75,10 +74,19 @@ module.exports = async (req, res) => {
     const latestRequest = latestRequestResult.rows[0] || null;
     const approvedEnrollment = approvedEnrollmentResult.rows[0] || null;
     const enrollment = approvedEnrollment || latestRequest || null;
-    const studentRecordIds = await getStudentRecordIds(db, {
-      studentId: user?.id || approvedEnrollment?.student_id || latestRequest?.student_id || null,
-      email: normalizedEmail,
-    });
+    const studentRecordIds = Array.from(
+      new Set(
+        [
+          user?.id,
+          user?.student_number,
+          approvedEnrollment?.student_id,
+          latestRequest?.student_id,
+        ]
+          .filter(Boolean)
+          .map((value) => String(value).trim())
+          .filter(Boolean),
+      ),
+    );
 
     const [
       takenCoursesResult,
@@ -150,9 +158,9 @@ module.exports = async (req, res) => {
       (sum, item) => sum + Number(item.amount || 0),
       0,
     );
-    const completedCourseKeys = await getCompletedCourseKeys(db, {
-      studentId: user?.id || enrollment?.student_id || null,
-      email: normalizedEmail,
+    const completedCourseKeys = new Set();
+    takenCoursesResult.rows.forEach((record) => {
+      getCourseKeys(record).forEach((key) => completedCourseKeys.add(key));
     });
     const programCoursesResult = enrollment?.program_id
       ? await db.query(

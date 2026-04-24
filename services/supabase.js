@@ -8,7 +8,7 @@ function getPoolMax() {
     return configured;
   }
 
-  return process.env.VERCEL ? 1 : 3;
+  return process.env.VERCEL ? 1 : 10;
 }
 
 function isPoolSaturationError(error) {
@@ -26,7 +26,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function withPoolRetry(operation, attempts = 3) {
+async function withPoolRetry(operation, attempts = 5) {
   let lastError = null;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -39,7 +39,7 @@ async function withPoolRetry(operation, attempts = 3) {
         throw error;
       }
 
-      await sleep(200 * attempt);
+      await sleep(Math.min(250 * 2 ** (attempt - 1), 2000));
     }
   }
 
@@ -53,8 +53,8 @@ if (!global._supabasePool) {
       rejectUnauthorized: false,
     },
     max: getPoolMax(),
-    idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 5000,
+    idleTimeoutMillis: process.env.VERCEL ? 3000 : 10000,
+    connectionTimeoutMillis: 3000,
     allowExitOnIdle: true,
   });
 
