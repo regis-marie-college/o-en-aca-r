@@ -197,6 +197,66 @@
         color: #123055;
       }
 
+      .reenrollment-course-panel {
+        grid-column: 1 / -1;
+        display: grid;
+        gap: 12px;
+      }
+
+      .reenrollment-course-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .reenrollment-course-list {
+        display: grid;
+        gap: 10px;
+        max-height: 320px;
+        overflow: auto;
+      }
+
+      .reenrollment-course-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 1px solid rgba(148, 184, 255, 0.34);
+        border-radius: 12px;
+        background: #f8fbff;
+      }
+
+      .reenrollment-course-item.is-selected {
+        border-color: rgba(37, 99, 235, 0.48);
+        background: #eff6ff;
+      }
+
+      .reenrollment-course-item.is-completed {
+        opacity: 0.72;
+        background: #f0fdf4;
+        border-color: rgba(34, 197, 94, 0.3);
+      }
+
+      .reenrollment-course-item strong,
+      .reenrollment-course-item small {
+        display: block;
+      }
+
+      .reenrollment-course-item small {
+        color: #5f7590;
+        margin-top: 4px;
+      }
+
+      .reenrollment-course-item input {
+        width: 18px;
+        height: 18px;
+        accent-color: #2563eb;
+        flex: 0 0 auto;
+      }
+
       @media (max-width: 960px) {
         .billing-payment-layout {
           grid-template-columns: 1fr;
@@ -373,6 +433,17 @@
               <option value="2nd Sem">2nd Sem</option>
               <option value="3rd Sem">3rd Sem</option>
             </select>
+            <div class="reenrollment-course-panel">
+              <div class="reenrollment-course-toolbar">
+                <div class="portal-form-note" id="reenrollment-course-note">
+                  Select program, year level, and semester to see remaining subjects.
+                </div>
+                <button type="button" class="btn btn-secondary" id="reenrollment-select-all">
+                  Select All
+                </button>
+              </div>
+              <div class="reenrollment-course-list" id="reenrollment-course-list"></div>
+            </div>
             <input
               name="notes"
               id="reenrollment-notes"
@@ -629,6 +700,9 @@
       let reenrollmentPrograms = [];
       let latestEnrollmentRequest = null;
       let latestTakenCourses = [];
+      let latestRemainingCourses = [];
+      let availableReenrollmentCourses = [];
+      const selectedReenrollmentCourses = new Map();
       const INSTALLMENT_ORDER = [
         "Downpayment",
         "1st Payment",
@@ -636,7 +710,6 @@
         "3rd Payment",
         "4th Payment",
         "Miscellaneous Fee",
-        "ID Fee",
       ];
       const DOCUMENT_LABELS = {
         form137: "Form 137",
@@ -713,11 +786,7 @@
           return "Miscellaneous Fee";
         }
 
-        if (text.includes("id fee")) {
-          return "ID Fee";
-        }
-
-        if (text.includes("tuition")) {
+        if (text.includes("tuition") || text.includes("id fee")) {
           return "Tuition Fee";
         }
 
@@ -726,6 +795,42 @@
 
       function normalizeValue(value) {
         return String(value || "").trim().toLowerCase();
+      }
+
+      function normalizeCourseKey(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ");
+      }
+
+      function getCompletedCourseKeys() {
+        const keys = new Set();
+        latestTakenCourses.forEach((course) => {
+          [
+            course.id,
+            course.code,
+            course.course_id,
+            course.name,
+            course.course_name,
+          ].forEach((value) => {
+            const key = normalizeCourseKey(value);
+            if (key) keys.add(key);
+          });
+        });
+        return keys;
+      }
+
+      function isCompletedCourse(course) {
+        const completedKeys = getCompletedCourseKeys();
+        return [course.id, course.code, course.course_id, course.name, course.course_name]
+          .map(normalizeCourseKey)
+          .filter(Boolean)
+          .some((key) => completedKeys.has(key));
+      }
+
+      function getCourseAmount(course) {
+        return Number(course.amount || Number(course.units || 0) * 300);
       }
 
       function isSameCurrencyAmount(left, right) {
@@ -785,6 +890,145 @@
         if (semesterSelect && source.semester) {
           semesterSelect.value = source.semester;
         }
+      }
+
+      function getSelectedReenrollmentCourseArray() {
+        return Array.from(selectedReenrollmentCourses.values());
+      }
+
+      function isReenrollmentFormLocked() {
+        const requestType = String(latestEnrollmentRequest?.request_type || "").trim();
+        const requestStatus = latestEnrollmentRequest?.status || "";
+        return requestType === "Returning Student" && requestStatus !== "Declined";
+      }
+
+      function updateReenrollmentCourseNote(message) {
+        const note = document.querySelector("#reenrollment-course-note");
+        if (note) {
+          note.textContent = message;
+        }
+      }
+
+      function renderReenrollmentCourses() {
+        const list = document.querySelector("#reenrollment-course-list");
+        const selectAllButton = document.querySelector("#reenrollment-select-all");
+
+        if (!list) return;
+
+        if (!availableReenrollmentCourses.length) {
+          list.innerHTML = `<div class="empty-state">No remaining subjects found for this selection.</div>`;
+          if (selectAllButton) selectAllButton.disabled = true;
+          return;
+        }
+
+        if (selectAllButton) {
+          selectAllButton.disabled = isReenrollmentFormLocked();
+        }
+
+        list.innerHTML = availableReenrollmentCourses
+          .map((course) => {
+            const completed = isCompletedCourse(course);
+            const locked = isReenrollmentFormLocked();
+            const selected = selectedReenrollmentCourses.has(course.id);
+            return `
+              <label class="reenrollment-course-item ${selected ? "is-selected" : ""} ${completed ? "is-completed" : ""}">
+                <div>
+                  <strong>${escapeHtml(course.name || "-")}</strong>
+                  <small>${escapeHtml(course.code || "No code")} | ${escapeHtml(course.year_level || "-")} | ${escapeHtml(course.semester || "-")} | ${escapeHtml(course.units || 0)} units</small>
+                </div>
+                <input
+                  type="checkbox"
+                  value="${escapeHtml(course.id)}"
+                  ${selected ? "checked" : ""}
+                  ${completed || locked ? "disabled" : ""}
+                  aria-label="Select ${escapeHtml(course.name || "course")}"
+                />
+              </label>
+            `;
+          })
+          .join("");
+      }
+
+      function autoSelectAvailableReenrollmentCourses() {
+        selectedReenrollmentCourses.clear();
+        availableReenrollmentCourses.forEach((course) => {
+          if (!isCompletedCourse(course)) {
+            selectedReenrollmentCourses.set(course.id, {
+              id: course.id,
+              code: course.code || "",
+              name: course.name || "",
+              units: Number(course.units || 0),
+              amount: getCourseAmount(course),
+            });
+          }
+        });
+      }
+
+      async function loadReenrollmentCourses({ autoSelect = true } = {}) {
+        const { programId, programName, programCode, programMajor } =
+          getReenrollmentProgramParts();
+        const yearLevel = document.querySelector("#reenrollment-year-level")?.value || "";
+        const semester = document.querySelector("#reenrollment-semester")?.value || "";
+        const needsMajor = String(programCode || "").toUpperCase() === "BSED";
+
+        selectedReenrollmentCourses.clear();
+
+        if (!programId || !yearLevel || !semester || (needsMajor && !programMajor)) {
+          availableReenrollmentCourses = [];
+          updateReenrollmentCourseNote(
+            `Remaining subjects: ${latestRemainingCourses.length}. Select program, year level, and semester to load subjects.`,
+          );
+          renderReenrollmentCourses();
+          return;
+        }
+
+        const query = new URLSearchParams({
+          program_id: programId,
+          year_level: yearLevel,
+          semester,
+        });
+
+        if (programMajor) {
+          query.set("major", programMajor);
+        }
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/courses/list?${query.toString()}`,
+        );
+        const data = await response.json();
+        const loadedCourses = Array.isArray(data) ? data : [];
+        availableReenrollmentCourses = loadedCourses.filter(
+          (course) => !isCompletedCourse(course),
+        );
+
+        if (autoSelect) {
+          if (isReenrollmentFormLocked()) {
+            selectedReenrollmentCourses.clear();
+            (Array.isArray(latestEnrollmentRequest?.selected_courses)
+              ? latestEnrollmentRequest.selected_courses
+              : []
+            ).forEach((course) => {
+              if (course?.id && !isCompletedCourse(course)) {
+                selectedReenrollmentCourses.set(course.id, {
+                  id: course.id,
+                  code: course.code || "",
+                  name: course.name || "",
+                  units: Number(course.units || 0),
+                  amount: Number(course.amount || Number(course.units || 0) * 300),
+                });
+              }
+            });
+          } else {
+            autoSelectAvailableReenrollmentCourses();
+          }
+        }
+
+        updateReenrollmentCourseNote(
+          `${latestRemainingCourses.length} subject(s) remaining in ${
+            programName || programCode || "this program"
+          }. ${availableReenrollmentCourses.length} available for ${yearLevel} / ${semester} and already selected for review.`,
+        );
+        renderReenrollmentCourses();
       }
 
       async function loadReenrollmentPrograms() {
@@ -856,9 +1100,11 @@
         Array.from(form.elements).forEach((element) => {
           if (element.tagName === "BUTTON") {
             element.disabled = shouldDisableForm;
-            element.textContent = shouldDisableForm
-              ? "Request Submitted"
-              : "Submit Re-Enrollment Request";
+            if (element.type === "submit") {
+              element.textContent = shouldDisableForm
+                ? "Request Submitted"
+                : "Submit Re-Enrollment Request";
+            }
             return;
           }
 
@@ -881,8 +1127,12 @@
           return "Tuition";
         }
 
-        if (text.includes("misc") || text.includes("id fee")) {
+        if (text.includes("misc")) {
           return "School Fees";
+        }
+
+        if (text.includes("id fee")) {
+          return "Tuition";
         }
 
         if (text.includes("document")) {
@@ -954,7 +1204,7 @@
           item.status = item.balance <= 0 ? "Paid" : item.amount_paid > 0 ? "Partial" : "Unpaid";
         });
 
-        return INSTALLMENT_ORDER.map((label) => {
+        const orderedCards = INSTALLMENT_ORDER.map((label) => {
           return (
             grouped.get(label) || {
               label,
@@ -965,6 +1215,12 @@
             }
           );
         });
+        const orderedLabels = new Set(INSTALLMENT_ORDER);
+        const extraCards = Array.from(grouped.values()).filter(
+          (item) => !orderedLabels.has(item.label),
+        );
+
+        return [...orderedCards, ...extraCards];
       }
 
       function renderStudentHeader(user, enrollment, idPicture) {
@@ -1163,6 +1419,9 @@
         const data = await response.json();
         const billings = Array.isArray(data.billings) ? data.billings : [];
         latestTakenCourses = Array.isArray(data.taken_courses) ? data.taken_courses : [];
+        latestRemainingCourses = Array.isArray(data.remaining_courses)
+          ? data.remaining_courses
+          : [];
 
         renderCurrentCourses(data.current_courses || []);
         renderCompletedCourses(latestTakenCourses);
@@ -1172,6 +1431,7 @@
         renderDocuments(data.submitted_documents || []);
         renderStudentHeader(data.user, data.enrollment, data.id_picture);
         renderReenrollmentStatus(data);
+        await loadReenrollmentCourses();
         const billingSummary = summarizeBillings(billings);
         outstandingBillings = billings.filter(
           (billing) =>
@@ -1207,6 +1467,11 @@
         const tbody = document.querySelector("#table-current-courses tbody");
         tbody.innerHTML = "";
 
+        if (!Array.isArray(courses) || !courses.length) {
+          tbody.innerHTML = `<tr><td colspan="3">No current courses found.</td></tr>`;
+          return;
+        }
+
         courses.forEach((course) => {
           const row = document.createElement("tr");
           row.innerHTML = `
@@ -1221,6 +1486,11 @@
       function renderCompletedCourses(courses) {
         const tbody = document.querySelector("#table-completed-courses tbody");
         tbody.innerHTML = "";
+
+        if (!Array.isArray(courses) || !courses.length) {
+          tbody.innerHTML = `<tr><td colspan="3">No completed courses recorded yet.</td></tr>`;
+          return;
+        }
 
         courses.forEach((course) => {
           const row = document.createElement("tr");
@@ -1853,6 +2123,52 @@
 
         if (!form) return;
 
+        [
+          "#reenrollment-program",
+          "#reenrollment-year-level",
+          "#reenrollment-semester",
+        ].forEach((selector) => {
+          document.querySelector(selector)?.addEventListener("change", () => {
+            loadReenrollmentCourses();
+          });
+        });
+
+        document
+          .querySelector("#reenrollment-select-all")
+          ?.addEventListener("click", () => {
+            autoSelectAvailableReenrollmentCourses();
+            renderReenrollmentCourses();
+          });
+
+        document
+          .querySelector("#reenrollment-course-list")
+          ?.addEventListener("change", (event) => {
+            const input = event.target.closest('input[type="checkbox"]');
+            if (!input) return;
+
+            const course = availableReenrollmentCourses.find(
+              (item) => item.id === input.value,
+            );
+            if (!course || isCompletedCourse(course)) {
+              input.checked = false;
+              return;
+            }
+
+            if (input.checked) {
+              selectedReenrollmentCourses.set(course.id, {
+                id: course.id,
+                code: course.code || "",
+                name: course.name || "",
+                units: Number(course.units || 0),
+                amount: getCourseAmount(course),
+              });
+            } else {
+              selectedReenrollmentCourses.delete(course.id);
+            }
+
+            renderReenrollmentCourses();
+          });
+
         form.addEventListener("submit", async (event) => {
           event.preventDefault();
 
@@ -1863,6 +2179,12 @@
           const user = auth();
           const { programId, programName, programCode, programMajor } =
             getReenrollmentProgramParts();
+          const selectedCourses = getSelectedReenrollmentCourseArray();
+
+          if (!selectedCourses.length) {
+            alert("Please select at least one remaining subject for admin evaluation.");
+            return;
+          }
 
           const response = await fetch(
             `${window.APP_CONFIG.API_BASE_URL}/enrollments/create`,
@@ -1891,9 +2213,15 @@
                 major: programMajor || "",
                 year_level: form.querySelector('[name="year_level"]').value,
                 semester: form.querySelector('[name="semester"]').value,
-                selected_courses: [],
-                total_units: 0,
-                total_amount: 0,
+                selected_courses: selectedCourses,
+                total_units: selectedCourses.reduce(
+                  (sum, course) => sum + Number(course.units || 0),
+                  0,
+                ),
+                total_amount: selectedCourses.reduce(
+                  (sum, course) => sum + Number(course.amount || 0),
+                  0,
+                ),
               }),
             },
           );
@@ -1906,6 +2234,9 @@
           }
 
           form.reset();
+          selectedReenrollmentCourses.clear();
+          availableReenrollmentCourses = [];
+          renderReenrollmentCourses();
           await loadPortal();
         });
       }

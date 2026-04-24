@@ -118,8 +118,7 @@ function getBillingStageLabel(description) {
   if (text.includes("3rd")) return "3rd Payment";
   if (text.includes("4th")) return "4th Payment";
   if (text.includes("misc")) return "Miscellaneous Fee";
-  if (text.includes("id fee")) return "ID Fee";
-  if (text.includes("tuition")) return "Tuition Fee";
+  if (text.includes("tuition") || text.includes("id fee")) return "Tuition Fee";
 
   return "Other";
 }

@@ -3,6 +3,11 @@ const db = require("../../services/supabase");
 const config = require("../../lib/config");
 const { normalizeEmail } = require("../../lib/email");
 const { requireAuth } = require("../../lib/auth");
+const {
+  getCompletedCourseKeys,
+  getStudentRecordIds,
+  isCourseCompleted,
+} = require("../../lib/course-completion");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -70,6 +75,10 @@ module.exports = async (req, res) => {
     const latestRequest = latestRequestResult.rows[0] || null;
     const approvedEnrollment = approvedEnrollmentResult.rows[0] || null;
     const enrollment = approvedEnrollment || latestRequest || null;
+    const studentRecordIds = await getStudentRecordIds(db, {
+      studentId: user?.id || approvedEnrollment?.student_id || latestRequest?.student_id || null,
+      email: normalizedEmail,
+    });
 
     const [
       takenCoursesResult,
@@ -78,15 +87,15 @@ module.exports = async (req, res) => {
       transactionsResult,
       documentsResult,
     ] = await Promise.all([
-      user
+      studentRecordIds.length
         ? db.query(
           `
           select *
           from student_records
-          where student_id = $1
+          where student_id = any($1::text[])
           order by created_at desc
           `,
-            [user.id],
+            [studentRecordIds],
           )
         : Promise.resolve({ rows: [] }),
       db.query(
@@ -141,6 +150,29 @@ module.exports = async (req, res) => {
       (sum, item) => sum + Number(item.amount || 0),
       0,
     );
+    const completedCourseKeys = await getCompletedCourseKeys(db, {
+      studentId: user?.id || enrollment?.student_id || null,
+      email: normalizedEmail,
+    });
+    const programCoursesResult = enrollment?.program_id
+      ? await db.query(
+          `
+          select *
+          from courses
+          where program_id = $1
+            and (
+              $2::text is null or
+              coalesce(major, '') = '' or
+              major = $2
+            )
+          order by program_code asc, year_level asc, semester asc, major asc nulls first, name asc
+          `,
+          [enrollment.program_id, enrollment.major || null],
+        )
+      : { rows: [] };
+    const remainingCourses = programCoursesResult.rows.filter(
+      (course) => !isCourseCompleted(course, completedCourseKeys),
+    );
 
     return okay(res, {
       user,
@@ -152,6 +184,9 @@ module.exports = async (req, res) => {
           ? enrollment.selected_courses
         : [],
       taken_courses: takenCoursesResult.rows,
+      remaining_courses: remainingCourses,
+      remaining_course_count: remainingCourses.length,
+      program_course_count: programCoursesResult.rows.length,
       billings: billingsResult.rows,
       total_paid: totalPaid,
       total_balance: totalBalance,

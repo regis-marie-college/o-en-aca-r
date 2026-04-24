@@ -2,6 +2,10 @@ const { okay, badRequest, notAllowed } = require("../../lib/response");
 const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
 const {
+  getCompletedCourseKeys,
+  getCompletedSelectedCourses,
+} = require("../../lib/course-completion");
+const {
   assertNoActiveEnrollmentRequest,
   calculateCourseTotals,
   isAllowedRequestType,
@@ -94,6 +98,27 @@ module.exports = async (req, res) => {
 
     if (!isReturningStudent && normalizedSelectedCourses.length === 0) {
       return badRequest(res, "Please select at least one course");
+    }
+
+    if (normalizedSelectedCourses.length) {
+      const completedCourseKeys = await getCompletedCourseKeys(db, {
+        studentId: student_id || null,
+        email,
+      });
+      const completedSelections = getCompletedSelectedCourses(
+        normalizedSelectedCourses,
+        completedCourseKeys,
+      );
+
+      if (completedSelections.length) {
+        return badRequest(
+          res,
+          `Completed courses cannot be selected again: ${completedSelections
+            .map((course) => course.name || course.course_name || course.code || course.id)
+            .filter(Boolean)
+            .join(", ")}`,
+        );
+      }
     }
 
     const courseAmount =
@@ -359,10 +384,9 @@ async function createInstallmentBillings({
   const totalAssessment = Number(courseAmount || 0) + MISC_FEE + ID_FEE;
   const downpayment = Number(downpaymentAmount || 0);
   const isFullPayment = paymentPlan === "full";
-  const tuitionAmount = Number(courseAmount || 0);
+  const tuitionAmount = Number(courseAmount || 0) + ID_FEE;
   const feeItems = [
     { description: "Miscellaneous Fee", amount: MISC_FEE },
-    { description: "ID Fee", amount: ID_FEE },
   ].filter((item) => Number(item.amount || 0) > 0);
   const tuitionDownpayment = isFullPayment
     ? tuitionAmount

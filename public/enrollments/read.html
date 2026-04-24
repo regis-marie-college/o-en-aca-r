@@ -720,9 +720,9 @@
                           type="button"
                           class="btn btn-secondary btn-assign-course"
                           data-id="${escapeHtml(course.id)}"
-                          ${isAssigned ? "disabled" : ""}
+                          ${isAssigned || taken ? "disabled" : ""}
                         >
-                          ${isAssigned ? "Assigned" : "Assign"}
+                          ${taken ? "Completed" : isAssigned ? "Assigned" : "Assign"}
                         </button>
                       </div>
                     `;
@@ -1006,6 +1006,11 @@
         (Array.isArray(data?.taken_courses) ? data.taken_courses : []).forEach((course) => {
           takenCourseKeys.add(normalizeCourseKey(course.course_id));
           takenCourseKeys.add(normalizeCourseKey(course.course_name));
+        });
+        Array.from(selectedCourses.values()).forEach((course) => {
+          if (isCourseTaken(course)) {
+            selectedCourses.delete(course.id);
+          }
         });
 
         const approval = document.querySelector("#approval");

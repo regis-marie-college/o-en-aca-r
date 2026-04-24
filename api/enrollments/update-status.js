@@ -10,6 +10,10 @@ const { writeAuditLog } = require("../../lib/audit-log");
 const { normalizeEmail } = require("../../lib/email");
 const { requireAuth } = require("../../lib/auth");
 const {
+  getCompletedCourseKeys,
+  getCompletedSelectedCourses,
+} = require("../../lib/course-completion");
+const {
   assertValidStatusTransition,
   calculateCourseTotals,
   ensureEnrollmentEvaluationColumns,
@@ -106,6 +110,23 @@ module.exports = async (req, res) => {
         selected_courses !== undefined
           ? parseSelectedCourses(selected_courses)
           : parseSelectedCourses(enrollment.selected_courses);
+      const completedCourseKeys = await getCompletedCourseKeys(client, {
+        studentId: enrollment.student_id || null,
+        email: enrollment.email,
+      });
+      const completedSelections = getCompletedSelectedCourses(
+        nextCourses,
+        completedCourseKeys,
+      );
+
+      if (completedSelections.length) {
+        throw new Error(
+          `Completed courses cannot be selected again: ${completedSelections
+            .map((course) => course.name || course.course_name || course.code || course.id)
+            .filter(Boolean)
+            .join(", ")}`,
+        );
+      }
       const computedTotals = calculateCourseTotals(nextCourses);
       const nextTotalUnits =
         selected_courses !== undefined
@@ -474,7 +495,7 @@ async function createInstallmentBillings({
   const studentName = `${first_name} ${last_name}`.trim();
   const miscFee = Number(enrollment.misc_fee || 0);
   const downpayment = Number(downpaymentAmount || 0);
-  const tuitionAmount = Number(courseAmount || 0);
+  const tuitionAmount = Number(courseAmount || 0) + ID_FEE;
   const tuitionDownpayment = Math.min(downpayment, tuitionAmount);
   const remainingBalance = Math.max(tuitionAmount - tuitionDownpayment, 0);
   const installments = splitAmounts(remainingBalance, 4);
@@ -489,7 +510,6 @@ async function createInstallmentBillings({
       amount,
     })),
     { description: "Miscellaneous Fee", amount: miscFee },
-    { description: "ID Fee", amount: ID_FEE },
   ].filter((item) => Number(item.amount || 0) > 0);
 
   for (const item of billingItems) {
@@ -540,7 +560,7 @@ async function syncEnrollmentBillings(enrollment, executor = db) {
   }
 
   const miscFee = Number(enrollment.misc_fee || 0);
-  const courseAmount = Number(enrollment.total_amount || 0);
+  const courseAmount = Number(enrollment.total_amount || 0) + ID_FEE;
   const downpaymentAmount = Number(downpaymentBilling.amount || 0);
   const installmentBillings = billings.filter((billing) => {
     const description = String(billing.description || "").toLowerCase();
@@ -791,10 +811,9 @@ function buildApprovalEmail({
     total_amount,
   } = enrollment;
   const courses = parseSelectedCourses(selected_courses);
-  const tuition = Number(total_amount || 0);
+  const tuition = Number(total_amount || 0) + 300;
   const miscFee = Number(enrollment.misc_fee || 0);
-  const idFee = 300;
-  const totalFees = tuition + miscFee + idFee;
+  const totalFees = tuition + miscFee;
   const paidAmount = Number(
     approvedDownpayment?.amount_paid || approvedDownpayment?.amount || 0,
   );
@@ -872,7 +891,6 @@ function buildApprovalEmail({
         <tr><td style="padding:4px 10px;"><strong>Total Units:</strong></td><td style="padding:4px 10px;text-align:right;">${total_units || 0}</td></tr>
         <tr><td style="padding:4px 10px;"><strong>Tuition Fee:</strong></td><td style="padding:4px 10px;text-align:right;">${formatMoney(tuition)}</td></tr>
         <tr><td style="padding:4px 10px;"><strong>Misc Fee:</strong></td><td style="padding:4px 10px;text-align:right;">${formatMoney(miscFee)}</td></tr>
-        <tr><td style="padding:4px 10px;"><strong>ID Fee:</strong></td><td style="padding:4px 10px;text-align:right;">${formatMoney(idFee)}</td></tr>
         <tr><td style="padding:4px 10px;border-top:1px solid #cbd5e1;"><strong>Total Fees:</strong></td><td style="padding:4px 10px;border-top:1px solid #cbd5e1;text-align:right;"><strong>${formatMoney(totalFees)}</strong></td></tr>
         <tr><td style="padding:4px 10px;"><strong>Payment:</strong></td><td style="padding:4px 10px;text-align:right;">${formatMoney(paidAmount)}</td></tr>
       </table>
@@ -898,10 +916,9 @@ function buildCorPdfBuffer({ enrollment, student, approvedDownpayment }) {
     total_amount,
   } = enrollment;
   const courses = parseSelectedCourses(selected_courses);
-  const tuition = Number(total_amount || 0);
+  const tuition = Number(total_amount || 0) + 300;
   const miscFee = Number(enrollment.misc_fee || 0);
-  const idFee = 300;
-  const totalFees = tuition + miscFee + idFee;
+  const totalFees = tuition + miscFee;
   const payment = Number(approvedDownpayment?.amount_paid || approvedDownpayment?.amount || 0);
   const balance = Math.max(totalFees - payment, 0);
   const studentName = `${last_name || ""}, ${first_name || ""} ${middle_name || ""}`.trim();
@@ -1035,7 +1052,7 @@ function buildCorPdfBuffer({ enrollment, student, approvedDownpayment }) {
       .fillColor("#111111")
       .text(
         "1. Withdrawal of enrollment is allowed only within the first two weeks of classes.\n" +
-          "2. Registration, other fees, miscellaneous fees, and ID fees are non-refundable.\n" +
+          "2. Registration, other fees, and miscellaneous fees are non-refundable.\n" +
           "3. Tuition refund is subject to school review and applicable enrollment policies.\n" +
           "4. All discrepancies in fees and subjects/courses are subject to review and adjustment before or until classes start.",
         noteX + 10,
@@ -1070,7 +1087,6 @@ function buildCorPdfBuffer({ enrollment, student, approvedDownpayment }) {
       ["Total Units", total_units || 0],
       ["Tuition Fee", formatMoney(tuition)],
       ["Misc Fee", formatMoney(miscFee)],
-      ["ID Fee", formatMoney(idFee)],
       ["Discount", formatMoney(0)],
       ["Total Fees", formatMoney(totalFees)],
       ["Payment", formatMoney(payment)],

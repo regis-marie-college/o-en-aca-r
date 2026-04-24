@@ -177,7 +177,7 @@ async function createInstallmentBillings({
   const studentName = `${first_name} ${last_name}`.trim();
   const miscFee = Number(enrollment.misc_fee || 0);
   const downpayment = Number(downpaymentAmount || 0);
-  const tuitionAmount = Number(courseAmount || 0);
+  const tuitionAmount = Number(courseAmount || 0) + ID_FEE;
   const tuitionDownpayment = Math.min(downpayment, tuitionAmount);
   const remainingBalance = Math.max(tuitionAmount - tuitionDownpayment, 0);
   const installments = splitAmounts(remainingBalance, 4);
@@ -192,7 +192,6 @@ async function createInstallmentBillings({
       amount,
     })),
     { description: "Miscellaneous Fee", amount: miscFee },
-    { description: "ID Fee", amount: ID_FEE },
   ].filter((item) => Number(item.amount || 0) > 0);
 
   for (const item of billingItems) {
@@ -243,7 +242,7 @@ async function syncEnrollmentBillings(enrollment, executor = db) {
   }
 
   const miscFee = Number(enrollment.misc_fee || 0);
-  const courseAmount = Number(enrollment.total_amount || 0);
+  const courseAmount = Number(enrollment.total_amount || 0) + ID_FEE;
   const downpaymentAmount = Number(downpaymentBilling.amount || 0);
   const installmentBillings = billings.filter((billing) => {
     const description = String(billing.description || "").toLowerCase();
