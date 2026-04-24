@@ -554,7 +554,7 @@
 
       async function loadEnrollments() {
         const res = await fetch(
-          `${window.APP_CONFIG.API_BASE_URL}/enrollments/list`,
+          `${window.APP_CONFIG.API_BASE_URL}/enrollments/list?limit=50`,
         );
 
         const data = await res.json();
@@ -590,7 +590,7 @@
 
       async function loadTransactions() {
         const res = await fetch(
-          `${window.APP_CONFIG.API_BASE_URL}/treasury/transactions/list`,
+          `${window.APP_CONFIG.API_BASE_URL}/treasury/transactions/list?limit=50`,
         );
         const data = await res.json();
         const tbody = document.querySelector("#table-enrollments tbody");
@@ -645,25 +645,27 @@
 
         config.stats.forEach(showStat);
 
-        await renderStatistics();
+        const initialLoads = [renderStatistics()];
 
         if (user.type !== "admin") {
           document.querySelector("#schoolYearTrendSection")?.remove();
           document.querySelector("#schoolYearManager")?.remove();
         } else {
           initSchoolYearForm();
-          await loadSchoolYears();
+          initialLoads.push(loadSchoolYears());
         }
 
         if (config.showTable) {
           if (config.table === "transactions") {
-            await loadTransactions();
+            initialLoads.push(loadTransactions());
           } else {
-            await loadEnrollments();
+            initialLoads.push(loadEnrollments());
           }
         } else {
           document.querySelector(".table-section")?.remove();
         }
+
+        await Promise.all(initialLoads);
       });
     </script>
   </body>

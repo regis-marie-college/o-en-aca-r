@@ -133,6 +133,11 @@ async function updateDocumentRequest(data) {
 
   const previousRequestStatus = String(existingRequest.request_status || "");
   const hasRequestStatusChanged = previousRequestStatus !== String(updatedRequest.request_status || "");
+  const nextRequestStatusValue = String(updatedRequest.request_status || "");
+
+  if (hasRequestStatusChanged && nextRequestStatusValue === "Ready for Release") {
+    await notifyDocumentRequestStatus(updatedRequest, "Ready");
+  }
 
   if (
     hasRequestStatusChanged ||

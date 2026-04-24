@@ -46,24 +46,28 @@ module.exports = async (req, res) => {
             where coalesce(school_year, '') <> ''
             group by school_year
           ),
+          latest_email_enrollments as (
+            select distinct on (lower(email))
+              lower(email) as email,
+              school_year
+            from enrollments
+            where coalesce(email, '') <> ''
+              and coalesce(school_year, '') <> ''
+            order by lower(email), created_at desc
+          ),
           revenue_years as (
             select
-              linked_enrollment.school_year,
+              coalesce(e.school_year, latest_email_enrollments.school_year) as school_year,
               coalesce(sum(b.amount_paid), 0)::numeric(12,2) as collected_amount
             from billings b
-            left join lateral (
-              select e.school_year
-              from enrollments e
-              where
-                (b.enrollment_id is not null and e.id = b.enrollment_id) or
-                (b.enrollment_id is null and e.email = b.email)
-              order by e.created_at desc
-              limit 1
-            ) as linked_enrollment on true
+            left join enrollments e on e.id = b.enrollment_id
+            left join latest_email_enrollments
+              on b.enrollment_id is null
+              and latest_email_enrollments.email = lower(b.email)
             where
-              coalesce(linked_enrollment.school_year, '') <> '' and
+              coalesce(e.school_year, latest_email_enrollments.school_year, '') <> '' and
               coalesce(b.amount_paid, 0) > 0
-            group by linked_enrollment.school_year
+            group by coalesce(e.school_year, latest_email_enrollments.school_year)
           )
           select
             coalesce(e.school_year, r.school_year) as school_year,

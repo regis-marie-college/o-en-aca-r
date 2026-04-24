@@ -70,6 +70,8 @@
                 <th>Units</th>
                 <th>Semester</th>
                 <th>Status</th>
+                <th>Grade</th>
+                <th>Remarks</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -92,21 +94,68 @@
         });
       }
 
-      function renderCourses(courses) {
+      function normalizeCourseKey(value) {
+        return String(value || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "_")
+          .replace(/^_+|_+$/g, "");
+      }
+
+      function buildRecordLookup(records) {
+        const lookup = new Map();
+
+        (Array.isArray(records) ? records : []).forEach((record) => {
+          const keys = [
+            normalizeCourseKey(record.course_id),
+            normalizeCourseKey(record.course_name),
+          ].filter(Boolean);
+
+          keys.forEach((key) => {
+            if (!lookup.has(key)) {
+              lookup.set(key, record);
+            }
+          });
+        });
+
+        return lookup;
+      }
+
+      function findCourseRecord(course, recordLookup) {
+        const candidateKeys = [
+          course.id,
+          course.code,
+          course.course_id,
+          course.name,
+        ].map(normalizeCourseKey);
+
+        return candidateKeys.map((key) => recordLookup.get(key)).find(Boolean) || null;
+      }
+
+      function renderCourses(courses, studentRecords = []) {
         const tbody = document.querySelector("#table-courses tbody");
+        const recordLookup = buildRecordLookup(studentRecords);
+        const renderedRecords = new Set();
         tbody.innerHTML = "";
 
-        if (!Array.isArray(courses) || !courses.length) {
+        if (
+          (!Array.isArray(courses) || !courses.length) &&
+          (!Array.isArray(studentRecords) || !studentRecords.length)
+        ) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="9">No courses found for the current view.</td>
+              <td colspan="11">No courses found for the current view.</td>
             </tr>
           `;
           return;
         }
 
-        courses.forEach((course) => {
+        (Array.isArray(courses) ? courses : []).forEach((course) => {
           const row = document.createElement("tr");
+          const record = findCourseRecord(course, recordLookup);
+          if (record?.id) {
+            renderedRecords.add(record.id);
+          }
 
           const {
             id,
@@ -130,10 +179,34 @@
             <td>${escapeHtml(units || "-")}</td>
             <td>${escapeHtml(semester || "-")}</td>
             <td>${escapeHtml(status || "-")}</td>
+            <td>${escapeHtml(record?.grade ?? "-")}</td>
+            <td>${escapeHtml(record?.remarks || "-")}</td>
           `;
 
           tbody.appendChild(row);
         });
+
+        (Array.isArray(studentRecords) ? studentRecords : [])
+          .filter((record) => record?.id && !renderedRecords.has(record.id))
+          .forEach((record) => {
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+              <td>${escapeHtml(String(record.id || "").substring(0, 6) || "-")}</td>
+              <td>${escapeHtml(record.course_name || "-")}</td>
+              <td>${escapeHtml(record.academic_year || record.school_year || "Imported grade record")}</td>
+              <td>${escapeHtml(record.program_name || "-")}</td>
+              <td>-</td>
+              <td>${escapeHtml(record.year_level || "-")}</td>
+              <td>${escapeHtml(record.units ?? "-")}</td>
+              <td>${escapeHtml(record.semester || "-")}</td>
+              <td>${escapeHtml(record.academic_status || "Recorded")}</td>
+              <td>${escapeHtml(record.grade ?? "-")}</td>
+              <td>${escapeHtml(record.remarks || "-")}</td>
+            `;
+
+            tbody.appendChild(row);
+          });
       }
 
       async function loadUsers() {
@@ -145,6 +218,7 @@
           const subcopy = document.querySelector("#coursesSubcopy");
 
           let endpoint = `${window.APP_CONFIG.API_BASE_URL}/courses/list`;
+          let studentRecords = [];
 
           if (user.type === "student") {
             if (addButton) {
@@ -164,12 +238,16 @@
             }
 
             const enrollment = portalData.enrollment || null;
+            studentRecords = Array.isArray(portalData.taken_courses)
+              ? portalData.taken_courses
+              : [];
 
             if (!enrollment?.program_id) {
               filterNote.hidden = false;
-              filterNote.textContent =
-                "Your student account does not have a linked enrolled program yet, so no filtered courses can be shown.";
-              renderCourses([]);
+              filterNote.textContent = studentRecords.length
+                ? "Your imported grade records are shown below. Your student account does not have a linked enrolled program yet."
+                : "Your student account does not have a linked enrolled program yet, so no filtered courses can be shown.";
+              renderCourses([], studentRecords);
               return;
             }
 
@@ -193,7 +271,7 @@
             throw new Error(data.error || "Failed to load courses");
           }
 
-          renderCourses(data);
+          renderCourses(data, studentRecords);
         } catch (err) {
           console.error("Failed to load courses:", err);
           renderCourses([]);

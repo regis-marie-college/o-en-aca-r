@@ -1,6 +1,19 @@
 "use strict";
 
 let activeBillingFilter = "paid";
+let latestBillingRequestId = 0;
+const BILLING_REFRESH_MS = 8000;
+let isLoadingBillings = false;
+let queuedBillingRefresh = false;
+
+function debounce(callback, delay = 350) {
+  let timer = null;
+
+  return (...args) => {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => callback(...args), delay);
+  };
+}
 
 function getCurrentUser() {
   if (typeof window.getStoredUser === "function") {
@@ -168,88 +181,121 @@ function initBillingFilterTabs() {
   });
 }
 
-async function loadBillings(search = "") {
-  const url = `${window.APP_CONFIG.API_BASE_URL}/billings/list${
-    search ? `?search=${encodeURIComponent(search)}` : ""
-  }`;
-  const response = await fetch(url);
-  const data = await response.json();
-  const tbody = document.querySelector("#table-billings tbody");
-  const visibleBillings = filterVisibleBillings(data);
-
-  tbody.innerHTML = "";
-  updateSummary(visibleBillings);
-
-  if (!visibleBillings.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="15" class="billing-empty">
-          No billing records found for the current search.
-        </td>
-      </tr>
-    `;
+async function loadBillings(search = "", options = {}) {
+  if (isLoadingBillings) {
+    queuedBillingRefresh = true;
     return;
   }
 
-  visibleBillings.forEach((billing) => {
-    const row = document.createElement("tr");
-    const paymentMethod = normalizeValue(billing.payment_method);
-    const paymentStatus = normalizeValue(billing.payment_status);
-    const canReviewOnlinePayment =
-      paymentMethod === "online" && paymentStatus === "submitted";
-    const canCollectCash =
-      Number(billing.balance || 0) > 0 && !canReviewOnlinePayment;
-
-    row.innerHTML = `
-      <td>${billing.student_name}<br /><small>${billing.email}</small></td>
-      <td><span class="stage-pill">${getBillingStageLabel(billing.description)}</span></td>
-      <td>${escapeHtml(billing.description)}</td>
-      <td>${formatCurrency(billing.amount)}</td>
-      <td>${formatCurrency(billing.amount_paid)}</td>
-      <td>${formatCurrency(billing.balance)}</td>
-      <td>${escapeHtml(billing.payment_method || "-")}</td>
-      <td>${escapeHtml(billing.payment_channel || "-")}</td>
-      <td>${escapeHtml(billing.reference_no || "-")}</td>
-      <td>${renderProofCell(billing.proof_of_payment)}</td>
-      <td>${escapeHtml(billing.notes || "-")}</td>
-      <td class="${canReviewOnlinePayment ? "payment-pending" : ""}">${escapeHtml(billing.payment_status || "-")}</td>
-      <td>${billing.due_date ? defaultDate(billing.due_date) : "-"}</td>
-      <td><span class="status ${String(billing.status || "").toLowerCase()}">${billing.status}</span></td>
-      <td>
-        ${
-          canReviewOnlinePayment
-            ? `
-              <button type="button" class="billing-button secondary btn-review-payment" data-id="${billing.id}" data-status="Approved">
-                Approve
-              </button>
-              <button type="button" class="billing-button secondary btn-review-payment" data-id="${billing.id}" data-status="Denied">
-                Reject
-              </button>
-            `
-            : canCollectCash
-              ? `
-                <button type="button" data-id="${billing.id}" data-balance="${billing.balance}" class="billing-button secondary btn-pay">
-                  Collect Payment
-                </button>
-              `
-              : escapeHtml(
-                  paymentMethod === "online" && paymentStatus === "approved"
-                    ? "Online Payment Approved"
-                    : paymentMethod === "online" && paymentStatus === "denied"
-                      ? "Online Payment Rejected"
-                      : Number(billing.balance || 0) <= 0
-                        ? "Fully Paid"
-                        : "-",
-                )
-        }
-      </td>
-    `;
-
-    tbody.appendChild(row);
+  isLoadingBillings = true;
+  const requestId = (latestBillingRequestId += 1);
+  const params = new URLSearchParams({
+    payment_filter: activeBillingFilter,
+    limit: "250",
   });
 
-  bindPaymentButtons();
-  bindReviewButtons();
+  if (search) {
+    params.set("search", search);
+  }
+
+  const url = `${window.APP_CONFIG.API_BASE_URL}/billings/list?${params.toString()}`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (requestId !== latestBillingRequestId) {
+      return;
+    }
+
+    const tbody = document.querySelector("#table-billings tbody");
+    const visibleBillings = filterVisibleBillings(data);
+
+    tbody.innerHTML = "";
+    updateSummary(visibleBillings);
+
+    if (!visibleBillings.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="15" class="billing-empty">
+            No billing records found for the current search.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = visibleBillings
+      .map((billing) => {
+      const paymentMethod = normalizeValue(billing.payment_method);
+      const paymentStatus = normalizeValue(billing.payment_status);
+      const canReviewOnlinePayment =
+        paymentMethod === "online" && paymentStatus === "submitted";
+      const canCollectCash =
+        Number(billing.balance || 0) > 0 && !canReviewOnlinePayment;
+
+      return `
+        <tr>
+        <td>${billing.student_name}<br /><small>${billing.email}</small></td>
+        <td><span class="stage-pill">${getBillingStageLabel(billing.description)}</span></td>
+        <td>${escapeHtml(billing.description)}</td>
+        <td>${formatCurrency(billing.amount)}</td>
+        <td>${formatCurrency(billing.amount_paid)}</td>
+        <td>${formatCurrency(billing.balance)}</td>
+        <td>${escapeHtml(billing.payment_method || "-")}</td>
+        <td>${escapeHtml(billing.payment_channel || "-")}</td>
+        <td>${escapeHtml(billing.reference_no || "-")}</td>
+        <td>${renderProofCell(billing.proof_of_payment)}</td>
+        <td>${escapeHtml(billing.notes || "-")}</td>
+        <td class="${canReviewOnlinePayment ? "payment-pending" : ""}">${escapeHtml(billing.payment_status || "-")}</td>
+        <td>${billing.due_date ? defaultDate(billing.due_date) : "-"}</td>
+        <td><span class="status ${String(billing.status || "").toLowerCase()}">${billing.status}</span></td>
+        <td>
+          ${
+            canReviewOnlinePayment
+              ? `
+                <button type="button" class="billing-button secondary btn-review-payment" data-id="${billing.id}" data-status="Approved">
+                  Approve
+                </button>
+                <button type="button" class="billing-button secondary btn-review-payment" data-id="${billing.id}" data-status="Denied">
+                  Reject
+                </button>
+              `
+              : canCollectCash
+                ? `
+                  <button type="button" data-id="${billing.id}" data-balance="${billing.balance}" class="billing-button secondary btn-pay">
+                    Collect Payment
+                  </button>
+                `
+                : escapeHtml(
+                    paymentMethod === "online" && paymentStatus === "approved"
+                      ? "Online Payment Approved"
+                      : paymentMethod === "online" && paymentStatus === "denied"
+                        ? "Online Payment Rejected"
+                        : Number(billing.balance || 0) <= 0
+                          ? "Fully Paid"
+                          : "-",
+                  )
+          }
+        </td>
+        </tr>
+      `;
+      })
+      .join("");
+
+    bindPaymentButtons();
+    bindReviewButtons();
+  } catch (error) {
+    console.error("Failed to load billings:", error);
+  } finally {
+    isLoadingBillings = false;
+
+    if (queuedBillingRefresh && !options.skipQueuedRefresh) {
+      queuedBillingRefresh = false;
+      loadBillings(document.querySelector(".search-box")?.value.trim() || "", {
+        skipQueuedRefresh: true,
+      });
+    }
+  }
 }
 
 function bindPaymentButtons() {
@@ -402,9 +448,28 @@ async function readApiResponse(response) {
 
 function initSearch() {
   const searchBox = document.querySelector(".search-box");
+  const debouncedLoad = debounce(() => {
+    loadBillings(searchBox.value.trim());
+  });
 
   searchBox.addEventListener("input", () => {
-    loadBillings(searchBox.value);
+    debouncedLoad();
+  });
+}
+
+function initAutoRefresh() {
+  window.setInterval(() => {
+    if (document.hidden) {
+      return;
+    }
+
+    loadBillings(document.querySelector(".search-box")?.value.trim() || "");
+  }, BILLING_REFRESH_MS);
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      loadBillings(document.querySelector(".search-box")?.value.trim() || "");
+    }
   });
 }
 
@@ -412,6 +477,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initBillingFilterTabs();
   setBillingFilter("paid");
   initSearch();
+  initAutoRefresh();
   await initCreateBilling();
   await loadBillings();
 });

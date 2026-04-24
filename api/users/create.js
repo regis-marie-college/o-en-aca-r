@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 const { normalizeEmail } = require("../../lib/email");
 const { requireAuth } = require("../../lib/auth");
 const { generateStudentNumber } = require("../../lib/student-number");
+const sendEmail = require("../sendMail/sendMail");
 
 const ALLOWED_USER_TYPES = ["admin", "treasury", "records", "student"];
 const OPTIONAL_ENROLLMENT_COLUMNS = [
@@ -53,6 +54,7 @@ module.exports = async (req, res) => {
 
     if (shouldCreateAcademicProfile) {
       const client = await db.connect();
+      let enrollment;
 
       try {
         await client.query("BEGIN");
@@ -63,7 +65,7 @@ module.exports = async (req, res) => {
           },
           { executor: client },
         );
-        const enrollment = await createWalkInEnrollment(
+        enrollment = await createWalkInEnrollment(
           {
             user,
             body,
@@ -73,6 +75,8 @@ module.exports = async (req, res) => {
         );
 
         await client.query("COMMIT");
+        await notifyStudentPortalReady(user, body.password);
+
         return okay(res, {
           ...user,
           enrollment,
@@ -89,6 +93,10 @@ module.exports = async (req, res) => {
       ...body,
       type: requestedType,
     });
+
+    if (requestedType === "student") {
+      await notifyStudentPortalReady(user, body.password);
+    }
 
     return okay(res, user);
   } catch (err) {
@@ -307,6 +315,49 @@ async function getEnrollmentOptionalColumns(executor) {
 function getCurrentSchoolYear(date = new Date()) {
   const year = date.getFullYear();
   return `${year}-${year + 1}`;
+}
+
+async function notifyStudentPortalReady(user, password) {
+  if (!user?.email || String(user.type || "").toLowerCase() !== "student") {
+    return;
+  }
+
+  const studentName = [user.first_name, user.middle_name, user.last_name]
+    .filter(Boolean)
+    .join(" ");
+  const subject = "Student Portal Account Ready - Login Details";
+  const message = `
+    <div style="font-family:Arial,sans-serif;color:#111827;line-height:1.5;">
+      <h2 style="margin:0 0 12px;color:#14532d;">Student Portal Login</h2>
+      <p>Good day <strong>${escapeHtml(studentName || "Student")}</strong>,</p>
+      <p>Your account on the student portal is ready to use. You may now log in using the credentials below.</p>
+      <p><strong>Student Number:</strong> ${escapeHtml(user.student_number || user.id || "-")}</p>
+      <p><strong>Username:</strong> ${escapeHtml(user.email)}</p>
+      <p><strong>Password:</strong> ${escapeHtml(password || "Use the password provided by the Records Office")}</p>
+      <p>Please keep your login details secure.</p>
+      <p>Regis Marie College</p>
+    </div>
+  `;
+
+  try {
+    await sendEmail(user.email, subject, message);
+  } catch (error) {
+    console.error("[StudentPortalReadyEmail]", error.message);
+  }
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (char) => {
+    const map = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+
+    return map[char] || char;
+  });
 }
 
 // export reusable function

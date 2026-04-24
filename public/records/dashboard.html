@@ -403,7 +403,7 @@
           <section class="records-hero">
             <div>
               <h2>Document Request Processing</h2>
-              <p>Approved document requests lang mula sa treasury ang makikita rito, kasama ang request details at printable templates.</p>
+              <p>Approved document requests from Treasury appear here, including request details and printable templates.</p>
             </div>
           </section>
 
@@ -428,8 +428,8 @@
 
         <section class="records-import-card">
           <h2>Excel Grade Import</h2>
-          <p>Mag-upload ng Excel file ng grades at automatic na ita-try ng system i-match ang student gamit ang `student number/id` at pangalan bago i-save sa student records.</p>
-          <p>Recommended columns: `Student Number`, `Last Name`, `First Name`, `Middle Name`, `Program`, `Course` o `Subject Name`, `Grade`, at optional na `Course ID`, `School Year`, `Semester`, `Units`, `Remarks`.</p>
+          <p>Upload an Excel file of grades. The system will automatically try to match each student using the student number/id and name before saving the records.</p>
+          <p>Recommended columns: `Student Number`, `Last Name`, `First Name`, `Middle Name`, `Program`, `Course` or `Subject Name`, `Grade`, plus optional `Course ID`, `School Year`, `Semester`, `Units`, and `Remarks`.</p>
           <p>Example program values: `Bachelor of Science in Computer Science`, `Bachelor of Science in Information Technology`, `Bachelor of Elementary Education`, `Bachelor of Science in Business Administration`.</p>
           <div id="supportedPrograms" class="records-program-list"></div>
           <div class="records-import-links">
@@ -487,7 +487,7 @@
 
           <aside class="detail-card">
             <div id="requestDetail" class="empty-detail">
-              Pumili ng request sa kaliwa para makita ang student detail, action buttons, at printable templates.
+              Select a request on the left to view student details, action buttons, and printable templates.
             </div>
           </aside>
         </section>
@@ -688,7 +688,7 @@
         if (!templates.length) {
           return `
             <div class="status-note">
-              Walang supported print template para sa kasalukuyang document type.
+              No supported print template is available for the current document type.
             </div>
           `;
         }
@@ -779,7 +779,7 @@
         if (!selectedRequestDetail) {
           root.innerHTML = `
             <div class="empty-detail">
-              Pumili ng request sa kaliwa para makita ang student detail, action buttons, at printable templates.
+              Select a request on the left to view student details, action buttons, and printable templates.
             </div>
           `;
           return;
@@ -852,7 +852,7 @@
 
           <section class="detail-section">
             <h3>Processing Actions</h3>
-            <p>${canProcess ? "Pwede nang iproseso ng records office ang request na ito." : "Kailangan munang approved ang payment bago ma-process ng records office."}</p>
+            <p>${canProcess ? "The Records Office can now process this request." : "Payment must be approved before the Records Office can process this request."}</p>
             <textarea id="recordsNotes" rows="3" placeholder="Add notes for this request"></textarea>
             <input id="claimedBy" type="text" placeholder="Claimed by / Receiver name" value="${escapeHtml(request.claimed_by || "")}" style="margin-top: 10px;" />
             <div class="detail-actions">

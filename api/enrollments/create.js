@@ -14,6 +14,7 @@ const ID_FEE = 300;
 const DOWNPAYMENT_AMOUNT = 2000;
 const PAYMENT_SUBMITTED_STATUS = "Payment Submitted";
 const PENDING_EVALUATION_STATUS = "Pending Evaluation";
+let enrollmentColumnsPromise = null;
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -161,42 +162,7 @@ module.exports = async (req, res) => {
     try {
       await client.query("BEGIN");
 
-      const mobileNumberColumn = await client.query(
-        `
-        select 1
-        from information_schema.columns
-        where table_name = 'enrollments'
-          and column_name = 'mobile_number'
-        limit 1
-        `,
-      );
-      const studentIdColumn = await client.query(
-        `
-        select 1
-        from information_schema.columns
-        where table_name = 'enrollments'
-          and column_name = 'student_id'
-        limit 1
-        `,
-      );
-      const requestTypeColumn = await client.query(
-        `
-        select 1
-        from information_schema.columns
-        where table_name = 'enrollments'
-          and column_name = 'request_type'
-        limit 1
-        `,
-      );
-      const idPictureColumn = await client.query(
-        `
-        select 1
-        from information_schema.columns
-        where table_name = 'enrollments'
-          and column_name = 'idpic_url'
-        limit 1
-        `,
-      );
+      const enrollmentColumns = await getEnrollmentColumns();
 
       const columns = [
         "last_name",
@@ -215,17 +181,17 @@ module.exports = async (req, res) => {
         birthday,
       ];
 
-      if (mobileNumberColumn.rows.length > 0) {
+      if (enrollmentColumns.mobile_number) {
         columns.push("mobile_number");
         values.push(mobile);
       }
 
-      if (studentIdColumn.rows.length > 0) {
+      if (enrollmentColumns.student_id) {
         columns.push("student_id");
         values.push(student_id || null);
       }
 
-      if (requestTypeColumn.rows.length > 0) {
+      if (enrollmentColumns.request_type) {
         columns.push("request_type");
         values.push(normalizedRequestType);
       }
@@ -257,7 +223,7 @@ module.exports = async (req, res) => {
         isReturningStudent ? PENDING_EVALUATION_STATUS : PAYMENT_SUBMITTED_STATUS,
       );
 
-      if (idPictureColumn.rows.length > 0) {
+      if (enrollmentColumns.idpic_url) {
         columns.push("idpic_url");
         values.push(idpic_url || null);
       }
@@ -294,15 +260,15 @@ module.exports = async (req, res) => {
         "created_at",
       ];
 
-      if (studentIdColumn.rows.length > 0) {
+      if (enrollmentColumns.student_id) {
         returningColumns.splice(returningColumns.length - 2, 0, "student_id");
       }
 
-      if (requestTypeColumn.rows.length > 0) {
+      if (enrollmentColumns.request_type) {
         returningColumns.splice(returningColumns.length - 2, 0, "request_type");
       }
 
-      if (idPictureColumn.rows.length > 0) {
+      if (enrollmentColumns.idpic_url) {
         returningColumns.splice(returningColumns.length - 1, 0, "idpic_url");
       }
 
@@ -317,7 +283,7 @@ module.exports = async (req, res) => {
       const enrollment = {
         ...result.rows[0],
         idpic_url:
-          idPictureColumn.rows.length > 0 ? result.rows[0]?.idpic_url || null : null,
+          enrollmentColumns.idpic_url ? result.rows[0]?.idpic_url || null : null,
       };
 
       if (!isReturningStudent) {
@@ -468,6 +434,37 @@ async function createInstallmentBillings({
       params,
     );
   }
+}
+
+async function getEnrollmentColumns() {
+  if (!enrollmentColumnsPromise) {
+    enrollmentColumnsPromise = db
+      .query(
+        `
+        select column_name
+        from information_schema.columns
+        where table_name = 'enrollments'
+          and column_name = any($1::text[])
+        `,
+        [["mobile_number", "student_id", "request_type", "idpic_url"]],
+      )
+      .then((result) => {
+        const columns = new Set(result.rows.map((row) => row.column_name));
+
+        return {
+          mobile_number: columns.has("mobile_number"),
+          student_id: columns.has("student_id"),
+          request_type: columns.has("request_type"),
+          idpic_url: columns.has("idpic_url"),
+        };
+      })
+      .catch((error) => {
+        enrollmentColumnsPromise = null;
+        throw error;
+      });
+  }
+
+  return enrollmentColumnsPromise;
 }
 
 function ordinalLabel(value) {

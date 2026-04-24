@@ -83,6 +83,10 @@
       </main>
     </div>
     <script>
+      const STUDENTS_REFRESH_MS = 15000;
+      let isLoadingUsers = false;
+      let queuedUsersRefresh = false;
+
       function escapeHtml(value) {
         return String(value || "").replace(/[&<>"']/g, (char) => {
           const map = {
@@ -125,10 +129,17 @@
         }
       }
 
-      async function loadUsers() {
+      async function loadUsers(options = {}) {
+        if (isLoadingUsers) {
+          queuedUsersRefresh = true;
+          return;
+        }
+
+        isLoadingUsers = true;
+
         try {
           const schoolYear = document.querySelector("#schoolYearFilter")?.value || "";
-          const query = new URLSearchParams({ type: "student" });
+          const query = new URLSearchParams({ type: "student", limit: "300" });
           if (schoolYear) {
             query.set("school_year", schoolYear);
           }
@@ -150,35 +161,58 @@
             return;
           }
 
-          data.forEach((user) => {
-            const row = document.createElement("tr");
+          tbody.innerHTML = data
+            .map((user) => {
+              const {
+                id,
+                last_name,
+                first_name,
+                type,
+                email,
+                created_at,
+                program_name,
+                program_code,
+                school_year,
+              } = user;
 
-            const {
-              id,
-              last_name,
-              first_name,
-              type,
-              email,
-              created_at,
-              program_name,
-              program_code,
-              school_year,
-            } = user;
-
-            row.innerHTML = `
-              <td><a href="read.html?id=${id}">${escapeHtml(id.substring(0, 6))}</a></td>
-              <td>${escapeHtml(last_name)} ${escapeHtml(first_name)}</td>
-              <td>${escapeHtml(email)}</td>
-              <td>${escapeHtml(program_name || program_code || type || "-")}</td>
-              <td>${escapeHtml(school_year || "-")}</td>
-              <td>${defaultDate(created_at)}</td>
-            `;
-
-            tbody.appendChild(row);
-          });
+              return `
+                <tr>
+                  <td><a href="read.html?id=${encodeURIComponent(id)}">${escapeHtml(String(id || "").substring(0, 6))}</a></td>
+                  <td>${escapeHtml(last_name)} ${escapeHtml(first_name)}</td>
+                  <td>${escapeHtml(email)}</td>
+                  <td>${escapeHtml(program_name || program_code || type || "-")}</td>
+                  <td>${escapeHtml(school_year || "-")}</td>
+                  <td>${defaultDate(created_at)}</td>
+                </tr>
+              `;
+            })
+            .join("");
         } catch (err) {
           console.error("Failed to load users:", err);
+        } finally {
+          isLoadingUsers = false;
+
+          if (queuedUsersRefresh && !options.skipQueuedRefresh) {
+            queuedUsersRefresh = false;
+            loadUsers({ skipQueuedRefresh: true });
+          }
         }
+      }
+
+      function initAutoRefresh() {
+        window.setInterval(() => {
+          if (document.hidden) {
+            return;
+          }
+
+          loadUsers();
+        }, STUDENTS_REFRESH_MS);
+
+        document.addEventListener("visibilitychange", () => {
+          if (!document.hidden) {
+            loadUsers();
+          }
+        });
       }
 
       document.addEventListener("DOMContentLoaded", async function () {
@@ -187,6 +221,7 @@
           .querySelector("#schoolYearFilter")
           .addEventListener("change", loadUsers);
         loadUsers();
+        initAutoRefresh();
       });
     </script>
   </body>

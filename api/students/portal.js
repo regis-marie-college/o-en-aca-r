@@ -30,98 +30,104 @@ module.exports = async (req, res) => {
       return forbidden(res, "You are not allowed to view this portal");
     }
 
-    const userResult = await db.query(
-      `
-      select *
-      from users
-      where lower(email) = $1
-        and deleted_at is null
-      order by updated_at desc, created_at desc
-      limit 1
-      `,
-      [normalizedEmail],
-    );
+    const [userResult, latestRequestResult, approvedEnrollmentResult] =
+      await Promise.all([
+        db.query(
+          `
+          select *
+          from users
+          where lower(email) = $1
+            and deleted_at is null
+          order by updated_at desc, created_at desc
+          limit 1
+          `,
+          [normalizedEmail],
+        ),
+        db.query(
+          `
+          select *
+          from enrollments
+          where lower(email) = $1
+          order by created_at desc
+          limit 1
+          `,
+          [normalizedEmail],
+        ),
+        db.query(
+          `
+          select *
+          from enrollments
+          where lower(email) = $1
+            and lower(coalesce(status, '')) = 'approved'
+          order by created_at desc
+          limit 1
+          `,
+          [normalizedEmail],
+        ),
+      ]);
+
     const user = userResult.rows[0] || null;
-
-    const latestRequestResult = await db.query(
-      `
-      select *
-      from enrollments
-      where lower(email) = $1
-      order by created_at desc
-      limit 1
-      `,
-      [normalizedEmail],
-    );
     const latestRequest = latestRequestResult.rows[0] || null;
-
-    const approvedEnrollmentResult = await db.query(
-      `
-      select *
-      from enrollments
-      where lower(email) = $1
-        and lower(coalesce(status, '')) = 'approved'
-      order by created_at desc
-      limit 1
-      `,
-      [normalizedEmail],
-    );
     const approvedEnrollment = approvedEnrollmentResult.rows[0] || null;
     const enrollment = approvedEnrollment || latestRequest || null;
 
-    const takenCoursesResult = user
-      ? await db.query(
+    const [
+      takenCoursesResult,
+      billingsResult,
+      requestsResult,
+      transactionsResult,
+      documentsResult,
+    ] = await Promise.all([
+      user
+        ? db.query(
           `
           select *
           from student_records
           where student_id = $1
           order by created_at desc
           `,
-          [user.id],
-        )
-      : { rows: [] };
-
-    const billingsResult = await db.query(
-      `
-      select *
-      from billings
-      where email = $1
-      order by created_at desc
-      `,
-      [normalizedEmail],
-    );
-
-    const requestsResult = await db.query(
-      `
-      select *
-      from document_requests
-      where email = $1
-      order by created_at desc
-      `,
-      [normalizedEmail],
-    );
-
-    const transactionsResult = await db.query(
-      `
-      select *
-      from treasury_transactions
-      where email = $1
-      order by created_at desc
-      `,
-      [email],
-    );
-
-    const documentsResult = latestRequest
-      ? await db.query(
+            [user.id],
+          )
+        : Promise.resolve({ rows: [] }),
+      db.query(
+        `
+        select *
+        from billings
+        where lower(email) = $1
+        order by created_at desc
+        `,
+        [normalizedEmail],
+      ),
+      db.query(
+        `
+        select *
+        from document_requests
+        where lower(email) = $1
+        order by created_at desc
+        `,
+        [normalizedEmail],
+      ),
+      db.query(
+        `
+        select *
+        from treasury_transactions
+        where lower(email) = $1
+        order by created_at desc
+        `,
+        [normalizedEmail],
+      ),
+      latestRequest
+        ? db.query(
           `
           select *
           from documents
           where enrollment_id = $1
           order by created_at asc, id asc
           `,
-          [latestRequest.id],
-        )
-      : { rows: [] };
+            [latestRequest.id],
+          )
+        : Promise.resolve({ rows: [] }),
+    ]);
 
     const totalPaid = billingsResult.rows.reduce(
       (sum, item) => sum + Number(item.amount_paid || 0),

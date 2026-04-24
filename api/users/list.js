@@ -1,6 +1,7 @@
 const { okay, notAllowed, badRequest } = require("../../lib/response");
 const db = require("../../services/supabase");
 const { requireAuth } = require("../../lib/auth");
+const { parseLimit } = require("../../lib/query-options");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -13,6 +14,7 @@ module.exports = async (req, res) => {
   }
 
   const { type, school_year } = req.query;
+  const limit = parseLimit(req.query.limit, 300, 800);
   let result = { rows: [] };
 
   try {
@@ -20,7 +22,12 @@ module.exports = async (req, res) => {
       result = await db.query(
         `
         select
-          u.*,
+          u.id,
+          u.last_name,
+          u.first_name,
+          u.email,
+          u.type,
+          u.created_at,
           enrollment.school_year,
           enrollment.program_name,
           enrollment.program_code,
@@ -45,16 +52,19 @@ module.exports = async (req, res) => {
         where u.type = $1
           and ($2::text is null or enrollment.school_year = $2)
         order by u.created_at desc
+        limit $3
         `,
-        [type, school_year || null],
+        [type, school_year || null, limit],
       );
     } else if (type) {
       result = await db.query(
-        `SELECT * FROM users where type = $1 ORDER BY created_at DESC`,
-        [type],
+        `SELECT * FROM users where type = $1 ORDER BY created_at DESC limit $2`,
+        [type, limit],
       );
     } else {
-      result = await db.query(`SELECT * FROM users ORDER BY created_at DESC`);
+      result = await db.query(`SELECT * FROM users ORDER BY created_at DESC limit $1`, [
+        limit,
+      ]);
     }
 
     return okay(res, result.rows);

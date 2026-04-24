@@ -54,17 +54,28 @@ async function notifyDocumentRequestStatus(request, decision) {
 
   const normalizedDecision = String(decision).toLowerCase();
   const isApproved = normalizedDecision === "approved";
-  const subject = `Document Request ${isApproved ? "Approved" : "Rejected"}`;
+  const isReady = normalizedDecision === "ready";
+  const subject = isReady
+    ? "Document Request Ready for Claiming"
+    : `Document Request ${isApproved ? "Approved" : "Rejected"}`;
+  const statusLine = isReady
+    ? "Your requested document(s) are now ready for claiming."
+    : `Your document request has been <strong>${isApproved ? "approved" : "rejected"}</strong>.`;
+  const nextStep = isReady
+    ? "Please come to the campus and claim your document(s) at the Records Office."
+    : isApproved
+      ? "Your payment has been approved. The Records Office will process your requested document(s)."
+      : "Please log in to your student portal for the latest update.";
   const message = `
-    <p>Good day ${request.student_name || "Student"},</p>
-    <p>Your document request has been <strong>${isApproved ? "approved" : "rejected"}</strong>.</p>
-    <p><strong>Document:</strong> ${request.document_type || "-"}</p>
+    <p>Good day ${escapeHtml(request.student_name || "Student")},</p>
+    <p>${statusLine}</p>
+    <p><strong>Document(s):</strong> ${escapeHtml(request.document_type || "-")}</p>
     <p><strong>Amount:</strong> PHP ${Number(request.amount || 0).toFixed(2)}</p>
-    <p><strong>Payment Method:</strong> ${request.payment_method || "-"}</p>
-    <p><strong>Reference No:</strong> ${request.reference_no || "-"}</p>
-    <p><strong>Status:</strong> ${request.request_status || request.payment_status || "-"}</p>
-    ${request.notes ? `<p><strong>Notes:</strong> ${request.notes}</p>` : ""}
-    <p>Please log in to your student portal for the latest update.</p>
+    <p><strong>Payment Method:</strong> ${escapeHtml(request.payment_method || "-")}</p>
+    <p><strong>Reference No.:</strong> ${escapeHtml(request.reference_no || "-")}</p>
+    <p><strong>Status:</strong> ${escapeHtml(request.request_status || request.payment_status || "-")}</p>
+    ${request.notes ? `<p><strong>Notes:</strong> ${escapeHtml(request.notes)}</p>` : ""}
+    <p>${nextStep}</p>
     <p>Regis Marie College</p>
   `;
 
@@ -73,6 +84,20 @@ async function notifyDocumentRequestStatus(request, decision) {
   } catch (error) {
     console.error("[DocumentRequestEmail]", error.message);
   }
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (char) => {
+    const map = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+
+    return map[char] || char;
+  });
 }
 
 module.exports = {

@@ -245,13 +245,16 @@
           sectionClass: "is-approved",
         },
       ];
+      const ENROLLMENT_REFRESH_MS = 10000;
+      let isLoadingEnrollments = false;
+      let queuedEnrollmentRefresh = false;
 
       function normalizeStatus(value) {
         return String(value || "Pending").trim().toLowerCase();
       }
 
       function escapeHtml(value) {
-        return String(value || "").replace(/[&<>"']/g, (char) => {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => {
           const map = {
             "&": "&amp;",
             "<": "&lt;",
@@ -378,54 +381,111 @@
       function renderBoard(grouped) {
         const board = document.querySelector("#status-board");
 
-        board.innerHTML = STATUS_GROUPS.filter((group) => grouped[group.key].length > 0)
-          .map(
-            (group) => `
-              <section class="status-section ${group.sectionClass}">
-                <div class="status-section-header">
-                  <div>
-                    <h2>${escapeHtml(group.title)}</h2>
-                    <p>${escapeHtml(group.description)}</p>
-                  </div>
-                  <span class="status-count-badge">${grouped[group.key].length}</span>
+        board.innerHTML = STATUS_GROUPS.map(
+          (group) => `
+            <section class="status-section ${group.sectionClass}">
+              <div class="status-section-header">
+                <div>
+                  <h2>${escapeHtml(group.title)}</h2>
+                  <p>${escapeHtml(group.description)}</p>
                 </div>
-                ${renderRows(grouped[group.key])}
-              </section>
-            `,
-          )
-          .join("");
+                <span class="status-count-badge">${grouped[group.key].length}</span>
+              </div>
+              ${renderRows(grouped[group.key])}
+            </section>
+          `,
+        ).join("");
       }
 
       async function initSearch() {
         const searchBox = document.querySelector(".search-box");
+        let searchTimer = null;
+
+        function queueSearch() {
+          window.clearTimeout(searchTimer);
+          searchTimer = window.setTimeout(() => {
+            loadEnrollments(searchBox.value.trim());
+          }, 350);
+        }
 
         searchBox.addEventListener("keyup", (event) => {
           if (event.code === "Enter") {
-            loadEnrollments(searchBox.value);
+            window.clearTimeout(searchTimer);
+            loadEnrollments(searchBox.value.trim());
           }
         });
+
+        searchBox.addEventListener("input", queueSearch);
       }
 
-      async function loadEnrollments(search = null) {
+      async function loadEnrollments(search = null, options = {}) {
+        if (isLoadingEnrollments) {
+          queuedEnrollmentRefresh = true;
+          return;
+        }
+
+        isLoadingEnrollments = true;
+
         try {
           const res = await fetch(
             `${window.APP_CONFIG.API_BASE_URL}/enrollments/list${
-              search ? "?search=" + encodeURIComponent(search) : ""
+              search
+                ? "?search=" + encodeURIComponent(search) + "&limit=200"
+                : "?limit=200"
             }`,
           );
           const data = await res.json();
+
+          if (!res.ok) {
+            throw new Error(data.error || "Failed to load enrollments");
+          }
+
           const grouped = groupEnrollments(Array.isArray(data) ? data : []);
 
           renderSummary(grouped);
           renderBoard(grouped);
         } catch (err) {
           console.error("Failed to load enrollments:", err);
+          const board = document.querySelector("#status-board");
+          if (board) {
+            board.innerHTML = `
+              <div class="empty-state-inline">
+                ${escapeHtml(err.message || "Failed to load enrollments.")}
+              </div>
+            `;
+          }
+        } finally {
+          isLoadingEnrollments = false;
+
+          if (queuedEnrollmentRefresh && !options.skipQueuedRefresh) {
+            queuedEnrollmentRefresh = false;
+            loadEnrollments(document.querySelector(".search-box")?.value.trim() || null, {
+              skipQueuedRefresh: true,
+            });
+          }
         }
+      }
+
+      function initAutoRefresh() {
+        window.setInterval(() => {
+          if (document.hidden) {
+            return;
+          }
+
+          loadEnrollments(document.querySelector(".search-box")?.value.trim() || null);
+        }, ENROLLMENT_REFRESH_MS);
+
+        document.addEventListener("visibilitychange", () => {
+          if (!document.hidden) {
+            loadEnrollments(document.querySelector(".search-box")?.value.trim() || null);
+          }
+        });
       }
 
       document.addEventListener("DOMContentLoaded", function () {
         loadEnrollments();
         initSearch();
+        initAutoRefresh();
       });
     </script>
   </body>
