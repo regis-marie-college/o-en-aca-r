@@ -13,18 +13,21 @@ module.exports = async (req, res) => {
     return notAllowed(res);
   }
 
-  const auth = await requireAuth(req, res);
-  if (!auth) {
-    return;
-  }
-
-  const { email } = req.query;
-
-  if (!email) {
-    return badRequest(res, "email is required");
-  }
-
+  let client;
   try {
+    client = await db.connect();
+
+    const auth = await requireAuth(req, res, null, client);
+    if (!auth) {
+      return;
+    }
+
+    const { email } = req.query;
+
+    if (!email) {
+      return badRequest(res, "email is required");
+    }
+
     const normalizedEmail = normalizeEmail(email);
     const normalizedAuthEmail = normalizeEmail(auth.email || "");
     const normalizedRole = String(auth.type || "").toLowerCase();
@@ -34,41 +37,38 @@ module.exports = async (req, res) => {
       return forbidden(res, "You are not allowed to view this portal");
     }
 
-    const [userResult, latestRequestResult, approvedEnrollmentResult] =
-      await Promise.all([
-        db.query(
-          `
-          select *
-          from users
-          where lower(email) = $1
-            and deleted_at is null
-          order by updated_at desc, created_at desc
-          limit 1
-          `,
-          [normalizedEmail],
-        ),
-        db.query(
-          `
-          select *
-          from enrollments
-          where lower(email) = $1
-          order by created_at desc
-          limit 1
-          `,
-          [normalizedEmail],
-        ),
-        db.query(
-          `
-          select *
-          from enrollments
-          where lower(email) = $1
-            and lower(coalesce(status, '')) = 'approved'
-          order by created_at desc
-          limit 1
-          `,
-          [normalizedEmail],
-        ),
-      ]);
+    const userResult = await client.query(
+      `
+      select *
+      from users
+      where lower(email) = $1
+        and deleted_at is null
+      order by updated_at desc, created_at desc
+      limit 1
+      `,
+      [normalizedEmail],
+    );
+    const latestRequestResult = await client.query(
+      `
+      select *
+      from enrollments
+      where lower(email) = $1
+      order by created_at desc
+      limit 1
+      `,
+      [normalizedEmail],
+    );
+    const approvedEnrollmentResult = await client.query(
+      `
+      select *
+      from enrollments
+      where lower(email) = $1
+        and lower(coalesce(status, '')) = 'approved'
+      order by created_at desc
+      limit 1
+      `,
+      [normalizedEmail],
+    );
 
     const user = userResult.rows[0] || null;
     const latestRequest = latestRequestResult.rows[0] || null;
@@ -88,63 +88,55 @@ module.exports = async (req, res) => {
       ),
     );
 
-    const [
-      takenCoursesResult,
-      billingsResult,
-      requestsResult,
-      transactionsResult,
-      documentsResult,
-    ] = await Promise.all([
-      studentRecordIds.length
-        ? db.query(
+    const takenCoursesResult = studentRecordIds.length
+      ? await client.query(
           `
           select *
           from student_records
           where student_id = any($1::text[])
           order by created_at desc
           `,
-            [studentRecordIds],
-          )
-        : Promise.resolve({ rows: [] }),
-      db.query(
-        `
-        select *
-        from billings
-        where lower(email) = $1
-        order by created_at desc
-        `,
-        [normalizedEmail],
-      ),
-      db.query(
-        `
-        select *
-        from document_requests
-        where lower(email) = $1
-        order by created_at desc
-        `,
-        [normalizedEmail],
-      ),
-      db.query(
-        `
-        select *
-        from treasury_transactions
-        where lower(email) = $1
-        order by created_at desc
-        `,
-        [normalizedEmail],
-      ),
-      latestRequest
-        ? db.query(
+          [studentRecordIds],
+        )
+      : { rows: [] };
+    const billingsResult = await client.query(
+      `
+      select *
+      from billings
+      where lower(email) = $1
+      order by created_at desc
+      `,
+      [normalizedEmail],
+    );
+    const requestsResult = await client.query(
+      `
+      select *
+      from document_requests
+      where lower(email) = $1
+      order by created_at desc
+      `,
+      [normalizedEmail],
+    );
+    const transactionsResult = await client.query(
+      `
+      select *
+      from treasury_transactions
+      where lower(email) = $1
+      order by created_at desc
+      `,
+      [normalizedEmail],
+    );
+    const documentsResult = latestRequest
+      ? await client.query(
           `
           select *
           from documents
           where enrollment_id = $1
           order by created_at asc, id asc
           `,
-            [latestRequest.id],
-          )
-        : Promise.resolve({ rows: [] }),
-    ]);
+          [latestRequest.id],
+        )
+      : { rows: [] };
 
     const totalPaid = billingsResult.rows.reduce(
       (sum, item) => sum + Number(item.amount_paid || 0),
@@ -163,7 +155,7 @@ module.exports = async (req, res) => {
       getCourseKeys(record).forEach((key) => completedCourseKeys.add(key));
     });
     const programCoursesResult = enrollment?.program_id
-      ? await db.query(
+      ? await client.query(
           `
           select *
           from courses
@@ -218,5 +210,9 @@ module.exports = async (req, res) => {
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 };

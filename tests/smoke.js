@@ -36,4 +36,16 @@ for (const modulePath of modules) {
   require(require("path").resolve(__dirname, "..", modulePath));
 }
 
+const { isTransientDatabaseError, sanitizeErrorMessage } = require("../lib/response");
+
+const poolConnectTimeout = "timeout exceeded when trying to connect";
+
+if (!isTransientDatabaseError(poolConnectTimeout)) {
+  throw new Error("Pool connect timeout should be treated as transient");
+}
+
+if (sanitizeErrorMessage(poolConnectTimeout) !== "The server is busy right now. Please wait a few seconds and try again.") {
+  throw new Error("Pool connect timeout should be sanitized for users");
+}
+
 console.log("Smoke test passed");

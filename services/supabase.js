@@ -18,7 +18,9 @@ function isPoolSaturationError(error) {
     message.includes("maxclientsinsessionmode") ||
     message.includes("max clients reached") ||
     message.includes("remaining connection slots are reserved") ||
-    message.includes("too many clients")
+    message.includes("too many clients") ||
+    message.includes("connection timeout") ||
+    message.includes("timeout exceeded when trying to connect")
   );
 }
 
@@ -54,7 +56,7 @@ if (!global._supabasePool) {
     },
     max: getPoolMax(),
     idleTimeoutMillis: process.env.VERCEL ? 3000 : 10000,
-    connectionTimeoutMillis: 3000,
+    connectionTimeoutMillis: Number(process.env.SUPABASE_DB_CONNECT_TIMEOUT_MS) || 10000,
     allowExitOnIdle: true,
   });
 

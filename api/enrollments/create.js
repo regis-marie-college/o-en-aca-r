@@ -25,9 +25,11 @@ module.exports = async (req, res) => {
     return notAllowed(res);
   }
 
+  let client;
+  let transactionStarted = false;
+
   try {
     const body = await bodyParser(req);
-    const defaultSchoolYear = await getDefaultSchoolYear();
 
     const {
       last_name,
@@ -100,27 +102,6 @@ module.exports = async (req, res) => {
       return badRequest(res, "Please select at least one course");
     }
 
-    if (normalizedSelectedCourses.length) {
-      const completedCourseKeys = await getCompletedCourseKeys(db, {
-        studentId: student_id || null,
-        email,
-      });
-      const completedSelections = getCompletedSelectedCourses(
-        normalizedSelectedCourses,
-        completedCourseKeys,
-      );
-
-      if (completedSelections.length) {
-        return badRequest(
-          res,
-          `Completed courses cannot be selected again: ${completedSelections
-            .map((course) => course.name || course.course_name || course.code || course.id)
-            .filter(Boolean)
-            .join(", ")}`,
-        );
-      }
-    }
-
     const courseAmount =
       normalizedSelectedCourses.length > 0
         ? computedTotals.totalAmount
@@ -175,19 +156,42 @@ module.exports = async (req, res) => {
       }
     }
 
+    client = await db.connect();
+    const defaultSchoolYear = await getDefaultSchoolYear(client);
+
+    if (normalizedSelectedCourses.length) {
+      const completedCourseKeys = await getCompletedCourseKeys(client, {
+        studentId: student_id || null,
+        email,
+      });
+      const completedSelections = getCompletedSelectedCourses(
+        normalizedSelectedCourses,
+        completedCourseKeys,
+      );
+
+      if (completedSelections.length) {
+        return badRequest(
+          res,
+          `Completed courses cannot be selected again: ${completedSelections
+            .map((course) => course.name || course.course_name || course.code || course.id)
+            .filter(Boolean)
+            .join(", ")}`,
+        );
+      }
+    }
+
     await assertNoActiveEnrollmentRequest({
-      executor: db,
+      executor: client,
       email,
       studentId: student_id || null,
       schoolYear: school_year || defaultSchoolYear,
     });
 
-    const client = await db.connect();
-
     try {
       await client.query("BEGIN");
+      transactionStarted = true;
 
-      const enrollmentColumns = await getEnrollmentColumns();
+      const enrollmentColumns = await getEnrollmentColumns(client);
 
       const columns = [
         "last_name",
@@ -356,16 +360,22 @@ module.exports = async (req, res) => {
       }
 
       await client.query("COMMIT");
+      transactionStarted = false;
       return okay(res, enrollment);
     } catch (txError) {
-      await client.query("ROLLBACK");
+      if (transactionStarted) {
+        await client.query("ROLLBACK");
+        transactionStarted = false;
+      }
       throw txError;
-    } finally {
-      client.release();
     }
   } catch (err) {
     console.error(err);
     return badRequest(res, err.message);
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 };
 
@@ -422,47 +432,72 @@ async function createInstallmentBillings({
     }),
   ].filter((item) => Number(item.amount || 0) > 0);
 
-  for (const item of billingItems) {
+  if (!billingItems.length) {
+    return;
+  }
+
+  const columns = [
+    "enrollment_id",
+    "student_name",
+    "email",
+    "description",
+    "amount",
+    "amount_paid",
+    "balance",
+    "due_date",
+    "status",
+    "created_by",
+    "updated_by",
+    "payment_method",
+    "payment_channel",
+    "reference_no",
+    "proof_of_payment",
+    "payment_status",
+    "pending_payment_amount",
+  ];
+  const params = [];
+  const rows = billingItems.map((item, rowIndex) => {
     const submittedAmount = Number(item.submittedAmount || 0);
     const hasSubmittedPayment = Boolean(initialPayment) && submittedAmount > 0;
-    const paymentColumns = hasSubmittedPayment
-      ? ", payment_method, payment_channel, reference_no, proof_of_payment, payment_status, pending_payment_amount"
-      : "";
-    const paymentValues = hasSubmittedPayment
-      ? ", 'Online', $7, $8, $9, 'Submitted', $10"
-      : "";
-    const params = [
+    const values = [
       enrollment.id,
       studentName,
       email,
       item.description,
       Number(item.amount).toFixed(2),
+      "0.00",
+      Number(item.amount).toFixed(2),
+      null,
+      "Unpaid",
       "System Enrollment",
+      "System Enrollment",
+      hasSubmittedPayment ? "Online" : null,
+      hasSubmittedPayment ? initialPayment?.paymentChannel || null : null,
+      hasSubmittedPayment ? initialPayment?.referenceNo || null : null,
+      hasSubmittedPayment ? initialPayment?.proofOfPayment || null : null,
+      hasSubmittedPayment ? "Submitted" : null,
+      hasSubmittedPayment ? submittedAmount.toFixed(2) : null,
     ];
 
-    if (hasSubmittedPayment) {
-      params.push(
-        initialPayment?.paymentChannel || null,
-        initialPayment?.referenceNo || null,
-        initialPayment?.proofOfPayment || null,
-        submittedAmount.toFixed(2),
-      );
-    }
+    params.push(...values);
 
-    await executor.query(
-      `
-      insert into billings
-      (enrollment_id, student_name, email, description, amount, amount_paid, balance, due_date, status, created_by, updated_by${paymentColumns})
-      values ($1,$2,$3,$4,$5,0,$5,null,'Unpaid',$6,$6${paymentValues})
-      `,
-      params,
-    );
-  }
+    const offset = rowIndex * columns.length;
+    return `(${values.map((_, index) => `$${offset + index + 1}`).join(",")})`;
+  });
+
+  await executor.query(
+    `
+    insert into billings
+    (${columns.join(", ")})
+    values ${rows.join(",")}
+    `,
+    params,
+  );
 }
 
-async function getEnrollmentColumns() {
+async function getEnrollmentColumns(executor = db) {
   if (!enrollmentColumnsPromise) {
-    enrollmentColumnsPromise = db
+    enrollmentColumnsPromise = executor
       .query(
         `
         select column_name
@@ -535,8 +570,8 @@ function getCurrentSchoolYear(date = new Date()) {
   return `${year}-${year + 1}`;
 }
 
-async function getDefaultSchoolYear() {
-  const result = await db.query(`
+async function getDefaultSchoolYear(executor = db) {
+  const result = await executor.query(`
     select name
     from school_years
     where is_active = true
