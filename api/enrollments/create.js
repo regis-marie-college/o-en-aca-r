@@ -471,12 +471,12 @@ async function createInstallmentBillings({
       "Unpaid",
       "System Enrollment",
       "System Enrollment",
-      hasSubmittedPayment ? "Online" : null,
+      hasSubmittedPayment ? "Online" : "Cash",
       hasSubmittedPayment ? initialPayment?.paymentChannel || null : null,
       hasSubmittedPayment ? initialPayment?.referenceNo || null : null,
       hasSubmittedPayment ? initialPayment?.proofOfPayment || null : null,
-      hasSubmittedPayment ? "Submitted" : null,
-      hasSubmittedPayment ? submittedAmount.toFixed(2) : null,
+      hasSubmittedPayment ? "Submitted" : "Unpaid",
+      hasSubmittedPayment ? submittedAmount.toFixed(2) : "0.00",
     ];
 
     params.push(...values);

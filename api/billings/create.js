@@ -51,8 +51,8 @@ async function createBilling(data) {
     const result = await db.query(
       `
       insert into billings
-      (enrollment_id, student_name, email, description, amount, amount_paid, balance, due_date, status, created_by, updated_by)
-      values ($1,$2,$3,$4,$5,0,$5,$6,'Unpaid',$7,$7)
+      (enrollment_id, student_name, email, description, amount, amount_paid, balance, due_date, status, created_by, updated_by, payment_method, payment_status, pending_payment_amount)
+      values ($1,$2,$3,$4,$5,0,$5,$6,'Unpaid',$7,$7,'Cash','Unpaid',0)
       returning *
       `,
       [

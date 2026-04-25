@@ -1,19 +1,10 @@
 const fs = require("fs");
-const path = require("path");
 const { formidable } = require("formidable");
 const XLSX = require("xlsx");
 const { okay, badRequest, notAllowed } = require("../../lib/response");
 const db = require("../../services/supabase");
 const { requireAuth } = require("../../lib/auth");
-
-const TEMP_UPLOAD_DIR = path.resolve(
-  __dirname,
-  "..",
-  "..",
-  "public",
-  "uploads",
-  "grade-imports",
-);
+const { ensureTempUploadDir } = require("../../lib/file-storage");
 
 const HEADER_ALIASES = {
   student_id: [
@@ -30,6 +21,9 @@ const HEADER_ALIASES = {
   middle_name: ["middlename", "middle_name", "middlenameinitial", "mi"],
   course_id: ["subjectcode", "coursecode", "code", "subject_code", "course_code"],
   course_name: [
+    "courseorsubjectname",
+    "subjectorcourse",
+    "subjectorcourse_name",
     "subjectname",
     "coursename",
     "subject",
@@ -156,11 +150,11 @@ function getStudentLookupKeys(student) {
 }
 
 async function parseUpload(req) {
-  await fs.promises.mkdir(TEMP_UPLOAD_DIR, { recursive: true });
+  const tempUploadDir = await ensureTempUploadDir();
 
   const form = formidable({
     multiples: false,
-    uploadDir: TEMP_UPLOAD_DIR,
+    uploadDir: tempUploadDir,
     keepExtensions: true,
     maxFiles: 1,
   });
