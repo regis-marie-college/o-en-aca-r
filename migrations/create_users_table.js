@@ -14,6 +14,7 @@ async function up() {
       mobile text,
       password text not null,
       type text,
+      status text not null default 'active',
       verified_at timestamp,
       created_at timestamp default now(),
       updated_at timestamp default now(),

@@ -42,6 +42,131 @@
   margin-top: 8px;
 }
 
+.student-type-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.student-type-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 184, 255, 0.42);
+  background: #f8fbff;
+  color: #000000;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.student-type-option:has(input:checked) {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.student-type-option input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+}
+
+.old-student-login {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  background: #eff6ff;
+  color: #000000;
+}
+
+.old-student-login strong,
+.old-student-login a {
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.old-student-login a {
+  margin-left: auto;
+  text-decoration: none;
+}
+
+.course-filter-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) minmax(140px, 0.8fr) minmax(140px, 0.8fr) auto;
+  gap: 10px;
+  margin: 12px 0 8px;
+}
+
+.course-filter-toolbar input,
+.course-filter-toolbar select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 184, 255, 0.34);
+  background: #f8fbff;
+  color: #000000;
+  outline: none;
+}
+
+.course-filter-clear {
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 184, 255, 0.34);
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.course-check-list,
+.select-list {
+  display: grid;
+  gap: 10px;
+}
+
+.course-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 184, 255, 0.34);
+  background: #f8fbff;
+  color: #000000;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.course-check-item:has(input:checked) {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.course-check-item input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #2563eb;
+  flex: 0 0 auto;
+}
+
+.course-check-item span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .form-enrollment .form-group,
 .form-enrollment .requirement-item {
   margin-bottom: 16px;
@@ -174,6 +299,20 @@
   .info-holder {
     padding: 14px;
     border-radius: 16px;
+  }
+
+  .student-type-panel {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .old-student-login a {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .course-filter-toolbar {
+    grid-template-columns: 1fr;
   }
 
   .link-enrollment-form {

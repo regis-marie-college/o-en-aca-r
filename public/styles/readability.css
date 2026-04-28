@@ -1,0 +1,65 @@
+:root {
+  --text: #000000;
+  --muted: #000000;
+  --muted-strong: #000000;
+  --accent: #1d4ed8;
+  --accent-strong: #2563eb;
+  --danger: #000000;
+  --success: #1d4ed8;
+  --warning: #1d4ed8;
+}
+
+body,
+button,
+input,
+select,
+textarea,
+p,
+li,
+span,
+small,
+label,
+th,
+td,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #000000 !important;
+}
+
+a,
+.logo,
+.sidebar nav a:hover,
+.sidebar nav a.active,
+.user .dropdown a:hover,
+td a,
+.btn-secondary,
+.selected-item,
+.success,
+.error,
+.form-message,
+[class*="active"],
+[class*="selected"],
+[class*="status"],
+[class*="accent"] {
+  color: #1d4ed8 !important;
+}
+
+.btn-primary,
+.btn-danger,
+.topbar span.auth-type,
+.form-group input[type="file"]::file-selector-button {
+  color: #000000 !important;
+  background: linear-gradient(135deg, #dbeafe, #93c5fd) !important;
+  border-color: #2563eb !important;
+}
+
+input::placeholder,
+textarea::placeholder,
+.search-box::placeholder {
+  color: #000000 !important;
+  opacity: 0.72;
+}

@@ -3,7 +3,7 @@ const { bodyParser } = require("../../lib/body-parser");
 const db = require("../../services/supabase");
 const { requireAuth } = require("../../lib/auth");
 
-const ALLOWED_USER_TYPES = ["admin", "treasury", "records", "student"];
+const ALLOWED_USER_TYPES = ["super_admin", "admin", "treasury", "records", "student"];
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -30,6 +30,32 @@ module.exports = async (req, res) => {
       return badRequest(res, "Invalid user role");
     }
 
+    const targetResult = await db.query(
+      `
+      select id, type
+      from users
+      where id = $1
+        and deleted_at is null
+      limit 1
+      `,
+      [id],
+    );
+
+    if (!targetResult.rows.length) {
+      return badRequest(res, "User not found");
+    }
+
+    const authRole = String(auth.type || "").toLowerCase();
+    const currentTargetRole = String(targetResult.rows[0].type || "").toLowerCase();
+
+    if (type === "super_admin") {
+      return badRequest(res, "Setting another account as super admin is not allowed");
+    }
+
+    if (currentTargetRole === "super_admin") {
+      return badRequest(res, "The super admin role cannot be changed");
+    }
+
     const result = await db.query(
       `
       update users
@@ -37,7 +63,7 @@ module.exports = async (req, res) => {
           updated_at = now()
       where id = $1
         and deleted_at is null
-      returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, created_at, updated_at
+      returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, status, created_at, updated_at
       `,
       [id, type],
     );

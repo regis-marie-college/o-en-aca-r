@@ -140,11 +140,13 @@
     let links = [];
 
     switch (user.type) {
+      case "super_admin":
       case "admin":
         links = [
           { href: "../admin/dashboard.html", label: "Dashboard" },
           { href: "../enrollments/list.html", label: "Enrollments" },
           { href: "../students/list.html", label: "Students" },
+          { href: "../users/list.html", label: "User Access" },
           { href: "../treasury/billing.html", label: "Billing" },
           { href: "../treasury/document-payments.html", label: "Doc Payments" },
           { href: "../treasury/transactions.html", label: "Transactions" },

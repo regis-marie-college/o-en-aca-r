@@ -31,7 +31,7 @@
         </div>
         <!-- Table -->
         <section class="table-section">
-          <h2>Admin Accounts</h2>
+          <h2>Staff Accounts</h2>
           <table id="table-users">
             <thead>
               <tr>
@@ -50,14 +50,17 @@
       async function loadUsers() {
         try {
           const res = await fetch(
-            `${window.APP_CONFIG.API_BASE_URL}/users/list?type=admin`,
+            `${window.APP_CONFIG.API_BASE_URL}/users/list`,
           );
           const data = await res.json();
+          const staffUsers = Array.isArray(data)
+            ? data.filter((user) => ["super_admin", "admin", "treasury", "records"].includes(String(user.type || "")))
+            : [];
 
           const tbody = document.querySelector("#table-users tbody");
           tbody.innerHTML = "";
 
-          data.forEach((user) => {
+          staffUsers.forEach((user) => {
             const row = document.createElement("tr");
 
             const { id, last_name, first_name, type, email } = user;

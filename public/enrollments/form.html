@@ -18,6 +18,27 @@
         </div>
         <h2>Student Details</h2>
 
+        <div class="student-type-panel">
+          <label class="student-type-option">
+            <input type="radio" name="request_type" value="New Student" required checked />
+            <span>New Student</span>
+          </label>
+          <label class="student-type-option">
+            <input type="radio" name="request_type" value="Transferee" required />
+            <span>Transferee</span>
+          </label>
+          <label class="student-type-option">
+            <input type="radio" name="request_type" value="Irregular Student" required />
+            <span>Irregular</span>
+          </label>
+        </div>
+
+        <div class="old-student-login">
+          <strong>Old student?</strong>
+          <span>Please login to your student account for re-enrollment.</span>
+          <a href="../auth/login.html">Login</a>
+        </div>
+
         <div class="form-group">
           <label>Last Name</label>
           <input type="text" name="last_name" required />
@@ -60,6 +81,16 @@
           <label>1x1 ID Picture</label>
           <input type="file" id="idpic" accept=".jpg,.jpeg,.png,.webp" required />
         </div>
+        <div id="transfer-requirements" hidden>
+          <div class="requirement-item">
+            <label>PSA Birth Certificate</label>
+            <input type="file" id="psa_document" accept=".jpg,.jpeg,.png,.pdf" />
+          </div>
+          <div class="requirement-item">
+            <label>Grades from Previous School</label>
+            <input type="file" id="previous_grades" accept=".jpg,.jpeg,.png,.pdf" />
+          </div>
+        </div>
 
         <h2>Select Program and Courses</h2>
 
@@ -89,6 +120,30 @@
             <option value="2nd Sem">2nd Sem</option>
             <option value="3rd Sem">3rd Sem</option>
           </select>
+        </div>
+
+        <div class="form-group" id="taken-courses-group" hidden>
+          <label>Courses Already Taken</label>
+          <small class="portal-form-note">Select subjects already taken from your previous school. These will not be added to your current enrollment subjects.</small>
+          <div class="course-filter-toolbar">
+            <input
+              id="taken-course-search"
+              type="search"
+              placeholder="Search course name or code"
+              autocomplete="off"
+            />
+            <select id="taken-course-year-filter">
+              <option value="">All Year Levels</option>
+            </select>
+            <select id="taken-course-semester-filter">
+              <option value="">All Semesters</option>
+            </select>
+            <button type="button" class="course-filter-clear" id="taken-course-clear-filter">
+              Clear
+            </button>
+          </div>
+          <small class="portal-form-note" id="taken-course-filter-summary"></small>
+          <div id="taken-course-options" class="course-check-list"></div>
         </div>
 
         <div class="form-group">
@@ -163,13 +218,28 @@
       const ID_FEE = 300;
       const MIN_DOWNPAYMENT = 2000;
       let courses = [];
+      let takenCourseOptions = [];
       let paymentOptions = [];
       const selectedCourses = new Set();
+      const takenCourses = new Set();
+      const takenCourseFilters = {
+        search: "",
+        yearLevel: "",
+        semester: "",
+      };
 
       const form = document.querySelector("#enrollmentForm");
       const message = document.getElementById("formMessage");
       const optionsEl = document.querySelector("#course-options");
       const selectedEl = document.querySelector("#course-selected");
+      const takenOptionsEl = document.querySelector("#taken-course-options");
+      const takenCourseSearchEl = document.querySelector("#taken-course-search");
+      const takenCourseYearFilterEl = document.querySelector("#taken-course-year-filter");
+      const takenCourseSemesterFilterEl = document.querySelector("#taken-course-semester-filter");
+      const takenCourseClearFilterEl = document.querySelector("#taken-course-clear-filter");
+      const takenCourseFilterSummaryEl = document.querySelector("#taken-course-filter-summary");
+      const takenCoursesGroupEl = document.querySelector("#taken-courses-group");
+      const transferRequirementsEl = document.querySelector("#transfer-requirements");
       const programEl = document.querySelector("#program");
       const yearLevelEl = document.querySelector("#year_level");
       const semesterEl = document.querySelector("#semester");
@@ -187,6 +257,22 @@
           programCode,
           programMajor,
         };
+      }
+
+      function getRequestType() {
+        return String(form.elements.request_type.value || "").trim();
+      }
+
+      function needsTransferFlow() {
+        return ["Transferee", "Irregular Student"].includes(getRequestType());
+      }
+
+      function getCourseAmount(course) {
+        return Number(course.amount || Number(course.units || 0) * RATE_PER_UNIT);
+      }
+
+      function getCourseKey(course) {
+        return String(course.id || course.code || course.name || "").trim();
       }
 
       function isBsedSelected() {
@@ -250,6 +336,27 @@
         return data;
       }
 
+      async function uploadRequirementFile(file) {
+        const uploadData = new FormData();
+        uploadData.append("requirement_file", file);
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/enrollments/upload-requirement`,
+          {
+            method: "POST",
+            body: uploadData,
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to upload requirement");
+        }
+
+        return data;
+      }
+
       function getSelectedCourseObjects() {
         return [...selectedCourses]
           .map((id) => courses.find((course) => course.id === id))
@@ -308,6 +415,7 @@
           ["email", "Active email"],
           ["mobile", "Mobile number"],
           ["birthday", "Birthday"],
+          ["request_type", "Student type"],
           ["program", "Program"],
           ["year_level", "Year level"],
           ["semester", "Semester"],
@@ -328,6 +436,38 @@
         }
 
         return true;
+      }
+
+      function applyStudentTypeRules() {
+        const isTransferFlow = needsTransferFlow();
+
+        transferRequirementsEl.hidden = !isTransferFlow;
+        takenCoursesGroupEl.hidden = !isTransferFlow;
+
+        document.getElementById("psa_document").required = isTransferFlow;
+        document.getElementById("previous_grades").required = isTransferFlow;
+
+        if (getRequestType() === "New Student") {
+          yearLevelEl.value = "1st Year";
+          semesterEl.value = "1st Sem";
+          yearLevelEl.disabled = true;
+          semesterEl.disabled = true;
+        } else {
+          yearLevelEl.disabled = false;
+          semesterEl.disabled = false;
+        }
+
+        takenCourses.clear();
+        selectedCourses.clear();
+        takenCourseOptions = [];
+        resetTakenCourseFilters();
+        renderTakenCourseOptions();
+        renderSelected();
+        if (isTransferFlow) {
+          loadTakenCourseOptions().then(loadAvailableCourses);
+        } else {
+          loadAvailableCourses();
+        }
       }
 
       function renderPaymentOptions(selectedKey = "") {
@@ -396,9 +536,145 @@
         optionsEl.innerHTML = courses
           .map(
             (course) => `
-              <div class="select-item" data-id="${course.id}">
-                ${course.name} (${course.units} units)
-              </div>
+              <label class="course-check-item">
+                <input
+                  type="checkbox"
+                  value="${course.id}"
+                  ${selectedCourses.has(course.id) ? "checked" : ""}
+                />
+                <span>${course.name} (${course.units} units)</span>
+              </label>
+            `,
+          )
+          .join("");
+      }
+
+      function getUniqueTakenCourseValues(key) {
+        return Array.from(
+          new Set(
+            takenCourseOptions
+              .map((course) => String(course?.[key] || "").trim())
+              .filter(Boolean),
+          ),
+        ).sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+      }
+
+      function syncTakenCourseFilterOptions() {
+        const yearLevels = getUniqueTakenCourseValues("year_level");
+        const semesters = getUniqueTakenCourseValues("semester");
+        const selectedYear = takenCourseFilters.yearLevel;
+        const selectedSemester = takenCourseFilters.semester;
+
+        takenCourseYearFilterEl.innerHTML = `
+          <option value="">All Year Levels</option>
+          ${yearLevels
+            .map(
+              (yearLevel) =>
+                `<option value="${yearLevel}">${yearLevel}</option>`,
+            )
+            .join("")}
+        `;
+        takenCourseSemesterFilterEl.innerHTML = `
+          <option value="">All Semesters</option>
+          ${semesters
+            .map(
+              (semester) =>
+                `<option value="${semester}">${semester}</option>`,
+            )
+            .join("")}
+        `;
+
+        takenCourseYearFilterEl.value = yearLevels.includes(selectedYear)
+          ? selectedYear
+          : "";
+        takenCourseSemesterFilterEl.value = semesters.includes(selectedSemester)
+          ? selectedSemester
+          : "";
+        takenCourseFilters.yearLevel = takenCourseYearFilterEl.value;
+        takenCourseFilters.semester = takenCourseSemesterFilterEl.value;
+      }
+
+      function resetTakenCourseFilters() {
+        takenCourseFilters.search = "";
+        takenCourseFilters.yearLevel = "";
+        takenCourseFilters.semester = "";
+        takenCourseSearchEl.value = "";
+        takenCourseYearFilterEl.innerHTML = `<option value="">All Year Levels</option>`;
+        takenCourseSemesterFilterEl.innerHTML = `<option value="">All Semesters</option>`;
+        takenCourseYearFilterEl.value = "";
+        takenCourseSemesterFilterEl.value = "";
+      }
+
+      function getFilteredTakenCourseOptions() {
+        const search = takenCourseFilters.search.trim().toLowerCase();
+
+        return takenCourseOptions.filter((course) => {
+          const haystack = `${course.name || ""} ${course.code || ""} ${course.course_id || ""}`.toLowerCase();
+
+          if (
+            takenCourseFilters.yearLevel &&
+            String(course.year_level || "") !== takenCourseFilters.yearLevel
+          ) {
+            return false;
+          }
+
+          if (
+            takenCourseFilters.semester &&
+            String(course.semester || "") !== takenCourseFilters.semester
+          ) {
+            return false;
+          }
+
+          if (search && !haystack.includes(search)) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      function updateTakenCourseFilterSummary(visibleCount) {
+        if (!takenCourseFilterSummaryEl) return;
+
+        takenCourseFilterSummaryEl.textContent = takenCourseOptions.length
+          ? `${visibleCount} of ${takenCourseOptions.length} course(s) shown`
+          : "";
+      }
+
+      function renderTakenCourseOptions() {
+        if (!needsTransferFlow()) {
+          takenOptionsEl.innerHTML = "";
+          updateTakenCourseFilterSummary(0);
+          return;
+        }
+
+        if (!takenCourseOptions.length) {
+          takenOptionsEl.innerHTML =
+            "<div class='select-item' style='pointer-events:none;opacity:.7;'>Select a program to view courses already taken.</div>";
+          updateTakenCourseFilterSummary(0);
+          return;
+        }
+
+        const filteredCourses = getFilteredTakenCourseOptions();
+        updateTakenCourseFilterSummary(filteredCourses.length);
+
+        if (!filteredCourses.length) {
+          takenOptionsEl.innerHTML =
+            "<div class='select-item' style='pointer-events:none;opacity:.7;'>No courses match the current filters.</div>";
+          return;
+        }
+
+        takenOptionsEl.innerHTML = filteredCourses
+          .map(
+            (course) => `
+              <label class="course-check-item">
+                <input
+                  type="checkbox"
+                  value="${course.id}"
+                  ${takenCourses.has(course.id) ? "checked" : ""}
+                />
+                <span>${course.year_level || "-"} / ${course.semester || "-"} - ${course.name} (${course.units} units)</span>
+              </label>
             `,
           )
           .join("");
@@ -462,7 +738,13 @@
         const semester = semesterEl.value;
         const needsMajor = isBsedSelected();
 
-        if (!programId || !yearLevel || !semester || (needsMajor && !major)) {
+        if (needsTransferFlow()) {
+          if (!programId || (needsMajor && !major)) {
+            courses = [];
+            renderOptions();
+            return;
+          }
+        } else if (!programId || !yearLevel || !semester || (needsMajor && !major)) {
           courses = [];
           renderOptions();
           return;
@@ -470,8 +752,47 @@
 
         const query = new URLSearchParams({
           program_id: programId,
-          year_level: yearLevel,
-          semester: semester,
+        });
+
+        if (!needsTransferFlow() || yearLevel) {
+          query.set("year_level", yearLevel);
+        }
+
+        if (!needsTransferFlow() || semester) {
+          query.set("semester", semester);
+        }
+
+        if (major) {
+          query.set("major", major);
+        }
+
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/courses/list?${query.toString()}`,
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load available courses");
+        }
+
+        courses = (Array.isArray(data) ? data : []).filter(
+          (course) => !takenCourses.has(course.id),
+        );
+        renderOptions();
+      }
+
+      async function loadTakenCourseOptions() {
+        const { programId } = getSelectedProgramParts();
+        const major = getSelectedMajor();
+
+        if (!needsTransferFlow() || !programId) {
+          takenCourseOptions = [];
+          renderTakenCourseOptions();
+          return;
+        }
+
+        const query = new URLSearchParams({
+          program_id: programId,
         });
 
         if (major) {
@@ -483,17 +804,79 @@
         );
         const data = await response.json();
 
-        courses = Array.isArray(data) ? data : [];
-        renderOptions();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load courses already taken");
+        }
+
+        takenCourseOptions = Array.isArray(data) ? data : [];
+        syncTakenCourseFilterOptions();
+        renderTakenCourseOptions();
       }
 
-      optionsEl.addEventListener("click", (event) => {
-        const item = event.target.closest(".select-item");
-
-        if (!item || !courses.length) return;
-
-        selectedCourses.add(item.dataset.id);
+      async function handleProgramChange() {
+        selectedCourses.clear();
+        takenCourses.clear();
+        takenCourseOptions = [];
+        resetTakenCourseFilters();
         renderSelected();
+        renderTakenCourseOptions();
+
+        if (needsTransferFlow()) {
+          await loadTakenCourseOptions();
+        }
+
+        await loadAvailableCourses();
+      }
+
+      optionsEl.addEventListener("change", (event) => {
+        const input = event.target.closest('input[type="checkbox"]');
+
+        if (!input || !courses.length) return;
+
+        if (input.checked) {
+          selectedCourses.add(input.value);
+        } else {
+          selectedCourses.delete(input.value);
+        }
+
+        renderSelected();
+      });
+
+      takenOptionsEl.addEventListener("change", (event) => {
+        const input = event.target.closest('input[type="checkbox"]');
+
+        if (!input) return;
+
+        if (input.checked) {
+          takenCourses.add(input.value);
+          selectedCourses.delete(input.value);
+        } else {
+          takenCourses.delete(input.value);
+        }
+
+        renderTakenCourseOptions();
+        loadAvailableCourses();
+      });
+
+      takenCourseSearchEl.addEventListener("input", () => {
+        takenCourseFilters.search = takenCourseSearchEl.value;
+        renderTakenCourseOptions();
+      });
+
+      takenCourseYearFilterEl.addEventListener("change", () => {
+        takenCourseFilters.yearLevel = takenCourseYearFilterEl.value;
+        renderTakenCourseOptions();
+      });
+
+      takenCourseSemesterFilterEl.addEventListener("change", () => {
+        takenCourseFilters.semester = takenCourseSemesterFilterEl.value;
+        renderTakenCourseOptions();
+      });
+
+      takenCourseClearFilterEl.addEventListener("click", () => {
+        resetTakenCourseFilters();
+        syncTakenCourseFilterOptions();
+        renderTakenCourseOptions();
       });
 
       selectedEl.addEventListener("click", (event) => {
@@ -509,7 +892,16 @@
         element.addEventListener("change", loadAvailableCourses);
       });
 
-      programEl.addEventListener("change", loadAvailableCourses);
+      programEl.addEventListener("change", () => {
+        handleProgramChange().catch((error) => {
+          console.error(error);
+          message.innerHTML = `<span class='error'>${error.message || "Failed to load courses."}</span>`;
+        });
+      });
+
+      Array.from(form.elements.request_type).forEach((input) => {
+        input.addEventListener("change", applyStudentTypeRules);
+      });
 
       paymentChannelEl.addEventListener("change", () => {
         renderPaymentOptions(paymentChannelEl.value);
@@ -531,6 +923,15 @@
           }
 
           const selectedCourseObjects = getSelectedCourseObjects();
+          const selectedTakenCourses = takenCourseOptions.filter((course) =>
+            takenCourses.has(course.id),
+          );
+
+          if (needsTransferFlow() && !selectedTakenCourses.length) {
+            message.innerHTML =
+              "<span class='error'>Please select at least one course already taken.</span>";
+            return;
+          }
 
           if (!selectedCourseObjects.length) {
             message.innerHTML =
@@ -540,6 +941,8 @@
 
           const idPictureFile = document.getElementById("idpic").files[0];
           const proofFile = document.getElementById("proof_of_payment").files[0];
+          const psaFile = document.getElementById("psa_document").files[0];
+          const gradesFile = document.getElementById("previous_grades").files[0];
 
           if (!idPictureFile) {
             message.innerHTML =
@@ -550,6 +953,12 @@
           if (!proofFile) {
             message.innerHTML =
               "<span class='error'>Please upload your proof of payment.</span>";
+            return;
+          }
+
+          if (needsTransferFlow() && (!psaFile || !gradesFile)) {
+            message.innerHTML =
+              "<span class='error'>Please upload PSA and grades from previous school.</span>";
             return;
           }
 
@@ -607,6 +1016,7 @@
             email: form.email.value,
             mobile: form.mobile.value,
             birthday: form.birthday.value,
+            request_type: form.elements.request_type.value,
             program_id,
             program_name,
             program_code,
@@ -619,15 +1029,63 @@
               units: Number(course.units || 0),
               amount: Number(course.units || 0) * RATE_PER_UNIT,
             })),
+            courses_already_taken: selectedTakenCourses.map((course) => ({
+              id: course.id,
+              code: course.code || "",
+              name: course.name,
+              year_level: course.year_level,
+              semester: course.semester,
+              units: Number(course.units || 0),
+              amount: getCourseAmount(course),
+            })),
             total_units: totalUnits,
             total_amount: totalAmount,
           };
 
           try {
-            const [uploadedIdPicture, uploadedProof] = await Promise.all([
+            const uploads = [
               uploadIdPicture(idPictureFile),
               uploadProofOfPayment(proofFile),
-            ]);
+            ];
+
+            if (needsTransferFlow()) {
+              uploads.push(uploadRequirementFile(psaFile), uploadRequirementFile(gradesFile));
+            }
+
+            const [
+              uploadedIdPicture,
+              uploadedProof,
+              uploadedPsa,
+              uploadedGrades,
+            ] = await Promise.all(uploads);
+
+            const documents = {
+              idpic: {
+                name: uploadedIdPicture.file_name,
+                url: uploadedIdPicture.file_url,
+              },
+            };
+
+            if (needsTransferFlow()) {
+              documents.psa = {
+                name: uploadedPsa.file_name,
+                url: uploadedPsa.file_url,
+              };
+              documents.previous_grades = {
+                name: uploadedGrades.file_name,
+                url: uploadedGrades.file_url,
+              };
+              documents.courses_already_taken = {
+                name: "Courses already taken",
+                url:
+                  selectedTakenCourses
+                    .map(
+                      (course) =>
+                        `${course.year_level || "-"} / ${course.semester || "-"} - ${course.name}`,
+                    )
+                    .join("; ") || "No courses selected",
+              };
+            }
 
             const response = await fetch(
               `${window.APP_CONFIG.API_BASE_URL}/enrollments/create`,
@@ -639,12 +1097,7 @@
                 body: JSON.stringify({
                   ...formData,
                   idpic_url: uploadedIdPicture.file_url,
-                  documents: {
-                    idpic: {
-                      name: uploadedIdPicture.file_name,
-                      url: uploadedIdPicture.file_url,
-                    },
-                  },
+                  documents,
                   downpayment_amount: downpaymentAmount,
                   payment_plan: paymentPlan,
                   payment_channel: form.payment_channel.value,
@@ -661,13 +1114,19 @@
             }
 
             message.innerHTML =
-              "<span class='success'>Enrollment submitted successfully!</span>";
+              "<span class='success'>Payment submitted successfully. Please wait for an email notification for the next step.</span>";
             form.reset();
             courses = [];
+            takenCourseOptions = [];
             selectedCourses.clear();
+            takenCourses.clear();
+            applyStudentTypeRules();
             renderOptions();
             renderSelected();
             renderPaymentOptions();
+            window.setTimeout(() => {
+              window.location.href = "../campaign/campaign.html";
+            }, 2200);
           } catch (error) {
             message.innerHTML = `<span class='error'>${error.message}</span>`;
           } finally {
@@ -678,6 +1137,7 @@
 
       document.addEventListener("DOMContentLoaded", async () => {
         await Promise.all([loadPrograms(), loadPaymentOptions()]);
+        applyStudentTypeRules();
         renderOptions();
         renderSelected();
       });

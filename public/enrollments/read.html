@@ -41,6 +41,59 @@
         line-height: 1.5;
       }
 
+      .course-filter-toolbar {
+        display: grid;
+        grid-template-columns: minmax(180px, 1.4fr) minmax(140px, 0.8fr) minmax(140px, 0.8fr) auto;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .course-filter-toolbar input,
+      .course-filter-toolbar select {
+        width: 100%;
+        min-height: 42px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 184, 255, 0.34);
+        background: #f8fbff;
+        color: #000000;
+        outline: none;
+      }
+
+      .course-filter-clear {
+        min-height: 42px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid rgba(148, 184, 255, 0.34);
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .course-filter-options {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 0 0 12px;
+      }
+
+      .course-filter-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #000000;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .course-filter-check input {
+        width: 16px;
+        height: 16px;
+        accent-color: #2563eb;
+      }
+
       .course-chip {
         display: flex;
         align-items: center;
@@ -227,6 +280,10 @@
           margin: 16px 0;
         }
 
+        .course-filter-toolbar {
+          grid-template-columns: 1fr;
+        }
+
         .evaluation-panel {
           padding: 14px;
           border-radius: 16px;
@@ -343,6 +400,34 @@
               <p class="course-filter-note" id="available-courses-note">
                 Loading courses for this student's program...
               </p>
+              <div class="course-filter-toolbar">
+                <input
+                  id="course-search-filter"
+                  type="search"
+                  placeholder="Search course name or code"
+                  autocomplete="off"
+                />
+                <select id="course-year-filter">
+                  <option value="">All Year Levels</option>
+                </select>
+                <select id="course-semester-filter">
+                  <option value="">All Semesters</option>
+                </select>
+                <button type="button" class="course-filter-clear" id="course-clear-filters">
+                  Clear
+                </button>
+              </div>
+              <div class="course-filter-options">
+                <label class="course-filter-check">
+                  <input type="checkbox" id="course-hide-assigned" />
+                  <span>Hide assigned</span>
+                </label>
+                <label class="course-filter-check">
+                  <input type="checkbox" id="course-hide-taken" checked />
+                  <span>Hide already taken</span>
+                </label>
+                <span class="course-filter-note" id="course-filter-summary"></span>
+              </div>
               <div class="course-picker-list" id="available-courses"></div>
             </article>
             <article class="evaluation-panel">
@@ -386,6 +471,13 @@
       let availableCourses = [];
       const selectedCourses = new Map();
       const takenCourseKeys = new Set();
+      const courseFilters = {
+        search: "",
+        yearLevel: "",
+        semester: "",
+        hideAssigned: false,
+        hideTaken: true,
+      };
 
       function getCurrentUser() {
         try {
@@ -408,7 +500,7 @@
       }
 
       function isAdminUser() {
-        return getCurrentUserType() === "admin";
+        return ["admin", "super_admin"].includes(getCurrentUserType());
       }
 
       function isTreasuryUser() {
@@ -440,6 +532,18 @@
 
         if (text === "returning student" || text === "returning_student") {
           return "Returning Student";
+        }
+
+        if (text === "transferee") {
+          return "Transferee";
+        }
+
+        if (
+          text === "irregular" ||
+          text === "irregular student" ||
+          text === "irregular_student"
+        ) {
+          return "Irregular Student";
         }
 
         return "New Student";
@@ -505,7 +609,7 @@
         help.textContent =
           normalizedRequestType === "Returning Student"
             ? "Returning student requests move through admin evaluation before approval."
-            : "New student requests usually move from payment submission to approval or decline.";
+            : "Enrollment requests usually move from payment submission to approval or decline.";
       }
 
       function formatCurrency(value) {
@@ -611,6 +715,20 @@
           .join("");
       }
 
+      function renderDocumentDescription(value) {
+        const text = String(value || "").trim();
+
+        if (!text) {
+          return "-";
+        }
+
+        if (text.startsWith("/uploads/") || /^https?:\/\//i.test(text)) {
+          return `<a href="${escapeHtml(text)}" target="_blank" rel="noopener noreferrer">Open</a>`;
+        }
+
+        return escapeHtml(text);
+      }
+
       function getSelectedCourseArray() {
         return Array.from(selectedCourses.values());
       }
@@ -656,6 +774,79 @@
         });
       }
 
+      function getUniqueCourseValues(key) {
+        return Array.from(
+          new Set(
+            availableCourses
+              .map((course) => String(course?.[key] || "").trim())
+              .filter(Boolean),
+          ),
+        ).sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+      }
+
+      function syncCourseFilterOptions() {
+        const yearSelect = document.querySelector("#course-year-filter");
+        const semesterSelect = document.querySelector("#course-semester-filter");
+
+        if (!yearSelect || !semesterSelect) return;
+
+        const yearLevels = getUniqueCourseValues("year_level");
+        const semesters = getUniqueCourseValues("semester");
+        const selectedYear = courseFilters.yearLevel;
+        const selectedSemester = courseFilters.semester;
+
+        yearSelect.innerHTML = `
+          <option value="">All Year Levels</option>
+          ${yearLevels
+            .map(
+              (yearLevel) =>
+                `<option value="${escapeHtml(yearLevel)}">${escapeHtml(yearLevel)}</option>`,
+            )
+            .join("")}
+        `;
+        semesterSelect.innerHTML = `
+          <option value="">All Semesters</option>
+          ${semesters
+            .map(
+              (semester) =>
+                `<option value="${escapeHtml(semester)}">${escapeHtml(semester)}</option>`,
+            )
+            .join("")}
+        `;
+
+        yearSelect.value = yearLevels.includes(selectedYear) ? selectedYear : "";
+        semesterSelect.value = semesters.includes(selectedSemester) ? selectedSemester : "";
+        courseFilters.yearLevel = yearSelect.value;
+        courseFilters.semester = semesterSelect.value;
+      }
+
+      function getFilteredAvailableCourses() {
+        const selectedIds = new Set(getSelectedCourseArray().map((course) => course.id));
+        const search = courseFilters.search.trim().toLowerCase();
+
+        return availableCourses.filter((course) => {
+          const isAssigned = selectedIds.has(course.id);
+          const taken = isCourseTaken(course);
+          const haystack = `${course.name || ""} ${course.code || ""} ${course.course_id || ""}`.toLowerCase();
+
+          if (courseFilters.hideAssigned && isAssigned) return false;
+          if (courseFilters.hideTaken && taken) return false;
+          if (courseFilters.yearLevel && String(course.year_level || "") !== courseFilters.yearLevel) return false;
+          if (courseFilters.semester && String(course.semester || "") !== courseFilters.semester) return false;
+          if (search && !haystack.includes(search)) return false;
+
+          return true;
+        });
+      }
+
+      function updateCourseFilterSummary(totalVisible, totalCourses) {
+        const summary = document.querySelector("#course-filter-summary");
+
+        if (summary) {
+          summary.textContent = `${totalVisible} of ${totalCourses} course(s) shown`;
+        }
+      }
+
       function updateCourseSummary() {
         const courses = getSelectedCourseArray();
         const totalUnits = courses.reduce(
@@ -679,7 +870,10 @@
         const availableContainer = document.querySelector("#available-courses");
         const selectedContainer = document.querySelector("#selected-courses");
         const selectedIds = new Set(getSelectedCourseArray().map((course) => course.id));
-        const groupedCourses = groupCoursesByAcademicSlot(availableCourses);
+        const filteredCourses = getFilteredAvailableCourses();
+        const groupedCourses = groupCoursesByAcademicSlot(filteredCourses);
+
+        updateCourseFilterSummary(filteredCourses.length, availableCourses.length);
 
         availableContainer.innerHTML = groupedCourses.length
           ? `<div class="course-group-list">${groupedCourses
@@ -740,7 +934,7 @@
                 `;
               })
               .join("")}</div>`
-          : `<div class="empty-state">No matching courses available for this enrollment.</div>`;
+          : `<div class="empty-state">No courses match the current filters.</div>`;
 
         selectedContainer.innerHTML = selectedIds.size
           ? getSelectedCourseArray()
@@ -796,6 +990,57 @@
         });
       }
 
+      function initCourseFilters() {
+        const searchInput = document.querySelector("#course-search-filter");
+        const yearSelect = document.querySelector("#course-year-filter");
+        const semesterSelect = document.querySelector("#course-semester-filter");
+        const hideAssignedInput = document.querySelector("#course-hide-assigned");
+        const hideTakenInput = document.querySelector("#course-hide-taken");
+        const clearButton = document.querySelector("#course-clear-filters");
+
+        if (!searchInput || !yearSelect || !semesterSelect) return;
+
+        searchInput.addEventListener("input", () => {
+          courseFilters.search = searchInput.value;
+          renderCourseLists();
+        });
+
+        yearSelect.addEventListener("change", () => {
+          courseFilters.yearLevel = yearSelect.value;
+          renderCourseLists();
+        });
+
+        semesterSelect.addEventListener("change", () => {
+          courseFilters.semester = semesterSelect.value;
+          renderCourseLists();
+        });
+
+        hideAssignedInput?.addEventListener("change", () => {
+          courseFilters.hideAssigned = hideAssignedInput.checked;
+          renderCourseLists();
+        });
+
+        hideTakenInput?.addEventListener("change", () => {
+          courseFilters.hideTaken = hideTakenInput.checked;
+          renderCourseLists();
+        });
+
+        clearButton?.addEventListener("click", () => {
+          courseFilters.search = "";
+          courseFilters.yearLevel = "";
+          courseFilters.semester = "";
+          courseFilters.hideAssigned = false;
+          courseFilters.hideTaken = false;
+
+          searchInput.value = "";
+          yearSelect.value = "";
+          semesterSelect.value = "";
+          if (hideAssignedInput) hideAssignedInput.checked = false;
+          if (hideTakenInput) hideTakenInput.checked = false;
+          renderCourseLists();
+        });
+      }
+
       async function loadAvailableCourses() {
         if (!enrollmentData?.program_id) {
           availableCourses = [];
@@ -817,6 +1062,7 @@
         );
         const data = await response.json();
         availableCourses = Array.isArray(data) ? data : [];
+        syncCourseFilterOptions();
 
         const currentSlotCount = availableCourses.filter((course) => {
           const sameYearLevel = String(course.year_level || "") === String(enrollmentData.year_level || "");
@@ -865,17 +1111,12 @@
 
         data.forEach((doc) => {
           const row = document.createElement("tr");
-          const link = String(doc.description || "").trim();
           row.innerHTML = `
             <td>${escapeHtml(String(doc.id || "").slice(0, 8))}</td>
             <td>${escapeHtml(doc.user_full_name || "-")}</td>
             <td>${escapeHtml(doc.name || "-")}</td>
             <td>${escapeHtml(doc.type || "-")}</td>
-            <td>${
-              link
-                ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Open</a>`
-                : "-"
-            }</td>
+            <td>${renderDocumentDescription(doc.description)}</td>
             <td>${doc.created_at ? defaultDate(doc.created_at) : "-"}</td>
           `;
           tbody.appendChild(row);
@@ -1101,6 +1342,8 @@
               await readEnrollment();
             }
           });
+
+        initCourseFilters();
       }
 
       function initTreasuryTask() {

@@ -41,6 +41,11 @@ module.exports = async (req, res) => {
     }
 
     const user = result.rows[0];
+
+    if (String(user.status || "active").toLowerCase() !== "active") {
+      return badRequest(res, "This account is inactive. Please contact the super admin.");
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {

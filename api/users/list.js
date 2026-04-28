@@ -23,10 +23,14 @@ module.exports = async (req, res) => {
         `
         select
           u.id,
+          u.student_number,
           u.last_name,
           u.first_name,
+          u.middle_name,
           u.email,
+          u.mobile,
           u.type,
+          coalesce(u.status, 'active') as status,
           u.created_at,
           enrollment.school_year,
           enrollment.program_name,
@@ -50,6 +54,7 @@ module.exports = async (req, res) => {
           limit 1
         ) as enrollment on true
         where u.type = $1
+          and u.deleted_at is null
           and ($2::text is null or enrollment.school_year = $2)
         order by u.created_at desc
         limit $3
@@ -58,13 +63,27 @@ module.exports = async (req, res) => {
       );
     } else if (type) {
       result = await db.query(
-        `SELECT * FROM users where type = $1 ORDER BY created_at DESC limit $2`,
+        `
+        SELECT id, student_number, last_name, first_name, middle_name, username, email, mobile, type, coalesce(status, 'active') as status, created_at, updated_at
+        FROM users
+        where type = $1
+          and deleted_at is null
+        ORDER BY created_at DESC
+        limit $2
+        `,
         [type, limit],
       );
     } else {
-      result = await db.query(`SELECT * FROM users ORDER BY created_at DESC limit $1`, [
-        limit,
-      ]);
+      result = await db.query(
+        `
+        SELECT id, student_number, last_name, first_name, middle_name, username, email, mobile, type, coalesce(status, 'active') as status, created_at, updated_at
+        FROM users
+        where deleted_at is null
+        ORDER BY created_at DESC
+        limit $1
+        `,
+        [limit],
+      );
     }
 
     return okay(res, result.rows);

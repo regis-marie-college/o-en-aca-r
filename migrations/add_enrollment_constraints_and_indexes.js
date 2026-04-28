@@ -4,7 +4,15 @@ async function up() {
   await db.query(`
     alter table enrollments
       add constraint enrollments_request_type_check
-      check (coalesce(request_type, 'New Student') in ('New Student', 'Returning Student'));
+      check (
+        coalesce(request_type, 'New Student') in (
+          'New Student',
+          'Walk-in Student',
+          'Transferee',
+          'Irregular Student',
+          'Returning Student'
+        )
+      );
   `).catch(ignoreDuplicateConstraint);
 
   await db.query(`

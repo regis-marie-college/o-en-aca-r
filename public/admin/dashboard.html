@@ -304,6 +304,21 @@
     </div>
     <script>
       const ROLE_CONFIG = {
+        super_admin: {
+          showTable: true,
+          stats: [
+            "students",
+            "enrollments",
+            "pending",
+            "billings",
+            "paid-billings",
+            "collected",
+            "outstanding",
+            "transactions",
+          ],
+          table: "enrollments",
+        },
+
         admin: {
           showTable: true,
           stats: [
@@ -647,7 +662,7 @@
 
         const initialLoads = [renderStatistics()];
 
-        if (user.type !== "admin") {
+        if (!["admin", "super_admin"].includes(user.type)) {
           document.querySelector("#schoolYearTrendSection")?.remove();
           document.querySelector("#schoolYearManager")?.remove();
         } else {

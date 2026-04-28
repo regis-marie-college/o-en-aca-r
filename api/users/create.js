@@ -7,7 +7,7 @@ const { requireAuth } = require("../../lib/auth");
 const { generateStudentNumber } = require("../../lib/student-number");
 const sendEmail = require("../sendMail/sendMail");
 
-const ALLOWED_USER_TYPES = ["admin", "treasury", "records", "student"];
+const ALLOWED_USER_TYPES = ["super_admin", "admin", "treasury", "records", "student"];
 const OPTIONAL_ENROLLMENT_COLUMNS = [
   "student_id",
   "request_type",
@@ -41,6 +41,10 @@ module.exports = async (req, res) => {
 
     if (!ALLOWED_USER_TYPES.includes(requestedType)) {
       return badRequest(res, "Invalid user type");
+    }
+
+    if (requestedType === "super_admin") {
+      return badRequest(res, "Creating another super admin is not allowed");
     }
 
     if (String(auth.type || "").toLowerCase() === "records" && requestedType !== "student") {
@@ -154,7 +158,7 @@ async function createUser(data, options = {}) {
     `insert into users
     (last_name, first_name, middle_name, username, email, mobile, password, type, student_number)
     values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-    returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, created_at, updated_at`,
+    returning id, student_number, last_name, first_name, middle_name, username, email, mobile, type, status, created_at, updated_at`,
     [
       last_name,
       first_name,

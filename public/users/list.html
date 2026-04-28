@@ -90,6 +90,23 @@
         text-transform: capitalize;
       }
 
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: capitalize;
+      }
+
+      .status-pill.inactive {
+        background: #e5e7eb;
+        color: #000000;
+      }
+
       .access-table select {
         min-width: 140px;
       }
@@ -157,7 +174,9 @@
                   <th>User</th>
                   <th>Email</th>
                   <th>Current Role</th>
+                  <th>Status</th>
                   <th>Change Role</th>
+                  <th>Account</th>
                   <th>Created</th>
                 </tr>
               </thead>
@@ -171,6 +190,14 @@
     <script>
       const ALLOWED_ROLES = ["student", "admin", "treasury", "records"];
       let allUsers = [];
+
+      function getCurrentUser() {
+        return typeof window.getStoredUser === "function" ? window.getStoredUser() : null;
+      }
+
+      function isSuperAdmin() {
+        return String(getCurrentUser()?.type || "").toLowerCase() === "super_admin";
+      }
 
       function escapeHtml(value) {
         return String(value || "").replace(/[&<>"']/g, (char) => {
@@ -188,7 +215,10 @@
 
       function formatRole(value) {
         const text = String(value || "student");
-        return text.charAt(0).toUpperCase() + text.slice(1);
+        return text
+          .split("_")
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(" ");
       }
 
       function renderSummary(users) {
@@ -197,8 +227,16 @@
           result[role] = users.filter((user) => String(user.type || "student") === role).length;
           return result;
         }, {});
+        const activeCount = users.filter(
+          (user) => String(user.status || "active") === "active",
+        ).length;
+        const inactiveCount = users.filter(
+          (user) => String(user.status || "active") === "inactive",
+        ).length;
 
         const cards = [
+          { label: "Active", value: activeCount, detail: "Accounts allowed to sign in" },
+          { label: "Inactive", value: inactiveCount, detail: "Accounts blocked from sign in" },
           { label: "Students", value: counts.student, detail: "Portal users and enrolled students" },
           { label: "Admins", value: counts.admin, detail: "Full-access system administrators" },
           { label: "Treasury", value: counts.treasury, detail: "Billing and payment processing staff" },
@@ -229,6 +267,7 @@
             user.middle_name,
             user.email,
             user.type,
+            user.status,
             user.student_number,
           ]
             .filter(Boolean)
@@ -259,9 +298,10 @@
                     </td>
                     <td>${escapeHtml(user.email || "-")}</td>
                     <td><span class="role-pill">${escapeHtml(formatRole(user.type || "student"))}</span></td>
+                    <td><span class="status-pill ${escapeHtml(user.status || "active")}">${escapeHtml(user.status || "active")}</span></td>
                     <td>
                       <select class="role-select" data-id="${escapeHtml(user.id)}">
-                        ${ALLOWED_ROLES.map(
+                        ${getAssignableRoles(user).map(
                           (role) => `
                             <option value="${role}" ${
                               String(user.type || "student") === role ? "selected" : ""
@@ -270,6 +310,15 @@
                         ).join("")}
                       </select>
                     </td>
+                    <td>
+                      ${
+                        isSuperAdmin()
+                          ? `<button type="button" class="btn btn-secondary btn-sm account-status-toggle" data-id="${escapeHtml(user.id)}" data-status="${escapeHtml(user.status || "active")}">
+                              ${(user.status || "active") === "inactive" ? "Activate" : "Inactivate"}
+                            </button>`
+                          : "-"
+                      }
+                    </td>
                     <td>${user.created_at ? defaultDate(user.created_at) : "-"}</td>
                   </tr>
                 `;
@@ -277,11 +326,12 @@
               .join("")
           : `
               <tr>
-                <td colspan="6">No users found for the current search.</td>
+                <td colspan="8">No users found for the current search.</td>
               </tr>
             `;
 
         bindRoleSelectors();
+        bindStatusButtons();
       }
 
       function bindRoleSelectors() {
@@ -320,6 +370,64 @@
             } catch (error) {
               alert(error.message || "Failed to update user role");
               await loadUsers();
+            }
+          });
+        });
+      }
+
+      function getAssignableRoles(user) {
+        if (String(user.type || "") === "super_admin") {
+          return ["super_admin"];
+        }
+
+        return ALLOWED_ROLES;
+      }
+
+      function bindStatusButtons() {
+        document.querySelectorAll(".account-status-toggle").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const userId = button.dataset.id;
+            const currentStatus = button.dataset.status || "active";
+            const nextStatus = currentStatus === "inactive" ? "active" : "inactive";
+
+            if (!window.confirm(`Set this account to ${nextStatus}?`)) {
+              return;
+            }
+
+            button.disabled = true;
+
+            try {
+              const response = await fetch(
+                `${window.APP_CONFIG.API_BASE_URL}/users/update-status`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    id: userId,
+                    status: nextStatus,
+                  }),
+                },
+              );
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(data.error || "Failed to update account status");
+              }
+
+              const index = allUsers.findIndex((user) => user.id === userId);
+              if (index >= 0) {
+                allUsers[index] = { ...allUsers[index], ...data };
+              }
+
+              renderSummary(allUsers);
+              renderUsers();
+            } catch (error) {
+              alert(error.message || "Failed to update account status");
+              await loadUsers();
+            } finally {
+              button.disabled = false;
             }
           });
         });
