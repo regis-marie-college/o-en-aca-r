@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="850" viewBox="0 0 1400 850" role="img" aria-labelledby="title desc">
+  <title id="title">Simple Level 0 DFD - Online Enrollment and Academic Records System</title>
+  <desc id="desc">A simple context DFD with one main system process, four external entities, and clear non-overlapping data flows.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 32px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 18px Arial, sans-serif; fill: #475569; }
+      .entity { fill: #ffffff; stroke: #2563eb; stroke-width: 3; rx: 10; }
+      .process { fill: #ecfeff; stroke: #0891b2; stroke-width: 4; }
+      .label { font: 700 21px Arial, sans-serif; fill: #0f172a; }
+      .text { font: 16px Arial, sans-serif; fill: #334155; }
+      .flow { fill: none; stroke: #334155; stroke-width: 2.5; marker-end: url(#arrow); }
+      .flow-label { font: 15px Arial, sans-serif; fill: #1e293b; }
+      .note { font: 15px Arial, sans-serif; fill: #64748b; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1400" height="850"/>
+  <text class="title" x="700" y="58" text-anchor="middle">Level 0 DFD</text>
+  <text class="subtitle" x="700" y="90" text-anchor="middle">Online Enrollment and Academic Records System</text>
+
+  <rect class="entity" x="80" y="190" width="260" height="120"/>
+  <text class="label" x="210" y="238" text-anchor="middle">Student / Applicant</text>
+  <text class="text" x="210" y="270" text-anchor="middle">Enrollment and requests</text>
+
+  <rect class="entity" x="1060" y="190" width="260" height="120"/>
+  <text class="label" x="1190" y="238" text-anchor="middle">Registrar / Admin</text>
+  <text class="text" x="1190" y="270" text-anchor="middle">Approvals and records</text>
+
+  <rect class="entity" x="80" y="550" width="260" height="120"/>
+  <text class="label" x="210" y="598" text-anchor="middle">Faculty / Staff</text>
+  <text class="text" x="210" y="630" text-anchor="middle">Grades and updates</text>
+
+  <rect class="entity" x="1060" y="550" width="260" height="120"/>
+  <text class="label" x="1190" y="598" text-anchor="middle">Treasury / Cashier</text>
+  <text class="text" x="1190" y="630" text-anchor="middle">Payments and receipts</text>
+
+  <rect class="process" x="545" y="250" width="310" height="420" rx="26"/>
+  <text class="label" x="700" y="378" text-anchor="middle">0</text>
+  <text class="label" x="700" y="416" text-anchor="middle">Online Enrollment</text>
+  <text class="label" x="700" y="446" text-anchor="middle">and Academic Records</text>
+  <text class="text" x="700" y="486" text-anchor="middle">Processes enrollment, billing,</text>
+  <text class="text" x="700" y="512" text-anchor="middle">records, and documents</text>
+
+  <path class="flow" d="M340 250 H545"/>
+  <text class="flow-label" x="440" y="232" text-anchor="middle">application details, uploads</text>
+
+  <path class="flow" d="M545 300 H340"/>
+  <text class="flow-label" x="450" y="350" text-anchor="middle">status, assessment, documents</text>
+
+  <path class="flow" d="M855 300 H1060"/>
+  <text class="flow-label" x="960" y="350" text-anchor="middle">applications, reports</text>
+
+  <path class="flow" d="M1060 250 H855"/>
+  <text class="flow-label" x="960" y="232" text-anchor="middle">approval and record updates</text>
+
+  <path class="flow" d="M340 610 H545"/>
+  <text class="flow-label" x="455" y="592" text-anchor="middle">grades and academic updates</text>
+
+  <path class="flow" d="M545 550 H340"/>
+  <text class="flow-label" x="455" y="535" text-anchor="middle">student records</text>
+
+  <path class="flow" d="M855 550 H1060"/>
+  <text class="flow-label" x="945" y="535" text-anchor="middle">billing information</text>
+
+  <path class="flow" d="M1060 610 H855"/>
+  <text class="flow-label" x="945" y="648" text-anchor="middle">payment validation, receipt</text>
+
+  <text class="note" x="700" y="780" text-anchor="middle">Simple context view: the whole system is shown as one process.</text>
+</svg>

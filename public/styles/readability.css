@@ -63,3 +63,9 @@ textarea::placeholder,
   color: #000000 !important;
   opacity: 0.72;
 }
+
+.campaign-card .enroll-btn,
+.campaign-card .enroll-btn:visited,
+.campaign-card .enroll-btn:hover {
+  color: #ffffff !important;
+}

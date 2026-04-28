@@ -60,7 +60,7 @@
 }
 
 .campaign-card h1 span {
-  color: #3b82f6;
+  color: #f5f6f7;
 }
 
 .campaign-card p {
@@ -92,6 +92,15 @@
   transition: 0.3s;
 }
 
+.campaign-card .buttons .enroll-btn,
+.campaign-card .buttons .enroll-btn:visited,
+.campaign-card .buttons .enroll-btn:hover,
+.campaign-card .buttons .info-btn,
+.campaign-card .buttons .info-btn:visited,
+.campaign-card .buttons .info-btn:hover {
+  color: #ffffff;
+}
+
 .enroll-btn:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px rgba(37, 99, 235, 0.6);
@@ -109,8 +118,72 @@
   transition: 0.3s;
 }
 
+.process-link {
+  display: inline-block;
+  margin-top: 24px;
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.process-link:hover {
+  color: #1d4ed8;
+}
+
 .info-btn:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.process-page {
+  padding-block: 32px;
+}
+
+.process-card {
+  max-width: 900px;
+}
+
+.process-steps {
+  display: grid;
+  gap: 16px;
+  margin: 10px 0 35px;
+  text-align: left;
+}
+
+.process-step {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 16px;
+  align-items: start;
+  padding: 18px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.step-number {
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 700;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+}
+
+.process-step h2 {
+  margin: 0 0 6px;
+  color: #000000;
+  font-size: 20px;
+}
+
+.process-step p {
+  margin: 0;
+  color: #000000;
 }
 
 @media (max-width: 768px) {
@@ -120,5 +193,16 @@
 
   .campaign-card h1 {
     font-size: 32px;
+  }
+
+  .process-step {
+    grid-template-columns: 44px 1fr;
+    padding: 15px;
+  }
+
+  .step-number {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
   }
 }

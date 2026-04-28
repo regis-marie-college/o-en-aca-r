@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="950" viewBox="0 0 1500 950" role="img" aria-labelledby="title desc">
+  <title id="title">Level 1 DFD - Online Enrollment and Academic Records System</title>
+  <desc id="desc">Level 1 DFD styled like the sample image: central system process, oval external entities, and straight connected data flows.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#111827"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 30px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 17px Arial, sans-serif; fill: #475569; }
+      .entity { fill: #ffffff; stroke: #2563eb; stroke-width: 3; }
+      .system { fill: #ecfeff; stroke: #0891b2; stroke-width: 4; }
+      .divider { stroke: #0891b2; stroke-width: 2.4; }
+      .flow { fill: none; stroke: #334155; stroke-width: 2.3; marker-end: url(#arrow); }
+      .label { font: 700 18px Arial, sans-serif; fill: #0f172a; }
+      .text { font: 16px Arial, sans-serif; fill: #334155; }
+      .flow-label { font: 15px Arial, sans-serif; fill: #1e293b; }
+      .small { font: 14px Arial, sans-serif; fill: #475569; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1500" height="950"/>
+  <text class="title" x="750" y="48" text-anchor="middle">Level 1 DFD</text>
+  <text class="subtitle" x="750" y="78" text-anchor="middle">Online Enrollment and Academic Records System</text>
+
+  <!-- External entities, styled as ovals like the sample -->
+  <ellipse class="entity" cx="210" cy="155" rx="160" ry="82"/>
+  <text class="label" x="210" y="145" text-anchor="middle">a.</text>
+  <text class="text" x="210" y="174" text-anchor="middle">Student / Applicant</text>
+
+  <ellipse class="entity" cx="1290" cy="155" rx="160" ry="82"/>
+  <text class="label" x="1290" y="145" text-anchor="middle">b.</text>
+  <text class="text" x="1290" y="174" text-anchor="middle">Registrar / Admin</text>
+
+  <ellipse class="entity" cx="210" cy="765" rx="160" ry="82"/>
+  <text class="label" x="210" y="755" text-anchor="middle">c.</text>
+  <text class="text" x="210" y="784" text-anchor="middle">Faculty / Records Staff</text>
+
+  <ellipse class="entity" cx="1290" cy="765" rx="160" ry="82"/>
+  <text class="label" x="1290" y="755" text-anchor="middle">d.</text>
+  <text class="text" x="1290" y="784" text-anchor="middle">Treasury / Cashier</text>
+
+  <!-- Central process -->
+  <rect class="system" x="590" y="315" width="320" height="255"/>
+  <line class="divider" x1="590" y1="365" x2="910" y2="365"/>
+  <text class="label" x="750" y="350" text-anchor="middle">1.0</text>
+  <text class="label" x="750" y="455" text-anchor="middle">Online Enrollment</text>
+  <text class="label" x="750" y="484" text-anchor="middle">and Academic Records</text>
+  <text class="small" x="750" y="518" text-anchor="middle">Enrollment, billing, documents, records</text>
+
+  <!-- Student / Applicant flows -->
+  <path class="flow" d="M330 120 H650 V315"/>
+  <text class="flow-label" x="498" y="106" text-anchor="middle">Enrollment Form</text>
+
+  <path class="flow" d="M330 155 H710 V315"/>
+  <text class="flow-label" x="505" y="145" text-anchor="middle">Requirements / Uploads</text>
+
+  <path class="flow" d="M330 190 H770 V315"/>
+  <text class="flow-label" x="505" y="210" text-anchor="middle">Document Request</text>
+
+  <path class="flow" d="M590 430 H250 V237"/>
+  <text class="flow-label" x="405" y="415" text-anchor="middle">Application Status</text>
+
+  <path class="flow" d="M590 495 H175 V237"/>
+  <text class="flow-label" x="370" y="530" text-anchor="middle">Assessment / Records / Released Documents</text>
+
+  <!-- Registrar / Admin flows -->
+  <path class="flow" d="M910 350 H1170 V237"/>
+  <text class="flow-label" x="1050" y="335" text-anchor="middle">Enrollment List</text>
+
+  <path class="flow" d="M1170 155 H850 V315"/>
+  <text class="flow-label" x="1010" y="145" text-anchor="middle">Approval / Evaluation</text>
+
+  <path class="flow" d="M1170 190 H790 V315"/>
+  <text class="flow-label" x="1010" y="210" text-anchor="middle">Course and Record Updates</text>
+
+  <path class="flow" d="M910 415 H1250 V237"/>
+  <text class="flow-label" x="1085" y="445" text-anchor="middle">Reports</text>
+
+  <!-- Faculty / Records Staff flows -->
+  <path class="flow" d="M330 765 H620 V570"/>
+  <text class="flow-label" x="458" y="750" text-anchor="middle">Grade Import</text>
+
+  <path class="flow" d="M590 545 H270 V683"/>
+  <text class="flow-label" x="428" y="575" text-anchor="middle">Student Records</text>
+
+  <!-- Treasury / Cashier flows -->
+  <path class="flow" d="M910 520 H1230 V683"/>
+  <text class="flow-label" x="1080" y="505" text-anchor="middle">Billing Details</text>
+
+  <path class="flow" d="M1230 765 H850 V570"/>
+  <text class="flow-label" x="1040" y="750" text-anchor="middle">Payment Confirmation</text>
+
+  <path class="flow" d="M910 560 H1290 V683"/>
+  <text class="flow-label" x="1105" y="590" text-anchor="middle">Receipt / Balance Update</text>
+</svg>

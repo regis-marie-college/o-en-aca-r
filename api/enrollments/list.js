@@ -4,6 +4,7 @@ const { requireAuth } = require("../../lib/auth");
 const { parseLimit } = require("../../lib/query-options");
 
 let hasRequestTypeColumnPromise = null;
+let hasSectionBlockColumnPromise = null;
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -23,6 +24,10 @@ module.exports = async (req, res) => {
     const requestTypeSelect = hasRequestTypeColumn
       ? "e.request_type"
       : "null::text as request_type";
+    const hasSectionBlockColumn = await getHasSectionBlockColumn();
+    const sectionBlockSelect = hasSectionBlockColumn
+      ? "e.section_block"
+      : "1::integer as section_block";
 
     const result = await db.query(
       `
@@ -37,6 +42,7 @@ module.exports = async (req, res) => {
         e.program_name,
         e.program_code,
         ${requestTypeSelect},
+        ${sectionBlockSelect},
         e.status,
         e.created_at,
         downpayment.payment_status as downpayment_payment_status
@@ -102,4 +108,26 @@ async function getHasRequestTypeColumn() {
   }
 
   return hasRequestTypeColumnPromise;
+}
+
+async function getHasSectionBlockColumn() {
+  if (!hasSectionBlockColumnPromise) {
+    hasSectionBlockColumnPromise = db
+      .query(
+        `
+        select 1
+        from information_schema.columns
+        where table_name = 'enrollments'
+          and column_name = 'section_block'
+        limit 1
+        `,
+      )
+      .then((result) => result.rows.length > 0)
+      .catch((error) => {
+        hasSectionBlockColumnPromise = null;
+        throw error;
+      });
+  }
+
+  return hasSectionBlockColumnPromise;
 }

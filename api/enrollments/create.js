@@ -12,6 +12,10 @@ const {
   normalizeRequestType,
   validateFinancialTotals,
 } = require("../../lib/enrollment-rules");
+const {
+  assignCourseBlock,
+  ensureEnrollmentBlockColumns,
+} = require("../../lib/course-blocks");
 
 const MISC_FEE = 0;
 const ID_FEE = 300;
@@ -191,7 +195,17 @@ module.exports = async (req, res) => {
       await client.query("BEGIN");
       transactionStarted = true;
 
+      await ensureEnrollmentBlockColumns(client);
       const enrollmentColumns = await getEnrollmentColumns(client);
+      const blockAssignment = await assignCourseBlock({
+        executor: client,
+        programId: program_id,
+        major: major || null,
+        schoolYear: school_year || defaultSchoolYear,
+        yearLevel: year_level,
+        semester,
+        selectedCourses: normalizedSelectedCourses,
+      });
 
       const columns = [
         "last_name",
@@ -236,6 +250,8 @@ module.exports = async (req, res) => {
         "selected_courses",
         "total_units",
         "total_amount",
+        "section_block",
+        "course_block_signature",
         "status",
       );
       values.push(
@@ -249,6 +265,8 @@ module.exports = async (req, res) => {
         JSON.stringify(normalizedSelectedCourses),
         nextTotalUnits,
         courseAmount.toFixed(2),
+        blockAssignment.sectionBlock,
+        blockAssignment.courseBlockSignature,
         isReturningStudent ? PENDING_EVALUATION_STATUS : PAYMENT_SUBMITTED_STATUS,
       );
 
@@ -285,6 +303,7 @@ module.exports = async (req, res) => {
         "selected_courses",
         "total_units",
         "total_amount",
+        "section_block",
         "status",
         "created_at",
       ];

@@ -21,6 +21,10 @@ const {
   normalizeRequestType,
   validateFinancialTotals,
 } = require("../../lib/enrollment-rules");
+const {
+  assignCourseBlock,
+  ensureEnrollmentBlockColumns,
+} = require("../../lib/course-blocks");
 
 const ID_FEE = 300;
 const DEFAULT_DOWNPAYMENT_AMOUNT = 2000;
@@ -69,6 +73,7 @@ module.exports = async (req, res) => {
 
     try {
       await ensureEnrollmentEvaluationColumns(client);
+      await ensureEnrollmentBlockColumns(client);
       await client.query("BEGIN");
 
       const enrollmentResult = await client.query(
@@ -143,6 +148,24 @@ module.exports = async (req, res) => {
         totalAmount: nextTotalAmount,
       });
 
+      const nextProgramId = program_id || enrollment.program_id || null;
+      const nextProgramName = program_name || enrollment.program_name || null;
+      const nextProgramCode = program_code || enrollment.program_code || null;
+      const nextMajor = major !== undefined ? major || null : enrollment.major || null;
+      const nextYearLevel = year_level || enrollment.year_level || null;
+      const nextSemester = semester || enrollment.semester || null;
+      const nextSchoolYear = school_year || enrollment.school_year || null;
+      const blockAssignment = await assignCourseBlock({
+        executor: client,
+        enrollmentId: id,
+        programId: nextProgramId,
+        major: nextMajor,
+        schoolYear: nextSchoolYear,
+        yearLevel: nextYearLevel,
+        semester: nextSemester,
+        selectedCourses: nextCourses,
+      });
+
       assertValidStatusTransition(
         enrollment.status || (isReturningStudent ? "Pending Evaluation" : "Pending"),
         normalizedStatus,
@@ -192,6 +215,8 @@ module.exports = async (req, res) => {
             year_level = $14,
             semester = $15,
             school_year = $16,
+            section_block = $17,
+            course_block_signature = $18,
             updated_at = now()
         where id = $2
         returning *
@@ -206,13 +231,15 @@ module.exports = async (req, res) => {
           JSON.stringify(nextCourses),
           nextTotalUnits,
           nextTotalAmount.toFixed(2),
-          program_id || enrollment.program_id || null,
-          program_name || enrollment.program_name || null,
-          program_code || enrollment.program_code || null,
-          major !== undefined ? major || null : enrollment.major || null,
-          year_level || enrollment.year_level || null,
-          semester || enrollment.semester || null,
-          school_year || enrollment.school_year || null,
+          nextProgramId,
+          nextProgramName,
+          nextProgramCode,
+          nextMajor,
+          nextYearLevel,
+          nextSemester,
+          nextSchoolYear,
+          blockAssignment.sectionBlock,
+          blockAssignment.courseBlockSignature,
         ],
       );
       const updatedEnrollment = result.rows[0];

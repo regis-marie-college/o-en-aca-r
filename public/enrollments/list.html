@@ -331,6 +331,7 @@
                   <th>ID</th>
                   <th>Student</th>
                   <th>Request Type</th>
+                  <th>Block</th>
                   <th>Contact</th>
                   <th>Birthday</th>
                   <th>Status</th>
@@ -359,6 +360,7 @@
                             enrollment.request_type || "New Student",
                           )}</span>
                         </td>
+                        <td>Block ${escapeHtml(enrollment.section_block || 1)}</td>
                         <td>
                           <div>${escapeHtml(enrollment.email || "-")}</div>
                           <div class="cell-muted">${escapeHtml(enrollment.mobile || "-")}</div>
