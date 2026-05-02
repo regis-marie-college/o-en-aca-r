@@ -145,6 +145,7 @@
         links = [
           { href: "../admin/dashboard.html", label: "Dashboard" },
           { href: "../enrollments/list.html", label: "Enrollments" },
+          { href: "../admin/program-shifts.html", label: "Program Shifts" },
           { href: "../students/list.html", label: "Students" },
           { href: "../users/list.html", label: "User Access" },
           { href: "../treasury/billing.html", label: "Billing" },
@@ -174,6 +175,7 @@
           { href: "../student/dashboard.html", label: "Dashboard" },
           { href: "../profile/profile.html", label: "Profile" },
           { href: "../courses/list.html", label: "My Courses" },
+          { href: "../student/dashboard.html#shift-request-form", label: "Program Shift" },
           { href: "../student/dashboard.html#document-request-form", label: "Document Requests" },
           { href: "../student/dashboard.html#reenrollment-form", label: "Re-Enrollment" },
           { href: "../student/dashboard.html#billing-summary", label: "Billing Summary" },

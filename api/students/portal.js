@@ -7,6 +7,9 @@ const {
   getCourseKeys,
   isCourseCompleted,
 } = require("../../lib/course-completion");
+const {
+  ensureProgramShiftRequestsTable,
+} = require("../program_shift_requests/helpers");
 
 module.exports = async (req, res) => {
   if (req.method !== "GET") {
@@ -36,6 +39,8 @@ module.exports = async (req, res) => {
     if (!isPrivileged && normalizedEmail !== normalizedAuthEmail) {
       return forbidden(res, "You are not allowed to view this portal");
     }
+
+    await ensureProgramShiftRequestsTable(client);
 
     const userResult = await client.query(
       `
@@ -137,6 +142,16 @@ module.exports = async (req, res) => {
           [latestRequest.id],
         )
       : { rows: [] };
+    const shiftRequestsResult = await client.query(
+      `
+      select *
+      from program_shift_requests
+      where lower(email) = $1
+      order by created_at desc
+      limit 20
+      `,
+      [normalizedEmail],
+    );
 
     const totalPaid = billingsResult.rows.reduce(
       (sum, item) => sum + Number(item.amount_paid || 0),
@@ -194,6 +209,7 @@ module.exports = async (req, res) => {
       document_requests: requestsResult.rows,
       transactions: transactionsResult.rows,
       submitted_documents: documentsResult.rows,
+      shift_requests: shiftRequestsResult.rows,
       id_picture:
         (enrollment?.idpic_url
           ? {

@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="../styles/index.css" rel="stylesheet" />
+    <script src="../scripts/datetime.js" defer></script>
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/load-component.js" defer></script>
+    <title>Program Shift Requests</title>
+    <style>
+      .shift-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .shift-filter {
+        min-width: 170px;
+      }
+
+      .shift-table-wrap {
+        overflow-x: auto;
+      }
+
+      .shift-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .shift-student strong,
+      .shift-student small {
+        display: block;
+      }
+
+      .shift-student small {
+        color: #64748b;
+      }
+
+      @media (max-width: 720px) {
+        .shift-toolbar {
+          grid-template-columns: 1fr;
+        }
+
+        .shift-filter {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="users">
+      <div data-component="../../components/sidebar.html"></div>
+
+      <main class="main">
+        <div data-component="../../components/topbar.html"></div>
+
+        <div class="shift-toolbar">
+          <input
+            id="shiftSearch"
+            class="search-box"
+            type="search"
+            placeholder="Search student, email, or program"
+          />
+          <select id="shiftStatusFilter" class="shift-filter">
+            <option value="">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+
+        <section class="table-section">
+          <h2>Program Shift Requests</h2>
+          <div class="shift-table-wrap">
+            <table id="table-shift-requests">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Student</th>
+                  <th>Current Program</th>
+                  <th>Requested Program</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Admin Notes</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      let shiftRequests = [];
+
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, (char) => {
+          const map = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          };
+
+          return map[char] || char;
+        });
+      }
+
+      function formatProgram(programName, programCode, major) {
+        return [
+          programCode || programName || "-",
+          major ? `Major in ${major}` : "",
+        ]
+          .filter(Boolean)
+          .join(" - ");
+      }
+
+      function getFilteredRequests() {
+        const search = document.querySelector("#shiftSearch").value.trim().toLowerCase();
+        const status = document.querySelector("#shiftStatusFilter").value;
+
+        return shiftRequests.filter((request) => {
+          const haystack = [
+            request.student_name,
+            request.email,
+            request.current_program_name,
+            request.current_program_code,
+            request.target_program_name,
+            request.target_program_code,
+            request.reason,
+            request.status,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return (!search || haystack.includes(search)) && (!status || request.status === status);
+        });
+      }
+
+      function renderRequests() {
+        const tbody = document.querySelector("#table-shift-requests tbody");
+        const items = getFilteredRequests();
+
+        if (!items.length) {
+          tbody.innerHTML = `<tr><td colspan="8">No program shift requests found.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = items
+          .map((request) => {
+            const canReview = request.status === "Pending";
+
+            return `
+              <tr>
+                <td>${request.created_at ? defaultDate(request.created_at) : "-"}</td>
+                <td class="shift-student">
+                  <strong>${escapeHtml(request.student_name || "-")}</strong>
+                  <small>${escapeHtml(request.email || "-")}</small>
+                </td>
+                <td>${escapeHtml(formatProgram(request.current_program_name, request.current_program_code, request.current_major))}</td>
+                <td>${escapeHtml(formatProgram(request.target_program_name, request.target_program_code, request.target_major))}</td>
+                <td>${escapeHtml(request.reason || "-")}</td>
+                <td><span class="status ${String(request.status || "").toLowerCase()}">${escapeHtml(request.status || "Pending")}</span></td>
+                <td>${escapeHtml(request.admin_notes || "-")}</td>
+                <td>
+                  ${
+                    canReview
+                      ? `<div class="shift-actions">
+                          <button type="button" class="btn btn-primary btn-sm btn-review-shift" data-id="${escapeHtml(request.id)}" data-status="Approved">Approve</button>
+                          <button type="button" class="btn btn-secondary btn-sm btn-review-shift" data-id="${escapeHtml(request.id)}" data-status="Rejected">Reject</button>
+                        </div>`
+                      : escapeHtml(request.reviewed_by || "-")
+                  }
+                </td>
+              </tr>
+            `;
+          })
+          .join("");
+
+        bindReviewButtons();
+      }
+
+      function bindReviewButtons() {
+        document.querySelectorAll(".btn-review-shift").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const nextStatus = button.dataset.status;
+            const notes = window.prompt(
+              nextStatus === "Approved"
+                ? "Admin notes for this approved shift request (optional)"
+                : "Reason for rejecting this shift request",
+            );
+
+            if (nextStatus === "Rejected" && !String(notes || "").trim()) {
+              alert("Admin notes are required when rejecting a shift request.");
+              return;
+            }
+
+            const response = await fetch(
+              `${window.APP_CONFIG.API_BASE_URL}/program_shift_requests/update`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  id: button.dataset.id,
+                  status: nextStatus,
+                  admin_notes: String(notes || "").trim(),
+                }),
+              },
+            );
+            const data = await response.json();
+
+            if (!response.ok) {
+              alert(data.error || "Failed to review shift request");
+              return;
+            }
+
+            await loadShiftRequests();
+          });
+        });
+      }
+
+      async function loadShiftRequests() {
+        const response = await fetch(
+          `${window.APP_CONFIG.API_BASE_URL}/program_shift_requests/list?limit=300`,
+        );
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load shift requests");
+        }
+
+        shiftRequests = Array.isArray(data) ? data : [];
+        renderRequests();
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        document.querySelector("#shiftSearch").addEventListener("input", renderRequests);
+        document.querySelector("#shiftStatusFilter").addEventListener("change", renderRequests);
+
+        try {
+          await loadShiftRequests();
+        } catch (error) {
+          document.querySelector("#table-shift-requests tbody").innerHTML = `
+            <tr><td colspan="8">${escapeHtml(error.message || "Failed to load shift requests.")}</td></tr>
+          `;
+        }
+      });
+    </script>
+  </body>
+</html>
